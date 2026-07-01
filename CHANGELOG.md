@@ -1,3 +1,150 @@
+## v2.5 — Portfolio Release + Demo Mode
+
+### Added
+
+- Portfolio Demo core
+- Demo state tracking
+- Demo readiness report
+- Portfolio case study generator
+- Demo script generator
+- Screenshot checklist generator
+- GitHub README summary generator
+- Portfolio release pack generator
+- Demo Mode API endpoints
+- Aurora OS Portfolio Demo Mode panel
+
+### Purpose
+
+- Prepare O.R.I.O.N. for GitHub presentation
+- Prepare portfolio case study content
+- Support demo video recording
+- Package final project documentation
+
+## v2.4 — Desktop Control Layer
+
+### Added
+
+- Desktop Control core
+- Approval-gated VS Code workspace opening
+- Approval-gated workspace folder opening
+- Approval-gated browser URL opening
+- Approval-gated workspace dev server start
+- Desktop Control API endpoints
+- Aurora OS Desktop Control panel
+
+### Safety
+
+- No silent desktop actions
+- No uncontrolled mouse or keyboard automation
+- All desktop control actions require manual approval
+- Dev server startup is restricted to registered workspaces with package.json
+
+## v2.3 — Controlled Multi-Step Mission Mode
+
+### Added
+
+- Controlled multi-step mission run endpoint
+- Maximum 3-step execution cycle
+- Aurora OS Run 3 Steps mission button
+- Automatic pause when approval is required
+- Automatic pause when mission completes, errors, or repeats a step
+
+### Safety
+
+- Multi-step mode does not bypass approval gates
+- File writing and terminal commands still require approval
+- Unsafe commands remain blocked
+- Execution is capped at 3 steps per cycle
+
+## v2.2 — Smarter Memory + Project Context Retrieval
+
+### Added
+
+- Context Engine for automatic memory/project/workspace retrieval
+- Context Preview API endpoint
+- Context Retrieval tool
+- Aurora OS Context Retrieval panel
+- Automatic context injection into API chat route
+- Context-aware terminal, voice, and wake launchers
+
+### Changed
+
+- O.R.I.O.N. now retrieves relevant context before answering
+- Responses can use persistent memory, projects, workspaces, missions, approvals, activity, and run history
+
+## v2.1 — Voice + Wake Phrase Polish
+
+### Added
+
+- Voice state tracking
+- Voice status API endpoint
+- Voice reset API endpoint
+- Aurora OS Voice Control panel
+- Shortened spoken responses for better voice UX
+- Improved wake phrase matching
+- Sleep and shutdown command handling
+
+### Changed
+
+- Spoken replies are now concise by default
+- Wake phrase mode now reports status into Aurora OS
+
+
+## v2.0 — Browser Research + Web Automation Layer
+
+### Added
+
+- Playwright Chromium browser engine
+- Safe public URL validation
+- Web page readable text extraction
+- Browser Research tools
+- Browser Research API endpoints
+- Aurora OS Browser Research panel
+- Web research markdown artifact saving
+
+### Safety
+
+- Public HTTP/HTTPS pages only
+- Local/private network URLs blocked
+- No login automation
+- No purchases
+- No account changes
+- No form submission automation
+
+
+## v1.9 — GitHub Release Assistant
+
+### Added
+
+- GitHub release readiness inspection
+- Git status and recent commit summary
+- Release notes generator
+- Release checklist generator
+- Commit message suggestion tool
+- GitHub Release Assistant API endpoints
+- Aurora OS GitHub Release Assistant panel
+
+### Safety
+
+- No automatic commits
+- No automatic pushes
+- No GitHub publishing
+- Release actions are preparation-only
+
+## v1.8 — Project Workspace Manager
+
+### Added
+
+- SQLite workspace database
+- Local workspace registration
+- Workspace inspection tools
+- Key project file reading
+- Tech stack detection
+- Workspace summary generation
+- Workspace API endpoints
+- Aurora OS Workspace Manager panel
+
+
 ## v1.7 — Mission Run History + Execution Reports
 
 ### Added

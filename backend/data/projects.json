@@ -7,5 +7,14 @@
     "created_at": "2026-06-25T22:12:33",
     "updated_at": "2026-06-25T22:12:33",
     "notes": []
+  },
+  "o.r.i.o.n._core": {
+    "name": "O.R.I.O.N. Core",
+    "type": "workspace",
+    "description": "The main AI desktop agent project with Aurora OS dashboard.",
+    "status": "active",
+    "created_at": "2026-06-28T20:06:05",
+    "updated_at": "2026-06-28T20:06:05",
+    "notes": []
   }
 }

@@ -1,0 +1,14 @@
+{
+  "status": "generated",
+  "project_name": "O.R.I.O.N.",
+  "interface_name": "Aurora OS",
+  "release_version": "v2.5",
+  "generated_at": "2026-07-01T22:21:13",
+  "files": [
+    "/home/titanvx/O.R.I.O.N/orion-ai/backend/demo_release/DEMO_READINESS_REPORT.md",
+    "/home/titanvx/O.R.I.O.N/orion-ai/backend/demo_release/DEMO_SCRIPT.md",
+    "/home/titanvx/O.R.I.O.N/orion-ai/backend/demo_release/README_PORTFOLIO_SNAPSHOT.md",
+    "/home/titanvx/O.R.I.O.N/orion-ai/backend/demo_release/CHANGELOG_PORTFOLIO_SNAPSHOT.md",
+    "/home/titanvx/O.R.I.O.N/orion-ai/backend/demo_release/PORTFOLIO_SUMMARY.md"
+  ]
+}

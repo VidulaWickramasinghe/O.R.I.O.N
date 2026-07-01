@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v1.7 — Mission Run History + Execution Reports**
+**v2.5 — Portfolio Release + Demo Mode**
 
 ## Core Capabilities
 
@@ -33,6 +33,35 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Mission run history
 - Mission execution reports
 - Report generation for controlled mission cycles
+- Project Workspace Manager
+- Local project path registration
+- Workspace inspection and tech stack detection
+- Browser Research Layer
+- Safe public webpage inspection
+- Web research report saving
+- Documentation research workflow
+- Voice status tracking
+- Aurora OS Voice Control panel
+- Improved wake phrase handling
+- Concise spoken replies
+- Smarter context retrieval
+- Automatic memory/project/workspace context injection
+- Context Preview panel in Aurora OS
+- Controlled multi-step mission execution
+- 3-step capped autonomous mission cycles
+- Approval-aware mission automation
+- Approval-gated desktop control
+- Open registered workspaces in VS Code
+- Open workspace folders
+- Open approved browser URLs
+- Start workspace dev servers with approval
+- Portfolio Demo Mode
+- Demo readiness reporting
+- Portfolio release pack generation
+- Demo script and screenshot checklist generation
+
+
+
 
 ## Architecture
 

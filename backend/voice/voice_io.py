@@ -4,32 +4,15 @@ from pathlib import Path
 
 import sounddevice as sd
 import pyttsx3
-from dotenv import load_dotenv
 from openai import OpenAI
 
+from core.voice_state import update_voice_state
 
-BACKEND_DIR = Path(__file__).resolve().parents[1]
-ENV_PATH = BACKEND_DIR / ".env"
-AUDIO_DIR = BACKEND_DIR / "data" / "audio"
 
+AUDIO_DIR = Path("backend/data/audio")
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
-load_dotenv(dotenv_path=ENV_PATH)
-
-
-def get_openai_client() -> OpenAI:
-    """
-    Create the OpenAI client only when needed.
-    This prevents import-time API key errors.
-    """
-    api_key = os.getenv("OPENAI_API_KEY")
-
-    if not api_key:
-        raise RuntimeError(
-            f"Missing OPENAI_API_KEY. Add it to this file: {ENV_PATH}"
-        )
-
-    return OpenAI(api_key=api_key)
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 def record_voice(duration: int = 6, sample_rate: int = 16000) -> Path:
@@ -37,6 +20,12 @@ def record_voice(duration: int = 6, sample_rate: int = 16000) -> Path:
     Record microphone audio and save it as a WAV file.
     """
     file_path = AUDIO_DIR / "voice_input.wav"
+
+    update_voice_state(
+        mode="recording",
+        listening=True,
+        last_event=f"Recording voice for {duration} seconds.",
+    )
 
     print(f"\nRecording for {duration} seconds...")
     print("Speak now...")
@@ -55,6 +44,12 @@ def record_voice(duration: int = 6, sample_rate: int = 16000) -> Path:
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(audio.tobytes())
 
+    update_voice_state(
+        mode="recorded",
+        listening=False,
+        last_event=f"Audio saved: {file_path}",
+    )
+
     print(f"Audio saved: {file_path}")
     return file_path
 
@@ -63,7 +58,11 @@ def transcribe_voice(audio_path: Path) -> str:
     """
     Convert recorded voice audio into text.
     """
-    client = get_openai_client()
+    update_voice_state(
+        mode="transcribing",
+        listening=False,
+        last_event="Transcribing voice input.",
+    )
 
     with audio_path.open("rb") as audio_file:
         transcript = client.audio.transcriptions.create(
@@ -72,17 +71,56 @@ def transcribe_voice(audio_path: Path) -> str:
         )
 
     text = transcript.text.strip()
+
+    update_voice_state(
+        mode="transcribed",
+        last_transcript=text,
+        last_event="Voice transcription completed.",
+    )
+
     print(f"You said: {text}")
     return text
 
 
-def speak_text(text: str) -> None:
+def prepare_voice_reply(text: str, max_chars: int = 420) -> str:
+    """
+    Shorten long assistant responses for spoken output.
+    The full response still appears in Aurora OS / terminal.
+    """
+    clean_text = " ".join(text.split())
+
+    if len(clean_text) <= max_chars:
+        return clean_text
+
+    shortened = clean_text[:max_chars].rsplit(" ", 1)[0]
+
+    return (
+        shortened
+        + "... I have shown the full response on Aurora OS."
+    )
+
+
+def speak_text(text: str, concise: bool = True) -> None:
     """
     Speak O.R.I.O.N.'s response using local text-to-speech.
     """
-    print(f"O.R.I.O.N. voice: {text}")
+    spoken_text = prepare_voice_reply(text) if concise else text
+
+    update_voice_state(
+        mode="speaking",
+        last_response=spoken_text,
+        last_event="O.R.I.O.N. is speaking.",
+    )
+
+    print(f"O.R.I.O.N. voice: {spoken_text}")
 
     engine = pyttsx3.init()
     engine.setProperty("rate", 175)
-    engine.say(text)
+    engine.setProperty("volume", 1.0)
+    engine.say(spoken_text)
     engine.runAndWait()
+
+    update_voice_state(
+        mode="idle",
+        last_event="O.R.I.O.N. finished speaking.",
+    )

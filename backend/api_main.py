@@ -2,7 +2,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -50,6 +50,66 @@ from core.approvals import (
     update_approval_status,
 )
 
+from core.workspace_manager import (
+    init_workspace_db,
+    register_workspace_record,
+    list_workspace_records,
+    inspect_workspace_tree,
+    detect_workspace_stack,
+    summarize_workspace as summarize_workspace_record,
+)
+
+from core.github_release_assistant import (
+    inspect_release_readiness,
+    generate_github_release_notes,
+    generate_release_checklist,
+    generate_commit_message,
+)
+
+from core.desktop_control import (
+    execute_approved_desktop_action,
+    ALLOWED_DESKTOP_ACTIONS,
+    request_open_workspace_in_vscode,
+    request_open_workspace_folder,
+    request_open_url_in_browser,
+    request_start_workspace_dev_server,
+)
+
+from core.portfolio_demo import (
+    load_demo_state,
+    update_demo_mode,
+    generate_demo_readiness_report,
+    generate_release_pack,
+)
+
+try:
+    from core.browser_research import (
+        research_public_page,
+        compare_web_pages,
+        save_web_research_report,
+    )
+except ImportError:
+    from core.browser_research import research_public_page
+
+    def compare_web_pages(urls: List[str]) -> str:
+        return "Browser comparison is not available in the current browser_research module."
+
+    def save_web_research_report(
+        title: str,
+        url: str,
+        summary: str,
+        notes: str = "",
+    ) -> str:
+        return ""
+
+
+from core.voice_state import load_voice_state, update_voice_state
+
+from core.context_engine import (
+    prepare_context_enriched_input,
+    get_context_preview,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -91,11 +151,21 @@ from tools.mission_tools import (
     add_mission_step,
 )
 
+from tools.workspace_tools import (
+    register_workspace,
+    list_workspaces,
+    read_workspace,
+    inspect_workspace,
+    read_workspace_key_file,
+    detect_workspace_tech_stack,
+    summarize_workspace as summarize_workspace_tool,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="1.7.0",
+    version="2.5.0",
 )
 
 app.add_middleware(
@@ -139,10 +209,17 @@ orion = Agent(
         update_mission_status,
         update_mission_step_status,
         add_mission_step,
+        register_workspace,
+        list_workspaces,
+        read_workspace,
+        inspect_workspace,
+        read_workspace_key_file,
+        detect_workspace_tech_stack,
+        summarize_workspace_tool,
     ],
 )
 
-session = SQLiteSession("orion_core_v17_dashboard")
+session = SQLiteSession("orion_core_v25_dashboard")
 
 
 class ChatRequest(BaseModel):
@@ -239,6 +316,19 @@ class MissionRunResponse(BaseModel):
     result: Optional[str] = None
 
 
+class MultiStepMissionRunRequest(BaseModel):
+    max_steps: int = 3
+
+
+class MultiStepMissionRunResponse(BaseModel):
+    mission_id: int
+    requested_steps: int
+    completed_cycles: int
+    status: str
+    stop_reason: str
+    cycles: List[MissionRunResponse]
+
+
 class MissionRunItem(BaseModel):
     id: int
     mission_id: int
@@ -258,6 +348,7 @@ class MissionRunsResponse(BaseModel):
 
 
 class MissionReportResponse(BaseModel):
+    version: str = "2.5"
     mission_id: int
     report_path: str
     status: str
@@ -281,16 +372,154 @@ class ApprovalsResponse(BaseModel):
     approvals: List[ApprovalItem]
 
 
+class WorkspaceItem(BaseModel):
+    id: int
+    name: str
+    path: str
+    description: str
+    status: str
+    created_at: str
+    updated_at: str
+
+
+class WorkspacesResponse(BaseModel):
+    workspaces: List[WorkspaceItem]
+
+
+class WorkspaceSummaryResponse(BaseModel):
+    workspace_id: int
+    name: str
+    path: str
+    description: str = ""
+    status: str = ""
+    summary: str
+    detected_stack: List[str]
+    key_files: List[str]
+
+
+class WorkspaceStackResponse(BaseModel):
+    workspace_id: int
+    name: Optional[str] = None
+    path: Optional[str] = None
+    summary: str
+    detected_stack: List[str]
+    key_files: List[str]
+
+
+class WorkspaceTreeResponse(BaseModel):
+    workspace_id: int
+    tree: str
+
+
+class WorkspaceRegisterRequest(BaseModel):
+    name: str
+    path: str
+    description: str = ""
+
+
+class GitHubReleaseRequest(BaseModel):
+    release_version: str = "v1.9"
+    change_summary: str = ""
+
+
+class GitHubReleaseResponse(BaseModel):
+    workspace_id: int
+    status: str
+    content: str
+    artifact_path: Optional[str] = None
+
+
+class BrowserResearchRequest(BaseModel):
+    url: str
+
+
+class BrowserCompareRequest(BaseModel):
+    urls: List[str]
+
+
+class BrowserResearchSaveRequest(BaseModel):
+    title: str
+    url: str
+    summary: str
+    notes: str = ""
+
+
+class BrowserResearchResponse(BaseModel):
+    status: str = "success"
+    url: str = ""
+    final_url: str = ""
+    status_code: int = 0
+    title: str = ""
+    summary: str = ""
+    headings: List[str] = Field(default_factory=list)
+    links: List[Dict[str, str]] = Field(default_factory=list)
+    content_preview: str = ""
+    content: str = ""
+    artifact_path: Optional[str] = None
+    created_at: str = ""
+
+
+class VoiceStatusResponse(BaseModel):
+    mode: str
+    wake_phrase: str
+    listening: bool
+    last_transcript: str
+    last_response: str
+    last_event: str
+    updated_at: str
+
+
+class ContextPreviewRequest(BaseModel):
+    message: str
+
+
+class ContextPreviewResponse(BaseModel):
+    message: str
+    context: str
+
+
+class DesktopUrlRequest(BaseModel):
+    url: str
+
+
+class DesktopActionResponse(BaseModel):
+    status: str
+    approval_id: Optional[int] = None
+    message: str
+
+
+class DemoStatusResponse(BaseModel):
+    demo_mode: bool
+    release_version: str
+    project_name: str
+    interface_name: str
+    tagline: str
+    last_generated_pack: str
+    updated_at: str
+    readiness_report: str
+
+
+class DemoModeRequest(BaseModel):
+    enabled: bool
+
+
+class DemoReleasePackResponse(BaseModel):
+    status: str
+    generated_at: str
+    files: List[str]
+
+
 @app.on_event("startup")
 def startup_event():
     init_memory_db()
     init_mission_db()
     init_approval_db()
     init_mission_run_db()
+    init_workspace_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v1.7.0 started with mission run history enabled.",
+        "O.R.I.O.N. API v2.5.0 started with Portfolio Release + Demo Mode enabled.",
         "API",
     )
 
@@ -299,7 +528,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "1.7.0",
+        "version": "2.5.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -343,11 +572,24 @@ def get_next_actionable_step(mission: Dict[str, Any]) -> Optional[Dict[str, Any]
     return None
 
 
+def get_pending_approval_ids() -> Set[int]:
+    try:
+        approvals = list_approval_requests(limit=50, status="pending")
+    except TypeError:
+        approvals = [
+            approval
+            for approval in list_approval_requests(limit=50)
+            if approval.get("status") == "pending"
+        ]
+
+    return {int(approval["id"]) for approval in approvals}
+
+
 @app.get("/api/status", response_model=SystemStatusResponse)
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="1.7.0",
+        version="2.5",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -368,6 +610,14 @@ def status():
             "Command Approval System",
             "Controlled Autonomous Mission Execution Loop",
             "Mission Run History + Execution Reports",
+            "Project Workspace Manager",
+            "GitHub Release Assistant",
+            "Browser Research + Web Automation Layer",
+            "Voice + Wake Phrase Polish",
+            "Smarter Memory + Project Context Retrieval",
+            "Controlled Multi-Step Mission Mode",
+            "Desktop Control Layer",
+            "Portfolio Release + Demo Mode",
         ],
     )
 
@@ -377,7 +627,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "1.7.0",
+        "version": "2.5.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -389,7 +639,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v1.7 Mission Control",
+        "release": "v2.5 Portfolio Release + Demo Mode",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -404,13 +654,30 @@ def mission():
             "Controlled Autonomous Mission Execution Loop",
             "Mission Run History",
             "Mission Execution Reports",
+            "Workspace context retrieval",
+            "Project context retrieval",
+            "Memory context retrieval",
+            "Mission context retrieval",
+            "Controlled multi-step mission execution",
+            "Desktop control approvals",
+            "Open workspace in VS Code",
+            "Open workspace folder",
+            "Start workspace development server",
+            "Open approved URLs in browser",
+            "Portfolio demo mode",
+            "Demo readiness report",
+            "Portfolio release pack generation",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
             "Safe project directory access",
             "Approved developer command execution only",
+            "Approved desktop actions only",
             "Activity and tool execution logging",
             "Mission run history records every controlled execution cycle",
+            "Multi-step mission mode stops on approval, completion, error, or repeated step detection",
+            "Desktop control actions must pass through the Command Approval System",
+            "Portfolio demo mode uses generated release artifacts and readiness reporting",
         ],
     }
 
@@ -424,10 +691,7 @@ def activity():
 def clear_activity_route():
     clear_activity()
     log_activity("SYSTEM", "Activity timeline cleared.", "Aurora OS")
-
-    return {
-        "status": "cleared",
-    }
+    return {"status": "cleared"}
 
 
 @app.get("/api/projects", response_model=ProjectsResponse)
@@ -437,7 +701,6 @@ def projects():
         "Aurora OS requested the project launcher list.",
         "Aurora OS",
     )
-
     return ProjectsResponse(projects=load_project_items())
 
 
@@ -452,7 +715,6 @@ def project_detail(project_key: str):
                 f"Project opened in launcher: {item.name}",
                 "Aurora OS",
             )
-
             return item
 
     return ProjectItem(
@@ -472,7 +734,6 @@ def memory_items():
         "Aurora OS requested persistent memory items.",
         "Aurora OS",
     )
-
     return MemoryResponse(items=list_recent_memory(limit=20))
 
 
@@ -483,7 +744,6 @@ def memory_search(q: str):
         f"Aurora OS searched memory for: {q}",
         "Aurora OS",
     )
-
     return MemoryResponse(items=search_memory_items(query=q, limit=20))
 
 
@@ -494,7 +754,6 @@ def missions():
         "Aurora OS requested mission planner records.",
         "Aurora OS",
     )
-
     return MissionsResponse(missions=list_mission_records(limit=20))
 
 
@@ -536,7 +795,6 @@ def mission_runs():
         "Aurora OS requested mission run history.",
         "Aurora OS",
     )
-
     return MissionRunsResponse(runs=list_mission_runs(limit=30))
 
 
@@ -547,7 +805,6 @@ def mission_runs_for_mission(mission_id: int):
         f"Aurora OS requested run history for mission {mission_id}.",
         "Aurora OS",
     )
-
     return MissionRunsResponse(
         runs=list_runs_for_mission(
             mission_id=mission_id,
@@ -595,7 +852,6 @@ def approvals():
         "Aurora OS requested command approval queue.",
         "Aurora OS",
     )
-
     return ApprovalsResponse(approvals=list_approval_requests(limit=30))
 
 
@@ -608,7 +864,20 @@ def approve_request(approval_id: int):
     )
 
     try:
-        result = execute_approved_dev_action(approval_id)
+        approval = next(
+            (
+                item
+                for item in list_approval_requests(limit=100)
+                if item["id"] == approval_id
+            ),
+            None,
+        )
+
+        if approval and approval["action_type"] in ALLOWED_DESKTOP_ACTIONS:
+            result = execute_approved_desktop_action(approval_id)
+        else:
+            result = execute_approved_dev_action(approval_id)
+
         update_approval_status(approval_id, "approved", result)
 
         log_activity(
@@ -813,6 +1082,515 @@ Rules:
         )
 
 
+@app.post("/api/missions/{mission_id}/run-batch", response_model=MultiStepMissionRunResponse)
+async def run_mission_batch(mission_id: int, request: MultiStepMissionRunRequest):
+    """
+    Run up to 3 controlled mission steps.
+    Stops early if approval is required, mission completes, an error occurs,
+    or the same step repeats without progress.
+    """
+    max_steps = max(1, min(request.max_steps, 3))
+    cycles: List[MissionRunResponse] = []
+    stop_reason = "max_steps_reached"
+    last_step_id: Optional[int] = None
+
+    log_activity(
+        "MISSION_BATCH_START",
+        f"Starting controlled multi-step mission run for mission {mission_id}. Max steps: {max_steps}",
+        "O.R.I.O.N.",
+    )
+
+    for _ in range(max_steps):
+        pending_before = get_pending_approval_ids()
+
+        cycle = await run_next_mission_step(mission_id)
+        cycles.append(cycle)
+
+        if cycle.step_id is None:
+            stop_reason = cycle.status
+            break
+
+        if cycle.status in ["missing", "complete", "error", "missing_api_key"]:
+            stop_reason = cycle.status
+            break
+
+        pending_after = get_pending_approval_ids()
+        new_pending_approvals = pending_after - pending_before
+
+        if new_pending_approvals or "Approval required" in cycle.output:
+            stop_reason = "waiting_approval"
+            break
+
+        if last_step_id == cycle.step_id:
+            stop_reason = "same_step_repeated_no_progress"
+            break
+
+        last_step_id = cycle.step_id
+
+    if stop_reason == "complete":
+        final_status = "complete"
+    elif stop_reason == "waiting_approval":
+        final_status = "paused_waiting_approval"
+    elif stop_reason in ["error", "missing_api_key"]:
+        final_status = "error"
+    else:
+        final_status = "paused"
+
+    log_activity(
+        "MISSION_BATCH_COMPLETE",
+        f"Multi-step mission run finished for mission {mission_id}. Status: {final_status}. Reason: {stop_reason}. Cycles: {len(cycles)}",
+        "O.R.I.O.N.",
+    )
+
+    return MultiStepMissionRunResponse(
+        mission_id=mission_id,
+        requested_steps=max_steps,
+        completed_cycles=len(cycles),
+        status=final_status,
+        stop_reason=stop_reason,
+        cycles=cycles,
+    )
+
+
+@app.get("/api/workspaces", response_model=WorkspacesResponse)
+def workspaces():
+    log_activity("WORKSPACES_VIEW", "Aurora OS requested workspace records.", "Aurora OS")
+    return WorkspacesResponse(workspaces=list_workspace_records(limit=30))
+
+
+@app.post("/api/workspaces/register")
+def register_workspace_api(request: WorkspaceRegisterRequest):
+    workspace_id = register_workspace_record(
+        name=request.name,
+        path=request.path,
+        description=request.description,
+        status="active",
+    )
+
+    log_activity(
+        "WORKSPACE_REGISTERED",
+        f"Workspace registered: {request.name} → {request.path}",
+        "Aurora OS",
+    )
+
+    return {
+        "status": "registered",
+        "workspace_id": workspace_id,
+        "name": request.name,
+        "path": request.path,
+    }
+
+
+@app.get("/api/workspaces/{workspace_id}/summary", response_model=WorkspaceSummaryResponse)
+def workspace_summary(workspace_id: int):
+    return WorkspaceSummaryResponse(**summarize_workspace_record(workspace_id))
+
+
+@app.get("/api/workspaces/{workspace_id}/stack", response_model=WorkspaceStackResponse)
+def workspace_stack(workspace_id: int):
+    return WorkspaceStackResponse(**detect_workspace_stack(workspace_id))
+
+
+@app.get("/api/workspaces/{workspace_id}/tree", response_model=WorkspaceTreeResponse)
+def workspace_tree(workspace_id: int, max_depth: int = 2):
+    return WorkspaceTreeResponse(
+        workspace_id=workspace_id,
+        tree=inspect_workspace_tree(workspace_id, max_depth=max_depth),
+    )
+
+
+@app.get("/api/workspaces/{workspace_id}/github-release/status", response_model=GitHubReleaseResponse)
+def github_release_status(workspace_id: int):
+    content = inspect_release_readiness(workspace_id)
+
+    log_activity(
+        "GITHUB_RELEASE_STATUS",
+        f"GitHub release readiness inspected for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return GitHubReleaseResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+        artifact_path=None,
+    )
+
+
+@app.post("/api/workspaces/{workspace_id}/github-release/notes", response_model=GitHubReleaseResponse)
+def github_release_notes(workspace_id: int, request: GitHubReleaseRequest):
+    result = generate_github_release_notes(
+        workspace_id=workspace_id,
+        release_version=request.release_version,
+    )
+
+    log_activity(
+        "GITHUB_RELEASE_NOTES",
+        f"GitHub release notes generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return GitHubReleaseResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=result["content"],
+        artifact_path=result["artifact_path"],
+    )
+
+
+@app.post("/api/workspaces/{workspace_id}/github-release/checklist", response_model=GitHubReleaseResponse)
+def github_release_checklist(workspace_id: int, request: GitHubReleaseRequest):
+    result = generate_release_checklist(
+        workspace_id=workspace_id,
+        release_version=request.release_version,
+    )
+
+    log_activity(
+        "GITHUB_RELEASE_CHECKLIST",
+        f"GitHub release checklist generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return GitHubReleaseResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=result["content"],
+        artifact_path=result["artifact_path"],
+    )
+
+
+@app.post("/api/workspaces/{workspace_id}/github-release/commit-message", response_model=GitHubReleaseResponse)
+def github_release_commit_message(workspace_id: int, request: GitHubReleaseRequest):
+    content = generate_commit_message(
+        release_version=request.release_version,
+        change_summary=request.change_summary,
+    )
+
+    log_activity(
+        "GITHUB_COMMIT_MESSAGE",
+        f"Release commit message suggested for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return GitHubReleaseResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+        artifact_path=None,
+    )
+
+
+@app.post("/api/browser/compare", response_model=BrowserResearchResponse)
+def browser_compare(request: BrowserCompareRequest):
+    try:
+        content = compare_web_pages(request.urls)
+
+        log_activity(
+            "BROWSER_COMPARE",
+            f"Compared {len(request.urls)} web pages.",
+            "O.R.I.O.N.",
+        )
+
+        return BrowserResearchResponse(
+            status="success",
+            content=content,
+        )
+
+    except Exception as error:
+        log_activity(
+            "BROWSER_COMPARE_FAILED",
+            f"Browser comparison failed: {error}",
+            "O.R.I.O.N.",
+        )
+
+        return BrowserResearchResponse(
+            status="failed",
+            content=str(error),
+        )
+
+
+@app.post("/api/browser/save", response_model=BrowserResearchResponse)
+def browser_save(request: BrowserResearchSaveRequest):
+    try:
+        artifact_path = save_web_research_report(
+            title=request.title,
+            url=request.url,
+            summary=request.summary,
+            notes=request.notes,
+        )
+
+        log_activity(
+            "BROWSER_RESEARCH_SAVED",
+            f"Web research artifact saved: {artifact_path}",
+            "O.R.I.O.N.",
+        )
+
+        return BrowserResearchResponse(
+            status="saved",
+            title=request.title,
+            url=request.url,
+            summary=request.summary,
+            content=request.summary,
+            artifact_path=artifact_path,
+        )
+
+    except Exception as error:
+        return BrowserResearchResponse(
+            status="failed",
+            content=str(error),
+        )
+
+
+def run_browser_research_request(request: BrowserResearchRequest) -> BrowserResearchResponse:
+    data = research_public_page(request.url)
+
+    log_activity(
+        "BROWSER_RESEARCH",
+        f"Browser research completed for: {request.url}",
+        "Aurora OS",
+    )
+
+    return BrowserResearchResponse(
+        status="success",
+        url=data.get("url", request.url),
+        final_url=data.get("final_url", request.url),
+        status_code=int(data.get("status_code", 0)),
+        title=data.get("title", "Untitled page"),
+        summary=data.get("summary", ""),
+        headings=data.get("headings", []),
+        links=data.get("links", []),
+        content_preview=data.get("content_preview", ""),
+        content=data.get("content_preview", ""),
+        created_at=data.get("created_at", ""),
+    )
+
+
+@app.post("/api/browser/research", response_model=BrowserResearchResponse)
+def browser_research_route(request: BrowserResearchRequest):
+    return run_browser_research_request(request)
+
+
+@app.post("/api/browser-research", response_model=BrowserResearchResponse)
+def browser_research_legacy_route(request: BrowserResearchRequest):
+    return run_browser_research_request(request)
+
+
+@app.get("/api/voice/status", response_model=VoiceStatusResponse)
+def voice_status():
+    state = load_voice_state()
+
+    return VoiceStatusResponse(
+        mode=state.get("mode", "idle"),
+        wake_phrase=state.get("wake_phrase", "Hey Orion"),
+        listening=state.get("listening", False),
+        last_transcript=state.get("last_transcript", ""),
+        last_response=state.get("last_response", ""),
+        last_event=state.get("last_event", ""),
+        updated_at=state.get("updated_at", ""),
+    )
+
+
+@app.post("/api/voice/reset")
+def voice_reset():
+    state = update_voice_state(
+        mode="idle",
+        listening=False,
+        last_transcript="",
+        last_response="",
+        last_event="Voice state reset from Aurora OS.",
+    )
+
+    log_activity("VOICE_RESET", "Voice state reset from Aurora OS.", "Aurora OS")
+
+    return {
+        "status": "reset",
+        "voice_state": state,
+    }
+
+
+@app.post("/api/context/preview", response_model=ContextPreviewResponse)
+def context_preview(request: ContextPreviewRequest):
+    clean_message = request.message.strip()
+
+    if not clean_message:
+        return ContextPreviewResponse(
+            message="",
+            context="No message provided.",
+        )
+
+    context = get_context_preview(clean_message)
+
+    log_activity(
+        "CONTEXT_PREVIEW",
+        "Aurora OS generated a context preview.",
+        "O.R.I.O.N.",
+    )
+
+    return ContextPreviewResponse(
+        message=clean_message,
+        context=context,
+    )
+
+
+@app.post("/api/desktop/workspaces/{workspace_id}/open-vscode", response_model=DesktopActionResponse)
+def desktop_open_vscode(workspace_id: int):
+    try:
+        approval_id = request_open_workspace_in_vscode(workspace_id)
+
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open workspace {workspace_id} in VS Code.",
+            "O.R.I.O.N.",
+        )
+
+        return DesktopActionResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to open workspace {workspace_id} in VS Code.",
+        )
+
+    except Exception as error:
+        return DesktopActionResponse(
+            status="failed",
+            message=str(error),
+        )
+
+
+@app.post("/api/desktop/workspaces/{workspace_id}/open-folder", response_model=DesktopActionResponse)
+def desktop_open_folder(workspace_id: int):
+    try:
+        approval_id = request_open_workspace_folder(workspace_id)
+
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open workspace folder {workspace_id}.",
+            "O.R.I.O.N.",
+        )
+
+        return DesktopActionResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to open workspace folder {workspace_id}.",
+        )
+
+    except Exception as error:
+        return DesktopActionResponse(
+            status="failed",
+            message=str(error),
+        )
+
+
+@app.post("/api/desktop/workspaces/{workspace_id}/start-dev", response_model=DesktopActionResponse)
+def desktop_start_dev(workspace_id: int):
+    try:
+        approval_id = request_start_workspace_dev_server(workspace_id)
+
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to start dev server for workspace {workspace_id}.",
+            "O.R.I.O.N.",
+        )
+
+        return DesktopActionResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to start dev server for workspace {workspace_id}.",
+        )
+
+    except Exception as error:
+        return DesktopActionResponse(
+            status="failed",
+            message=str(error),
+        )
+
+
+@app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
+def desktop_open_url(request: DesktopUrlRequest):
+    try:
+        approval_id = request_open_url_in_browser(request.url)
+
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open URL: {request.url}",
+            "O.R.I.O.N.",
+        )
+
+        return DesktopActionResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to open URL: {request.url}",
+        )
+
+    except Exception as error:
+        return DesktopActionResponse(
+            status="failed",
+            message=str(error),
+        )
+
+
+@app.get("/api/demo/status", response_model=DemoStatusResponse)
+def demo_status():
+    state = load_demo_state()
+    readiness_report = generate_demo_readiness_report()
+
+    log_activity(
+        "DEMO_STATUS_VIEW",
+        "Aurora OS requested portfolio demo status.",
+        "Aurora OS",
+    )
+
+    return DemoStatusResponse(
+        demo_mode=state.get("demo_mode", False),
+        release_version=state.get("release_version", "v2.5"),
+        project_name=state.get("project_name", "O.R.I.O.N."),
+        interface_name=state.get("interface_name", "Aurora OS"),
+        tagline=state.get("tagline", "Think. Plan. Act. Learn."),
+        last_generated_pack=state.get("last_generated_pack", ""),
+        updated_at=state.get("updated_at", ""),
+        readiness_report=readiness_report,
+    )
+
+
+@app.post("/api/demo/mode", response_model=DemoStatusResponse)
+def demo_mode(request: DemoModeRequest):
+    state = update_demo_mode(request.enabled)
+    readiness_report = generate_demo_readiness_report()
+
+    log_activity(
+        "DEMO_MODE_UPDATED",
+        f"Demo mode set to {request.enabled}.",
+        "Aurora OS",
+    )
+
+    return DemoStatusResponse(
+        demo_mode=state.get("demo_mode", False),
+        release_version=state.get("release_version", "v2.5"),
+        project_name=state.get("project_name", "O.R.I.O.N."),
+        interface_name=state.get("interface_name", "Aurora OS"),
+        tagline=state.get("tagline", "Think. Plan. Act. Learn."),
+        last_generated_pack=state.get("last_generated_pack", ""),
+        updated_at=state.get("updated_at", ""),
+        readiness_report=readiness_report,
+    )
+
+
+@app.post("/api/demo/release-pack", response_model=DemoReleasePackResponse)
+def demo_release_pack():
+    result = generate_release_pack()
+
+    log_activity(
+        "DEMO_RELEASE_PACK",
+        "Portfolio release pack generated.",
+        "O.R.I.O.N.",
+    )
+
+    return DemoReleasePackResponse(
+        status=result["status"],
+        generated_at=result["generated_at"],
+        files=result["files"],
+    )
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     if not os.getenv("OPENAI_API_KEY"):
@@ -852,9 +1630,17 @@ async def chat(request: ChatRequest):
     )
 
     try:
+        contextual_input = prepare_context_enriched_input(clean_message)
+
+        log_activity(
+            "CONTEXT_RETRIEVAL",
+            "Relevant memory, project, workspace, mission, and activity context retrieved.",
+            "O.R.I.O.N.",
+        )
+
         result = await Runner.run(
             orion,
-            clean_message,
+            contextual_input,
             session=session,
         )
 
@@ -878,3 +1664,5 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             response=f"O.R.I.O.N. encountered an error: {error}"
         )
+
+

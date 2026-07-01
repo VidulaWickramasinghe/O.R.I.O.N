@@ -1,16 +1,9 @@
 [
   {
     "id": 1,
-    "timestamp": "2026-06-26T01:19:05",
-    "type": "MISSIONS_VIEW",
+    "timestamp": "2026-07-01T22:29:16",
+    "type": "DEMO_STATUS_VIEW",
     "source": "Aurora OS",
-    "message": "Aurora OS requested mission planner records."
-  },
-  {
-    "id": 2,
-    "timestamp": "2026-06-26T01:19:05",
-    "type": "APPROVALS_VIEW",
-    "source": "Aurora OS",
-    "message": "Aurora OS requested command approval queue."
+    "message": "Aurora OS requested portfolio demo status."
   }
 ]

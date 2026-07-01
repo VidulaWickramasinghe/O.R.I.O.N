@@ -1,0 +1,9 @@
+{
+  "mode": "idle",
+  "wake_phrase": "Hey Orion",
+  "listening": false,
+  "last_transcript": "",
+  "last_response": "",
+  "last_event": "Voice system initialized.",
+  "updated_at": "2026-07-01T22:24:13"
+}
