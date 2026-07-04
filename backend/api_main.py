@@ -110,6 +110,39 @@ from core.context_engine import (
     get_context_preview,
 )
 
+from core.knowledge_base import (
+    init_knowledge_db,
+    index_document,
+    index_knowledge_folder,
+    list_knowledge_documents,
+    search_knowledge,
+    summarize_knowledge_document,
+)
+
+from core.vector_memory import (
+    init_vector_db,
+    rebuild_vector_index,
+    semantic_search,
+    list_vector_items,
+)
+
+from core.workflow_blueprints import (
+    list_blueprints,
+    get_blueprint,
+    render_blueprint,
+    create_mission_from_blueprint,
+)
+
+from core.developer_agent import (
+    init_developer_agent_db,
+    inspect_workspace_for_development,
+    diagnose_workspace_issue,
+    create_patch_plan,
+    list_developer_reports,
+    request_workspace_file_patch,
+    execute_approved_workspace_patch,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -161,11 +194,39 @@ from tools.workspace_tools import (
     summarize_workspace as summarize_workspace_tool,
 )
 
+from tools.knowledge_tools import (
+    index_knowledge_document,
+    index_knowledge_folder_tool,
+    list_knowledge_documents_tool,
+    search_local_knowledge,
+    summarize_knowledge_document_tool,
+)
+
+from tools.vector_memory_tools import (
+    rebuild_vector_memory_index,
+    semantic_memory_search,
+    list_vector_memory_items,
+)
+
+from tools.workflow_blueprint_tools import (
+    list_workflow_blueprints,
+    read_workflow_blueprint,
+    create_mission_from_workflow_blueprint,
+)
+
+from tools.developer_agent_tools import (
+    inspect_workspace_for_development_tool,
+    diagnose_workspace_issue_tool,
+    create_workspace_patch_plan,
+    request_workspace_file_patch_tool,
+    list_developer_reports_tool,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="2.5.0",
+    version="3.0.0",
 )
 
 app.add_middleware(
@@ -216,10 +277,26 @@ orion = Agent(
         read_workspace_key_file,
         detect_workspace_tech_stack,
         summarize_workspace_tool,
+        index_knowledge_document,
+        index_knowledge_folder_tool,
+        list_knowledge_documents_tool,
+        search_local_knowledge,
+        summarize_knowledge_document_tool,
+        rebuild_vector_memory_index,
+        semantic_memory_search,
+        list_vector_memory_items,
+        list_workflow_blueprints,
+        read_workflow_blueprint,
+        create_mission_from_workflow_blueprint,
+        inspect_workspace_for_development_tool,
+        diagnose_workspace_issue_tool,
+        create_workspace_patch_plan,
+        request_workspace_file_patch_tool,
+        list_developer_reports_tool,
     ],
 )
 
-session = SQLiteSession("orion_core_v25_dashboard")
+session = SQLiteSession("orion_core_v30_developer_mode")
 
 
 class ChatRequest(BaseModel):
@@ -509,6 +586,171 @@ class DemoReleasePackResponse(BaseModel):
     files: List[str]
 
 
+class KnowledgeIndexRequest(BaseModel):
+    path: str
+    summary: str = ""
+
+
+class KnowledgeFolderIndexRequest(BaseModel):
+    folder_path: str
+
+
+class KnowledgeSearchRequest(BaseModel):
+    query: str
+    limit: int = 10
+
+
+class KnowledgeDocumentItem(BaseModel):
+    id: int
+    title: str
+    source_path: str
+    extension: str
+    size_bytes: int
+    summary: str
+    indexed_at: str
+    updated_at: str
+
+
+class KnowledgeDocumentsResponse(BaseModel):
+    documents: List[KnowledgeDocumentItem]
+
+
+class KnowledgeSearchItem(BaseModel):
+    chunk_id: int
+    document_id: int
+    chunk_index: int
+    content: str
+    title: str
+    source_path: str
+    extension: str
+
+
+class KnowledgeSearchResponse(BaseModel):
+    results: List[KnowledgeSearchItem]
+
+
+class KnowledgeActionResponse(BaseModel):
+    status: str
+    message: str
+    data: Dict[str, Any] = Field(default_factory=dict)
+
+
+class VectorRebuildResponse(BaseModel):
+    status: str
+    data: Dict[str, Any]
+
+
+class VectorItem(BaseModel):
+    id: int
+    source_type: str
+    source_id: str
+    title: str
+    content: str
+    metadata: Dict[str, Any]
+    created_at: str
+    updated_at: str
+
+
+class VectorItemsResponse(BaseModel):
+    items: List[VectorItem]
+
+
+class SemanticSearchRequest(BaseModel):
+    query: str
+    limit: int = 8
+
+
+class SemanticSearchItem(BaseModel):
+    id: int
+    source_type: str
+    source_id: str
+    title: str
+    content: str
+    metadata: Dict[str, Any]
+    score: float
+    created_at: str
+    updated_at: str
+
+
+class SemanticSearchResponse(BaseModel):
+    results: List[SemanticSearchItem]
+
+
+class WorkflowBlueprintItem(BaseModel):
+    key: str
+    name: str
+    description: str
+    priority: int
+    step_count: int
+
+
+class WorkflowBlueprintsResponse(BaseModel):
+    blueprints: List[WorkflowBlueprintItem]
+
+
+class WorkflowBlueprintDetailResponse(BaseModel):
+    key: str
+    name: str
+    description: str
+    priority: int
+    steps: List[str]
+    rendered: str
+
+
+class CreateMissionFromBlueprintRequest(BaseModel):
+    mission_title: str = ""
+    custom_goal: str = ""
+    workspace_id: Optional[int] = None
+
+
+class CreateMissionFromBlueprintResponse(BaseModel):
+    status: str
+    mission_id: Optional[int] = None
+    blueprint_key: str
+    title: str = ""
+    goal: str = ""
+    step_count: int = 0
+    created_at: str = ""
+    message: str = ""
+
+
+class DeveloperInspectResponse(BaseModel):
+    workspace_id: int
+    status: str
+    content: str
+
+
+class DeveloperIssueRequest(BaseModel):
+    issue_description: str
+    target_files: List[str] = Field(default_factory=list)
+
+
+class DeveloperPatchRequest(BaseModel):
+    relative_path: str
+    new_content: str
+    reason: str
+
+
+class DeveloperPatchResponse(BaseModel):
+    status: str
+    approval_id: Optional[int] = None
+    message: str
+
+
+class DeveloperReportItem(BaseModel):
+    id: int
+    workspace_id: int
+    report_type: str
+    title: str
+    content: str
+    artifact_path: str
+    created_at: str
+
+
+class DeveloperReportsResponse(BaseModel):
+    reports: List[DeveloperReportItem]
+
+
 @app.on_event("startup")
 def startup_event():
     init_memory_db()
@@ -516,10 +758,13 @@ def startup_event():
     init_approval_db()
     init_mission_run_db()
     init_workspace_db()
+    init_knowledge_db()
+    init_vector_db()
+    init_developer_agent_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v2.5.0 started with Portfolio Release + Demo Mode enabled.",
+        "O.R.I.O.N. API v3.0.0 started with Agentic Workspace Developer Mode enabled.",
         "API",
     )
 
@@ -528,7 +773,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "2.5.0",
+        "version": "3.0.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -589,7 +834,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="2.5",
+        version="3.0",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -618,6 +863,10 @@ def status():
             "Controlled Multi-Step Mission Mode",
             "Desktop Control Layer",
             "Portfolio Release + Demo Mode",
+            "Local Knowledge Base + Document Intelligence",
+            "Vector Memory + Semantic Search",
+            "Workflow Templates + Mission Blueprints",
+            "Agentic Workspace Developer Mode",
         ],
     )
 
@@ -627,7 +876,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "2.5.0",
+        "version": "3.0.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -639,7 +888,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v2.5 Portfolio Release + Demo Mode",
+        "release": "v3.0 Agentic Workspace Developer Mode",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -667,6 +916,23 @@ def mission():
             "Portfolio demo mode",
             "Demo readiness report",
             "Portfolio release pack generation",
+            "Local Knowledge Base",
+            "Document indexing and search",
+            "Knowledge-aware context retrieval",
+            "Aurora OS Knowledge Base panel",
+            "Vector Memory",
+            "Semantic search",
+            "Embedding-based context retrieval",
+            "Meaning-aware memory and knowledge search",
+            "Workflow Blueprints",
+            "Reusable mission templates",
+            "Blueprint-to-mission generation",
+            "Standard release, research, bug-fix, and portfolio workflows",
+            "Agentic Workspace Developer Mode",
+            "Workspace inspection and diagnosis",
+            "Approval-gated patch planning",
+            "Developer report generation",
+            "Safe workspace file patching with backup",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -678,6 +944,7 @@ def mission():
             "Multi-step mission mode stops on approval, completion, error, or repeated step detection",
             "Desktop control actions must pass through the Command Approval System",
             "Portfolio demo mode uses generated release artifacts and readiness reporting",
+            "Local knowledge indexing reads supported local files only and skips heavy folders",
         ],
     }
 
@@ -875,6 +1142,8 @@ def approve_request(approval_id: int):
 
         if approval and approval["action_type"] in ALLOWED_DESKTOP_ACTIONS:
             result = execute_approved_desktop_action(approval_id)
+        elif approval and approval["action_type"] == "APPLY_WORKSPACE_FILE_PATCH":
+            result = execute_approved_workspace_patch(approval)
         else:
             result = execute_approved_dev_action(approval_id)
 
@@ -1589,6 +1858,354 @@ def demo_release_pack():
         generated_at=result["generated_at"],
         files=result["files"],
     )
+
+
+@app.get("/api/knowledge/documents", response_model=KnowledgeDocumentsResponse)
+def knowledge_documents():
+    log_activity(
+        "KNOWLEDGE_DOCUMENTS_VIEW",
+        "Aurora OS requested indexed knowledge documents.",
+        "Aurora OS",
+    )
+    return KnowledgeDocumentsResponse(documents=list_knowledge_documents(limit=100))
+
+
+@app.post("/api/knowledge/index", response_model=KnowledgeActionResponse)
+def knowledge_index(request: KnowledgeIndexRequest):
+    try:
+        result = index_document(
+            path=request.path,
+            summary=request.summary,
+        )
+        log_activity(
+            "KNOWLEDGE_INDEXED",
+            f"Knowledge document indexed: {result['title']}",
+            "O.R.I.O.N.",
+        )
+        return KnowledgeActionResponse(
+            status="indexed",
+            message="Knowledge document indexed successfully.",
+            data=result,
+        )
+    except Exception as error:
+        return KnowledgeActionResponse(
+            status="failed",
+            message=str(error),
+            data={},
+        )
+
+
+@app.post("/api/knowledge/index-folder", response_model=KnowledgeActionResponse)
+def knowledge_index_folder(request: KnowledgeFolderIndexRequest):
+    try:
+        result = index_knowledge_folder(request.folder_path)
+        log_activity(
+            "KNOWLEDGE_FOLDER_INDEXED",
+            f"Knowledge folder indexed: {request.folder_path}",
+            "O.R.I.O.N.",
+        )
+        return KnowledgeActionResponse(
+            status="indexed",
+            message="Knowledge folder indexed successfully.",
+            data=result,
+        )
+    except Exception as error:
+        return KnowledgeActionResponse(
+            status="failed",
+            message=str(error),
+            data={},
+        )
+
+
+@app.post("/api/knowledge/search", response_model=KnowledgeSearchResponse)
+def knowledge_search(request: KnowledgeSearchRequest):
+    results = search_knowledge(
+        query=request.query,
+        limit=request.limit,
+    )
+    log_activity(
+        "KNOWLEDGE_SEARCH",
+        f"Knowledge search completed for query: {request.query}",
+        "O.R.I.O.N.",
+    )
+    return KnowledgeSearchResponse(results=results)
+
+
+@app.get(
+    "/api/knowledge/documents/{document_id}/summary",
+    response_model=KnowledgeActionResponse,
+)
+def knowledge_document_summary(document_id: int):
+    summary = summarize_knowledge_document(document_id)
+    log_activity(
+        "KNOWLEDGE_SUMMARY",
+        f"Knowledge document summary requested: {document_id}",
+        "O.R.I.O.N.",
+    )
+    return KnowledgeActionResponse(
+        status="generated",
+        message="Knowledge document summary generated.",
+        data={
+            "document_id": document_id,
+            "summary": summary,
+        },
+    )
+
+
+@app.get("/api/vector/items", response_model=VectorItemsResponse)
+def vector_items():
+    log_activity(
+        "VECTOR_ITEMS_VIEW",
+        "Aurora OS requested vector memory items.",
+        "Aurora OS",
+    )
+    return VectorItemsResponse(items=list_vector_items(limit=100))
+
+
+@app.post("/api/vector/rebuild", response_model=VectorRebuildResponse)
+def vector_rebuild():
+    try:
+        result = rebuild_vector_index()
+        log_activity(
+            "VECTOR_INDEX_REBUILT",
+            "Vector memory index rebuilt.",
+            "O.R.I.O.N.",
+        )
+        return VectorRebuildResponse(
+            status="rebuilt",
+            data=result,
+        )
+    except Exception as error:
+        log_activity(
+            "VECTOR_INDEX_FAILED",
+            f"Vector memory rebuild failed: {error}",
+            "O.R.I.O.N.",
+        )
+        return VectorRebuildResponse(
+            status="failed",
+            data={"error": str(error)},
+        )
+
+
+@app.post("/api/vector/search", response_model=SemanticSearchResponse)
+def vector_search(request: SemanticSearchRequest):
+    try:
+        results = semantic_search(
+            query=request.query,
+            limit=request.limit,
+        )
+        log_activity(
+            "SEMANTIC_SEARCH",
+            f"Semantic search completed for query: {request.query}",
+            "O.R.I.O.N.",
+        )
+        return SemanticSearchResponse(results=results)
+    except Exception as error:
+        log_activity(
+            "SEMANTIC_SEARCH_FAILED",
+            f"Semantic search failed: {error}",
+            "O.R.I.O.N.",
+        )
+        return SemanticSearchResponse(results=[])
+
+
+@app.get("/api/workflows/blueprints", response_model=WorkflowBlueprintsResponse)
+def workflow_blueprints():
+    log_activity(
+        "WORKFLOW_BLUEPRINTS_VIEW",
+        "Aurora OS requested workflow blueprints.",
+        "Aurora OS",
+    )
+
+    return WorkflowBlueprintsResponse(blueprints=list_blueprints())
+
+
+@app.get(
+    "/api/workflows/blueprints/{blueprint_key}",
+    response_model=WorkflowBlueprintDetailResponse,
+)
+def workflow_blueprint_detail(blueprint_key: str):
+    blueprint = get_blueprint(blueprint_key)
+
+    if not blueprint:
+        return WorkflowBlueprintDetailResponse(
+            key=blueprint_key,
+            name="Blueprint not found",
+            description="No workflow blueprint found with this key.",
+            priority=0,
+            steps=[],
+            rendered="Workflow blueprint not found.",
+        )
+
+    log_activity(
+        "WORKFLOW_BLUEPRINT_OPEN",
+        f"Workflow blueprint opened: {blueprint_key}",
+        "Aurora OS",
+    )
+
+    return WorkflowBlueprintDetailResponse(
+        key=blueprint["key"],
+        name=blueprint["name"],
+        description=blueprint["description"],
+        priority=blueprint["priority"],
+        steps=blueprint["steps"],
+        rendered=render_blueprint(blueprint_key),
+    )
+
+
+@app.post(
+    "/api/workflows/blueprints/{blueprint_key}/create-mission",
+    response_model=CreateMissionFromBlueprintResponse,
+)
+def workflow_create_mission(
+    blueprint_key: str,
+    request: CreateMissionFromBlueprintRequest,
+):
+    try:
+        result = create_mission_from_blueprint(
+            blueprint_key=blueprint_key,
+            mission_title=request.mission_title,
+            custom_goal=request.custom_goal,
+            workspace_id=request.workspace_id,
+        )
+
+        log_activity(
+            "WORKFLOW_MISSION_CREATED",
+            f"Mission {result['mission_id']} created from blueprint {blueprint_key}.",
+            "O.R.I.O.N.",
+        )
+
+        return CreateMissionFromBlueprintResponse(
+            status="created",
+            mission_id=result["mission_id"],
+            blueprint_key=result["blueprint_key"],
+            title=result["title"],
+            goal=result["goal"],
+            step_count=result["step_count"],
+            created_at=result["created_at"],
+            message="Mission created from workflow blueprint.",
+        )
+
+    except Exception as error:
+        return CreateMissionFromBlueprintResponse(
+            status="failed",
+            mission_id=None,
+            blueprint_key=blueprint_key,
+            message=str(error),
+        )
+
+
+@app.get("/api/developer/reports", response_model=DeveloperReportsResponse)
+def developer_reports():
+    reports = list_developer_reports(limit=50)
+
+    log_activity(
+        "DEVELOPER_REPORTS_VIEW",
+        "Aurora OS requested developer reports.",
+        "Aurora OS",
+    )
+
+    return DeveloperReportsResponse(reports=reports)
+
+
+@app.get(
+    "/api/developer/workspaces/{workspace_id}/inspect",
+    response_model=DeveloperInspectResponse,
+)
+def developer_inspect_workspace(workspace_id: int):
+    content = inspect_workspace_for_development(workspace_id)
+
+    log_activity(
+        "DEVELOPER_WORKSPACE_INSPECT",
+        f"Developer inspection generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/diagnose",
+    response_model=DeveloperInspectResponse,
+)
+def developer_diagnose_workspace(workspace_id: int, request: DeveloperIssueRequest):
+    content = diagnose_workspace_issue(
+        workspace_id=workspace_id,
+        issue_description=request.issue_description,
+    )
+
+    log_activity(
+        "DEVELOPER_DIAGNOSIS",
+        f"Developer diagnosis generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/patch-plan",
+    response_model=DeveloperInspectResponse,
+)
+def developer_patch_plan(workspace_id: int, request: DeveloperIssueRequest):
+    content = create_patch_plan(
+        workspace_id=workspace_id,
+        issue_description=request.issue_description,
+        target_files=request.target_files or None,
+    )
+
+    log_activity(
+        "DEVELOPER_PATCH_PLAN",
+        f"Patch plan generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/request-patch",
+    response_model=DeveloperPatchResponse,
+)
+def developer_request_patch(workspace_id: int, request: DeveloperPatchRequest):
+    try:
+        approval_id = request_workspace_file_patch(
+            workspace_id=workspace_id,
+            relative_path=request.relative_path,
+            new_content=request.new_content,
+            reason=request.reason,
+        )
+
+        log_activity(
+            "DEVELOPER_PATCH_APPROVAL",
+            f"Patch approval created for workspace {workspace_id}: {request.relative_path}",
+            "O.R.I.O.N.",
+        )
+
+        return DeveloperPatchResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to patch {request.relative_path}.",
+        )
+
+    except Exception as error:
+        return DeveloperPatchResponse(
+            status="failed",
+            approval_id=None,
+            message=str(error),
+        )
 
 
 @app.post("/api/chat", response_model=ChatResponse)

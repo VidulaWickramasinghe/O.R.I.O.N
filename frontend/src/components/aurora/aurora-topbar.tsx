@@ -8,6 +8,8 @@ type AuroraTopbarProps = {
   search: string;
   setSearch: (value: string) => void;
   openCommandPalette: () => void;
+  leftPanelCollapsed: boolean;
+  rightPanelCollapsed: boolean;
   toggleLeftPanel: () => void;
   toggleRightPanel: () => void;
 };
@@ -17,6 +19,8 @@ export function AuroraTopbar({
   search,
   setSearch,
   openCommandPalette,
+  leftPanelCollapsed,
+  rightPanelCollapsed,
   toggleLeftPanel,
   toggleRightPanel,
 }: AuroraTopbarProps) {
@@ -75,17 +79,22 @@ export function AuroraTopbar({
         <button
           onClick={toggleLeftPanel}
           className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-slate-300 hover:bg-white/10"
-          title="Toggle left sidebar"
+          title={leftPanelCollapsed ? "Expand left sidebar" : "Collapse left sidebar"}
+          aria-pressed={leftPanelCollapsed}
         >
-          <LayoutPanelLeft size={18} />
+          <LayoutPanelLeft size={18} className={leftPanelCollapsed ? "text-cyan-300" : undefined} />
         </button>
 
         <button
           onClick={toggleRightPanel}
           className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 text-slate-300 hover:bg-white/10"
-          title="Toggle right context panel"
+          title={rightPanelCollapsed ? "Expand right context panel" : "Collapse right context panel"}
+          aria-pressed={rightPanelCollapsed}
         >
-          <LayoutPanelLeft size={18} className="rotate-180" />
+          <LayoutPanelLeft
+            size={18}
+            className={`rotate-180 ${rightPanelCollapsed ? "text-cyan-300" : ""}`}
+          />
         </button>
       </div>
     </header>
