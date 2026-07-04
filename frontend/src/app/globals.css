@@ -24,3 +24,43 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* React Flow Overrides */
+.react-flow {
+  --xy-background-color: transparent;
+  --xy-edge-stroke-default: rgba(34, 211, 238, 0.5);
+  --xy-edge-stroke-width-default: 1.8;
+  --xy-node-border-default: transparent;
+  --xy-node-background-color-default: transparent;
+  --xy-node-color-default: white;
+  --xy-controls-button-background-color-default: rgba(15, 23, 42, 0.92);
+  --xy-controls-button-color-default: rgba(226, 232, 240, 0.9);
+  --xy-controls-button-border-color-default: rgba(255, 255, 255, 0.08);
+}
+
+.react-flow__node {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.react-flow__node-default {
+  background: transparent !important;
+  border: none !important;
+  color: white !important;
+}
+
+.react-flow__handle {
+  width: 8px !important;
+  height: 8px !important;
+}
+
+.react-flow__controls {
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.react-flow__attribution {
+  display: none;
+}

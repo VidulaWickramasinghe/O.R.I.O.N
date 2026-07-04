@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v2.5 — Portfolio Release + Demo Mode**
+**v2.6.3-C — TanStack Query API Layer**
 
 ## Core Capabilities
 
@@ -59,6 +59,16 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Demo readiness reporting
 - Portfolio release pack generation
 - Demo script and screenshot checklist generation
+- Aurora OS command palette
+- Ctrl/Cmd + K command launcher
+- Module navigation and quick assistant commands
+- Visual Mission Flow Graph
+- React Flow-powered mission execution map
+- Mission planner, approval gate, report, and run history visualization
+- TanStack Query frontend API layer
+- Shared Aurora API client
+- Query-based automatic data refresh
+- Cleaner frontend module architecture
 
 
 

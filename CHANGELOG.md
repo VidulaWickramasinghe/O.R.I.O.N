@@ -1,3 +1,75 @@
+## v2.6.3-D — Adaptive Aurora Layout + Dashboard Customization
+
+### Added
+
+- Collapsible left navigation panel
+- Collapsible right context panel
+- Persistent layout state using localStorage
+- Dashboard widget filters
+- Customisable dashboard sections
+- Topbar layout toggle controls
+- Improved compact sidebar state
+- Fixed Mission Flow Graph custom node styling
+
+### Changed
+
+- Aurora OS dashboard is now more configurable
+- Main dashboard modules can be shown/hidden
+- Mission graph now uses custom React Flow nodes instead of default bright node wrappers
+
+
+## v2.6.3-C — TanStack Query API Layer
+
+### Added
+
+- TanStack Query provider
+- Shared Aurora API client
+- Shared query hooks for status, activity, projects, workspaces, memory, missions, approvals, voice, and demo state
+- Query invalidation after assistant actions
+- Query-based Tools module
+- Query-based Missions module
+
+### Changed
+
+- Core Aurora Workspace data loading now uses TanStack Query
+- Reduced repeated manual frontend fetch logic
+- Improved automatic refresh behavior across Aurora OS modules
+
+## v2.6.3-B — Mission Flow Graph
+
+### Added
+
+- React Flow mission visualization
+- Mission goal node
+- Mission planner node
+- Approval gate node
+- Mission report node
+- Recent mission run nodes
+- Visual execution graph inside Missions module
+
+### Changed
+
+- Missions module now includes a visual mission intelligence layer
+- Aurora OS mission workflow is easier to understand at a glance
+
+
+## v2.6.3-A — Aurora Command Palette
+
+### Added
+
+- Aurora OS command palette powered by `cmdk`
+- Ctrl/Cmd + K keyboard shortcut
+- Navigation commands for all Aurora modules
+- Assistant quick commands
+- System Doctor command
+- Demo Release Pack command
+- Mobile command palette trigger
+
+### Changed
+
+- Topbar search now opens the command palette
+- Aurora OS now behaves more like an intelligent operating system command environment
+
 ## v2.5 — Portfolio Release + Demo Mode
 
 ### Added
