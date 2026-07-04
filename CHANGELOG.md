@@ -1,3 +1,21 @@
+## v2.8 — Vector Memory + Semantic Search
+
+### Added
+
+- SQLite vector memory database
+- OpenAI embeddings integration
+- Semantic search across persistent memory
+- Semantic search across indexed knowledge documents
+- Vector rebuild endpoint
+- Vector search endpoint
+- Aurora OS Semantic Memory panel
+- Context Engine semantic retrieval integration
+
+### Changed
+
+- Context retrieval can now include semantic results
+- O.R.I.O.N. can retrieve related information by meaning, not only exact keywords
+
 ## v2.7 — Local Knowledge Base + Document Intelligence
 
 ### Added

@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v2.7 — Local Knowledge Base + Document Intelligence**
+**v2.8 — Vector Memory + Semantic Search**
 
 ## Core Capabilities
 
@@ -73,6 +73,10 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Document indexing and search
 - Knowledge-aware context retrieval
 - Aurora OS Knowledge Base panel
+- Vector Memory
+- Semantic search
+- Embedding-based context retrieval
+- Meaning-aware memory and knowledge search
 
 
 

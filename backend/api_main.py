@@ -119,6 +119,13 @@ from core.knowledge_base import (
     summarize_knowledge_document,
 )
 
+from core.vector_memory import (
+    init_vector_db,
+    rebuild_vector_index,
+    semantic_search,
+    list_vector_items,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -178,11 +185,17 @@ from tools.knowledge_tools import (
     summarize_knowledge_document_tool,
 )
 
+from tools.vector_memory_tools import (
+    rebuild_vector_memory_index,
+    semantic_memory_search,
+    list_vector_memory_items,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="2.7.0",
+    version="2.8.0",
 )
 
 app.add_middleware(
@@ -238,10 +251,13 @@ orion = Agent(
         list_knowledge_documents_tool,
         search_local_knowledge,
         summarize_knowledge_document_tool,
+        rebuild_vector_memory_index,
+        semantic_memory_search,
+        list_vector_memory_items,
     ],
 )
 
-session = SQLiteSession("orion_core_v27_knowledge")
+session = SQLiteSession("orion_core_v28_vector_memory")
 
 
 class ChatRequest(BaseModel):
@@ -580,6 +596,47 @@ class KnowledgeActionResponse(BaseModel):
     data: Dict[str, Any] = Field(default_factory=dict)
 
 
+class VectorRebuildResponse(BaseModel):
+    status: str
+    data: Dict[str, Any]
+
+
+class VectorItem(BaseModel):
+    id: int
+    source_type: str
+    source_id: str
+    title: str
+    content: str
+    metadata: Dict[str, Any]
+    created_at: str
+    updated_at: str
+
+
+class VectorItemsResponse(BaseModel):
+    items: List[VectorItem]
+
+
+class SemanticSearchRequest(BaseModel):
+    query: str
+    limit: int = 8
+
+
+class SemanticSearchItem(BaseModel):
+    id: int
+    source_type: str
+    source_id: str
+    title: str
+    content: str
+    metadata: Dict[str, Any]
+    score: float
+    created_at: str
+    updated_at: str
+
+
+class SemanticSearchResponse(BaseModel):
+    results: List[SemanticSearchItem]
+
+
 @app.on_event("startup")
 def startup_event():
     init_memory_db()
@@ -588,10 +645,11 @@ def startup_event():
     init_mission_run_db()
     init_workspace_db()
     init_knowledge_db()
+    init_vector_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v2.7.0 started with Local Knowledge Base + Document Intelligence enabled.",
+        "O.R.I.O.N. API v2.8.0 started with Vector Memory + Semantic Search enabled.",
         "API",
     )
 
@@ -600,7 +658,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "2.7.0",
+        "version": "2.8.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -661,7 +719,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="2.7",
+        version="2.8",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -691,6 +749,7 @@ def status():
             "Desktop Control Layer",
             "Portfolio Release + Demo Mode",
             "Local Knowledge Base + Document Intelligence",
+            "Vector Memory + Semantic Search",
         ],
     )
 
@@ -700,7 +759,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "2.7.0",
+        "version": "2.8.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -712,7 +771,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v2.7 Local Knowledge Base + Document Intelligence",
+        "release": "v2.8 Vector Memory + Semantic Search",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -744,6 +803,10 @@ def mission():
             "Document indexing and search",
             "Knowledge-aware context retrieval",
             "Aurora OS Knowledge Base panel",
+            "Vector Memory",
+            "Semantic search",
+            "Embedding-based context retrieval",
+            "Meaning-aware memory and knowledge search",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -1759,6 +1822,63 @@ def knowledge_document_summary(document_id: int):
             "summary": summary,
         },
     )
+
+
+@app.get("/api/vector/items", response_model=VectorItemsResponse)
+def vector_items():
+    log_activity(
+        "VECTOR_ITEMS_VIEW",
+        "Aurora OS requested vector memory items.",
+        "Aurora OS",
+    )
+    return VectorItemsResponse(items=list_vector_items(limit=100))
+
+
+@app.post("/api/vector/rebuild", response_model=VectorRebuildResponse)
+def vector_rebuild():
+    try:
+        result = rebuild_vector_index()
+        log_activity(
+            "VECTOR_INDEX_REBUILT",
+            "Vector memory index rebuilt.",
+            "O.R.I.O.N.",
+        )
+        return VectorRebuildResponse(
+            status="rebuilt",
+            data=result,
+        )
+    except Exception as error:
+        log_activity(
+            "VECTOR_INDEX_FAILED",
+            f"Vector memory rebuild failed: {error}",
+            "O.R.I.O.N.",
+        )
+        return VectorRebuildResponse(
+            status="failed",
+            data={"error": str(error)},
+        )
+
+
+@app.post("/api/vector/search", response_model=SemanticSearchResponse)
+def vector_search(request: SemanticSearchRequest):
+    try:
+        results = semantic_search(
+            query=request.query,
+            limit=request.limit,
+        )
+        log_activity(
+            "SEMANTIC_SEARCH",
+            f"Semantic search completed for query: {request.query}",
+            "O.R.I.O.N.",
+        )
+        return SemanticSearchResponse(results=results)
+    except Exception as error:
+        log_activity(
+            "SEMANTIC_SEARCH_FAILED",
+            f"Semantic search failed: {error}",
+            "O.R.I.O.N.",
+        )
+        return SemanticSearchResponse(results=[])
 
 
 @app.post("/api/chat", response_model=ChatResponse)

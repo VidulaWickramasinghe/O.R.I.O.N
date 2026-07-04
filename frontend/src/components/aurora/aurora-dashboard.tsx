@@ -228,7 +228,7 @@ export function AuroraDashboard({
                     <AuroraStatusPill tone={apiOnline ? "green" : "red"}>
                       {apiOnline ? "System Online" : "System Offline"}
                     </AuroraStatusPill>
-                    <AuroraStatusPill tone="cyan">Aurora OS v2.7</AuroraStatusPill>
+                    <AuroraStatusPill tone="cyan">Aurora OS v2.8</AuroraStatusPill>
                   </div>
                 </div>
 

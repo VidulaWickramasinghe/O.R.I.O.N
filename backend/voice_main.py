@@ -94,6 +94,12 @@ from tools.knowledge_tools import (
     search_local_knowledge,
     summarize_knowledge_document_tool,
 )
+
+from tools.vector_memory_tools import (
+    rebuild_vector_memory_index,
+    semantic_memory_search,
+    list_vector_memory_items,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -127,6 +133,9 @@ orion = Agent(
         list_knowledge_documents_tool,
         search_local_knowledge,
         summarize_knowledge_document_tool,
+        rebuild_vector_memory_index,
+        semantic_memory_search,
+        list_vector_memory_items,
     ],
 )
 

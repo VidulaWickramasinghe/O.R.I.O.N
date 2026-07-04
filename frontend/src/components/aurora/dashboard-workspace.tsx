@@ -30,6 +30,29 @@ type KnowledgeSearchItem = {
   extension: string;
 };
 
+type VectorItem = {
+  id: number;
+  source_type: string;
+  source_id: string;
+  title: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+};
+
+type SemanticSearchItem = {
+  id: number;
+  source_type: string;
+  source_id: string;
+  title: string;
+  content: string;
+  metadata: Record<string, unknown>;
+  score: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export function DashboardWorkspace() {
   const [widgets, setWidgets] = useState([
     "Hero",
@@ -38,6 +61,7 @@ export function DashboardWorkspace() {
     "Models",
     "Timeline",
     "Knowledge Base",
+    "Semantic Memory",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -45,6 +69,11 @@ export function DashboardWorkspace() {
   const [knowledgeResults, setKnowledgeResults] = useState<KnowledgeSearchItem[]>([]);
   const [knowledgeLoading, setKnowledgeLoading] = useState(false);
   const [knowledgeMessage, setKnowledgeMessage] = useState("");
+  const [vectorItems, setVectorItems] = useState<VectorItem[]>([]);
+  const [semanticQuery, setSemanticQuery] = useState("");
+  const [semanticResults, setSemanticResults] = useState<SemanticSearchItem[]>([]);
+  const [vectorLoading, setVectorLoading] = useState(false);
+  const [vectorMessage, setVectorMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -117,10 +146,74 @@ export function DashboardWorkspace() {
     }
   }
 
+
+
+  async function loadVectorItems() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/vector/items");
+      const data = await response.json();
+      setVectorItems(data.items || []);
+    } catch {
+      setVectorItems([]);
+    }
+  }
+
+  async function rebuildVectorIndexFromUI() {
+    setVectorLoading(true);
+    setVectorMessage("");
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/vector/rebuild", {
+        method: "POST",
+      });
+      const data = await response.json();
+      setVectorMessage(`Vector index rebuild status: ${data.status}`);
+      await loadVectorItems();
+    } catch {
+      setVectorMessage(
+        "Vector index rebuild failed. Confirm backend is running and OPENAI_API_KEY is set."
+      );
+    } finally {
+      setVectorLoading(false);
+    }
+  }
+
+  async function runSemanticSearchFromUI() {
+    const cleanQuery = semanticQuery.trim();
+    if (!cleanQuery || vectorLoading) return;
+
+    setVectorLoading(true);
+    setVectorMessage("");
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/vector/search", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: cleanQuery,
+          limit: 8,
+        }),
+      });
+      const data = await response.json();
+      setSemanticResults(data.results || []);
+    } catch {
+      setSemanticResults([]);
+      setVectorMessage(
+        "Semantic search failed. Confirm backend is running and OPENAI_API_KEY is set."
+      );
+    } finally {
+      setVectorLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
+    void loadVectorItems();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
+      void loadVectorItems();
     }, 3000);
 
     return () => window.clearInterval(timer);
@@ -135,13 +228,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v2.7
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v2.8
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -158,10 +251,11 @@ export function DashboardWorkspace() {
       </GlassPanel>
 
       {widgets.includes("Metrics") && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <Metric label="Models Online" value="4" />
           <Metric label="Memory" value="87%" />
           <Metric label="Knowledge Docs" value={String(knowledgeDocuments.length)} />
+          <Metric label="Vectors" value={String(vectorItems.length)} />
           <Metric label="Active Projects" value={String(projects.length)} />
           <Metric label="Running Agents" value={String(agents.filter((agent) => agent.status === "Running").length)} />
         </div>
@@ -239,6 +333,19 @@ export function DashboardWorkspace() {
             />
           )}
 
+          {widgets.includes("Semantic Memory") && (
+            <SemanticMemoryPanel
+              vectorItems={vectorItems}
+              semanticQuery={semanticQuery}
+              semanticResults={semanticResults}
+              loading={vectorLoading}
+              message={vectorMessage}
+              setSemanticQuery={setSemanticQuery}
+              rebuildVectorIndex={rebuildVectorIndexFromUI}
+              runSemanticSearch={runSemanticSearchFromUI}
+            />
+          )}
+
           {widgets.includes("Timeline") && (
             <GlassPanel className="p-5">
               <h2 className="font-black text-white">Aurora Timeline</h2>
@@ -257,6 +364,105 @@ export function DashboardWorkspace() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+function SemanticMemoryPanel({
+  vectorItems,
+  semanticQuery,
+  semanticResults,
+  loading,
+  message,
+  setSemanticQuery,
+  rebuildVectorIndex,
+  runSemanticSearch,
+}: {
+  vectorItems: VectorItem[];
+  semanticQuery: string;
+  semanticResults: SemanticSearchItem[];
+  loading: boolean;
+  message: string;
+  setSemanticQuery: (value: string) => void;
+  rebuildVectorIndex: () => void;
+  runSemanticSearch: () => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Semantic Memory</h2>
+          <p className="text-sm text-slate-400">
+            Vector search across memory and indexed knowledge
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
+          {vectorItems.length} vectors
+        </span>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <button
+          onClick={rebuildVectorIndex}
+          disabled={loading}
+          className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+        >
+          {loading ? "Rebuilding..." : "Rebuild Vector Index"}
+        </button>
+
+        <div>
+          <p className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+            Semantic Search
+          </p>
+          <div className="flex gap-2">
+            <input
+              value={semanticQuery}
+              onChange={(event) => setSemanticQuery(event.target.value)}
+              placeholder="Ask by meaning, not exact words..."
+              className="min-w-0 flex-1 rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2"
+            />
+            <button
+              onClick={runSemanticSearch}
+              disabled={loading}
+              className="rounded-2xl border border-cyan-400/30 px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-500/10 disabled:opacity-60"
+            >
+              Search
+            </button>
+          </div>
+        </div>
+
+        {message && (
+          <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+            {message}
+          </p>
+        )}
+
+        {semanticResults.length === 0 ? (
+          <p className="text-sm text-slate-500">
+            Rebuild the vector index, then run a semantic search.
+          </p>
+        ) : (
+          <div className="max-h-80 space-y-2 overflow-y-auto rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3">
+            {semanticResults.map((result) => (
+              <div key={result.id} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-slate-100">{result.title}</h3>
+                  <span className="text-[10px] text-cyan-300">
+                    {result.score.toFixed(3)}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  {result.source_type} | Source ID: {result.source_id}
+                </p>
+                <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-300">
+                  {result.content.slice(0, 700)}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </GlassPanel>
   );
 }
 
