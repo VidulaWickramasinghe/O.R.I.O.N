@@ -142,3 +142,23 @@ body {
     radial-gradient(circle at 50% 58%, rgba(59, 130, 246, 0.25), transparent 38%),
     repeating-radial-gradient(circle, transparent 0 28px, rgba(34, 211, 238, 0.15) 29px 30px, transparent 31px 56px);
 }
+
+.aurora-os-bg {
+  background:
+    radial-gradient(circle at 12% 8%, rgba(79, 139, 255, 0.18), transparent 28%),
+    radial-gradient(circle at 82% 12%, rgba(123, 92, 255, 0.16), transparent 30%),
+    radial-gradient(circle at 50% 90%, rgba(97, 223, 255, 0.12), transparent 32%),
+    #05070B;
+}
+
+.aurora-os-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
