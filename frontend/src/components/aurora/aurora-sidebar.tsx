@@ -137,7 +137,7 @@ export function AuroraSidebar({
             {collapsed ? (apiOnline ? "●" : "●") : apiOnline ? "Online" : "Offline"}
           </p>
 
-          {!collapsed && <p className="mt-2 text-xs text-slate-500">Aurora v2.9</p>}
+          {!collapsed && <p className="mt-2 text-xs text-slate-500">Aurora v3.0</p>}
         </div>
       </div>
     </aside>

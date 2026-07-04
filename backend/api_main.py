@@ -133,6 +133,16 @@ from core.workflow_blueprints import (
     create_mission_from_blueprint,
 )
 
+from core.developer_agent import (
+    init_developer_agent_db,
+    inspect_workspace_for_development,
+    diagnose_workspace_issue,
+    create_patch_plan,
+    list_developer_reports,
+    request_workspace_file_patch,
+    execute_approved_workspace_patch,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -204,11 +214,19 @@ from tools.workflow_blueprint_tools import (
     create_mission_from_workflow_blueprint,
 )
 
+from tools.developer_agent_tools import (
+    inspect_workspace_for_development_tool,
+    diagnose_workspace_issue_tool,
+    create_workspace_patch_plan,
+    request_workspace_file_patch_tool,
+    list_developer_reports_tool,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="2.9.0",
+    version="3.0.0",
 )
 
 app.add_middleware(
@@ -270,10 +288,15 @@ orion = Agent(
         list_workflow_blueprints,
         read_workflow_blueprint,
         create_mission_from_workflow_blueprint,
+        inspect_workspace_for_development_tool,
+        diagnose_workspace_issue_tool,
+        create_workspace_patch_plan,
+        request_workspace_file_patch_tool,
+        list_developer_reports_tool,
     ],
 )
 
-session = SQLiteSession("orion_core_v29_workflow_blueprints")
+session = SQLiteSession("orion_core_v30_developer_mode")
 
 
 class ChatRequest(BaseModel):
@@ -691,6 +714,43 @@ class CreateMissionFromBlueprintResponse(BaseModel):
     message: str = ""
 
 
+class DeveloperInspectResponse(BaseModel):
+    workspace_id: int
+    status: str
+    content: str
+
+
+class DeveloperIssueRequest(BaseModel):
+    issue_description: str
+    target_files: List[str] = Field(default_factory=list)
+
+
+class DeveloperPatchRequest(BaseModel):
+    relative_path: str
+    new_content: str
+    reason: str
+
+
+class DeveloperPatchResponse(BaseModel):
+    status: str
+    approval_id: Optional[int] = None
+    message: str
+
+
+class DeveloperReportItem(BaseModel):
+    id: int
+    workspace_id: int
+    report_type: str
+    title: str
+    content: str
+    artifact_path: str
+    created_at: str
+
+
+class DeveloperReportsResponse(BaseModel):
+    reports: List[DeveloperReportItem]
+
+
 @app.on_event("startup")
 def startup_event():
     init_memory_db()
@@ -700,10 +760,11 @@ def startup_event():
     init_workspace_db()
     init_knowledge_db()
     init_vector_db()
+    init_developer_agent_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v2.9.0 started with Workflow Templates + Mission Blueprints enabled.",
+        "O.R.I.O.N. API v3.0.0 started with Agentic Workspace Developer Mode enabled.",
         "API",
     )
 
@@ -712,7 +773,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "2.9.0",
+        "version": "3.0.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -773,7 +834,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="2.9",
+        version="3.0",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -805,6 +866,7 @@ def status():
             "Local Knowledge Base + Document Intelligence",
             "Vector Memory + Semantic Search",
             "Workflow Templates + Mission Blueprints",
+            "Agentic Workspace Developer Mode",
         ],
     )
 
@@ -814,7 +876,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "2.9.0",
+        "version": "3.0.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -826,7 +888,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v2.9 Workflow Templates + Mission Blueprints",
+        "release": "v3.0 Agentic Workspace Developer Mode",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -866,6 +928,11 @@ def mission():
             "Reusable mission templates",
             "Blueprint-to-mission generation",
             "Standard release, research, bug-fix, and portfolio workflows",
+            "Agentic Workspace Developer Mode",
+            "Workspace inspection and diagnosis",
+            "Approval-gated patch planning",
+            "Developer report generation",
+            "Safe workspace file patching with backup",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -1075,6 +1142,8 @@ def approve_request(approval_id: int):
 
         if approval and approval["action_type"] in ALLOWED_DESKTOP_ACTIONS:
             result = execute_approved_desktop_action(approval_id)
+        elif approval and approval["action_type"] == "APPLY_WORKSPACE_FILE_PATCH":
+            result = execute_approved_workspace_patch(approval)
         else:
             result = execute_approved_dev_action(approval_id)
 
@@ -2022,6 +2091,119 @@ def workflow_create_mission(
             status="failed",
             mission_id=None,
             blueprint_key=blueprint_key,
+            message=str(error),
+        )
+
+
+@app.get("/api/developer/reports", response_model=DeveloperReportsResponse)
+def developer_reports():
+    reports = list_developer_reports(limit=50)
+
+    log_activity(
+        "DEVELOPER_REPORTS_VIEW",
+        "Aurora OS requested developer reports.",
+        "Aurora OS",
+    )
+
+    return DeveloperReportsResponse(reports=reports)
+
+
+@app.get(
+    "/api/developer/workspaces/{workspace_id}/inspect",
+    response_model=DeveloperInspectResponse,
+)
+def developer_inspect_workspace(workspace_id: int):
+    content = inspect_workspace_for_development(workspace_id)
+
+    log_activity(
+        "DEVELOPER_WORKSPACE_INSPECT",
+        f"Developer inspection generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/diagnose",
+    response_model=DeveloperInspectResponse,
+)
+def developer_diagnose_workspace(workspace_id: int, request: DeveloperIssueRequest):
+    content = diagnose_workspace_issue(
+        workspace_id=workspace_id,
+        issue_description=request.issue_description,
+    )
+
+    log_activity(
+        "DEVELOPER_DIAGNOSIS",
+        f"Developer diagnosis generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/patch-plan",
+    response_model=DeveloperInspectResponse,
+)
+def developer_patch_plan(workspace_id: int, request: DeveloperIssueRequest):
+    content = create_patch_plan(
+        workspace_id=workspace_id,
+        issue_description=request.issue_description,
+        target_files=request.target_files or None,
+    )
+
+    log_activity(
+        "DEVELOPER_PATCH_PLAN",
+        f"Patch plan generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/request-patch",
+    response_model=DeveloperPatchResponse,
+)
+def developer_request_patch(workspace_id: int, request: DeveloperPatchRequest):
+    try:
+        approval_id = request_workspace_file_patch(
+            workspace_id=workspace_id,
+            relative_path=request.relative_path,
+            new_content=request.new_content,
+            reason=request.reason,
+        )
+
+        log_activity(
+            "DEVELOPER_PATCH_APPROVAL",
+            f"Patch approval created for workspace {workspace_id}: {request.relative_path}",
+            "O.R.I.O.N.",
+        )
+
+        return DeveloperPatchResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to patch {request.relative_path}.",
+        )
+
+    except Exception as error:
+        return DeveloperPatchResponse(
+            status="failed",
+            approval_id=None,
             message=str(error),
         )
 

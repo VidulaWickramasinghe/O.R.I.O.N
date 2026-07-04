@@ -70,6 +70,32 @@ type WorkflowBlueprintDetail = {
   rendered: string;
 };
 
+type WorkspaceItem = {
+  id: number;
+  name: string;
+  path: string;
+  description: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type DeveloperReportItem = {
+  id: number;
+  workspace_id: number;
+  report_type: string;
+  title: string;
+  content: string;
+  artifact_path: string;
+  created_at: string;
+};
+
+type DeveloperInspectResult = {
+  workspace_id: number;
+  status: string;
+  content: string;
+};
+
 export function DashboardWorkspace() {
   const [widgets, setWidgets] = useState([
     "Hero",
@@ -80,6 +106,7 @@ export function DashboardWorkspace() {
     "Knowledge Base",
     "Semantic Memory",
     "Workflow Blueprints",
+    "Developer Mode",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -98,6 +125,12 @@ export function DashboardWorkspace() {
   const [workflowLoadingKey, setWorkflowLoadingKey] = useState<string | null>(null);
   const [workflowMessage, setWorkflowMessage] = useState("");
   const [workflowWorkspaceId, setWorkflowWorkspaceId] = useState("1");
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
+  const [developerReports, setDeveloperReports] = useState<DeveloperReportItem[]>([]);
+  const [developerResult, setDeveloperResult] = useState<DeveloperInspectResult | null>(null);
+  const [developerIssue, setDeveloperIssue] = useState("");
+  const [developerLoadingAction, setDeveloperLoadingAction] = useState<string | null>(null);
+  const [developerMessage, setDeveloperMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -299,14 +332,127 @@ export function DashboardWorkspace() {
     }
   }
 
+  async function loadWorkspaces() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/workspaces");
+      const data = await response.json();
+      setWorkspaces(data.workspaces || []);
+    } catch {
+      setWorkspaces([]);
+    }
+  }
+
+  async function loadDeveloperReports() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/developer/reports");
+      const data = await response.json();
+      setDeveloperReports(data.reports || []);
+    } catch {
+      setDeveloperReports([]);
+    }
+  }
+
+  async function runDeveloperInspect(workspaceId: number) {
+    setDeveloperLoadingAction(`inspect-${workspaceId}`);
+    setDeveloperMessage("");
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/developer/workspaces/${workspaceId}/inspect`
+      );
+      const data = await response.json();
+      setDeveloperResult(data);
+      setDeveloperMessage(`Developer inspection generated for workspace ${workspaceId}.`);
+      await loadDeveloperReports();
+    } catch {
+      setDeveloperMessage("Developer inspection failed. Confirm backend is running.");
+    } finally {
+      setDeveloperLoadingAction(null);
+    }
+  }
+
+  async function runDeveloperDiagnosis(workspaceId: number) {
+    const cleanIssue = developerIssue.trim();
+    if (!cleanIssue) {
+      setDeveloperMessage("Add an issue description before running developer diagnosis.");
+      return;
+    }
+
+    setDeveloperLoadingAction(`diagnose-${workspaceId}`);
+    setDeveloperMessage("");
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/developer/workspaces/${workspaceId}/diagnose`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            issue_description: cleanIssue,
+            target_files: [],
+          }),
+        }
+      );
+      const data = await response.json();
+      setDeveloperResult(data);
+      setDeveloperMessage(`Developer diagnosis generated for workspace ${workspaceId}.`);
+      await loadDeveloperReports();
+    } catch {
+      setDeveloperMessage("Developer diagnosis failed. Confirm backend is running.");
+    } finally {
+      setDeveloperLoadingAction(null);
+    }
+  }
+
+  async function runDeveloperPatchPlan(workspaceId: number) {
+    const cleanIssue = developerIssue.trim();
+    if (!cleanIssue) {
+      setDeveloperMessage("Add an issue or objective before creating a patch plan.");
+      return;
+    }
+
+    setDeveloperLoadingAction(`patch-plan-${workspaceId}`);
+    setDeveloperMessage("");
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/developer/workspaces/${workspaceId}/patch-plan`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            issue_description: cleanIssue,
+            target_files: [],
+          }),
+        }
+      );
+      const data = await response.json();
+      setDeveloperResult(data);
+      setDeveloperMessage(`Patch plan generated for workspace ${workspaceId}.`);
+      await loadDeveloperReports();
+    } catch {
+      setDeveloperMessage("Patch plan generation failed. Confirm backend is running.");
+    } finally {
+      setDeveloperLoadingAction(null);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
     void loadWorkflowBlueprints();
+    void loadWorkspaces();
+    void loadDeveloperReports();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
       void loadWorkflowBlueprints();
+      void loadWorkspaces();
+      void loadDeveloperReports();
     }, 3000);
 
     return () => window.clearInterval(timer);
@@ -321,13 +467,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v2.9
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.0
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -344,12 +490,13 @@ export function DashboardWorkspace() {
       </GlassPanel>
 
       {widgets.includes("Metrics") && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-8">
           <Metric label="Models Online" value="4" />
           <Metric label="Memory" value="87%" />
           <Metric label="Knowledge Docs" value={String(knowledgeDocuments.length)} />
           <Metric label="Vectors" value={String(vectorItems.length)} />
           <Metric label="Blueprints" value={String(workflowBlueprints.length)} />
+          <Metric label="Dev Reports" value={String(developerReports.length)} />
           <Metric label="Active Projects" value={String(projects.length)} />
           <Metric label="Running Agents" value={String(agents.filter((agent) => agent.status === "Running").length)} />
         </div>
@@ -453,6 +600,21 @@ export function DashboardWorkspace() {
             />
           )}
 
+          {widgets.includes("Developer Mode") && (
+            <AgenticDeveloperModePanel
+              workspaces={workspaces}
+              developerIssue={developerIssue}
+              developerReports={developerReports}
+              developerResult={developerResult}
+              loadingAction={developerLoadingAction}
+              message={developerMessage}
+              setDeveloperIssue={setDeveloperIssue}
+              inspectWorkspace={runDeveloperInspect}
+              diagnoseWorkspace={runDeveloperDiagnosis}
+              createPatchPlan={runDeveloperPatchPlan}
+            />
+          )}
+
           {widgets.includes("Timeline") && (
             <GlassPanel className="p-5">
               <h2 className="font-black text-white">Aurora Timeline</h2>
@@ -475,6 +637,137 @@ export function DashboardWorkspace() {
 }
 
 
+
+
+function AgenticDeveloperModePanel({
+  workspaces,
+  developerIssue,
+  developerReports,
+  developerResult,
+  loadingAction,
+  message,
+  setDeveloperIssue,
+  inspectWorkspace,
+  diagnoseWorkspace,
+  createPatchPlan,
+}: {
+  workspaces: WorkspaceItem[];
+  developerIssue: string;
+  developerReports: DeveloperReportItem[];
+  developerResult: DeveloperInspectResult | null;
+  loadingAction: string | null;
+  message: string;
+  setDeveloperIssue: (value: string) => void;
+  inspectWorkspace: (workspaceId: number) => void;
+  diagnoseWorkspace: (workspaceId: number) => void;
+  createPatchPlan: (workspaceId: number) => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Agentic Developer Mode</h2>
+          <p className="text-sm text-slate-400">
+            Workspace inspection, diagnosis, patch planning, and approval-gated edits
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
+          v3.0
+        </span>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <textarea
+          value={developerIssue}
+          onChange={(event) => setDeveloperIssue(event.target.value)}
+          placeholder="Describe a bug, error, UI issue, backend issue, or development objective..."
+          className="min-h-28 w-full rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2"
+        />
+
+        {message && (
+          <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+            {message}
+          </p>
+        )}
+
+        {workspaces.length === 0 ? (
+          <p className="text-sm text-slate-500">Register a workspace first to use Developer Mode.</p>
+        ) : (
+          <div className="space-y-3">
+            {workspaces.map((workspace) => (
+              <div key={workspace.id} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-slate-100">{workspace.name}</h3>
+                  <span className="text-[10px] text-slate-500">ID {workspace.id}</span>
+                </div>
+                <p className="break-all text-xs text-slate-500">{workspace.path}</p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    onClick={() => inspectWorkspace(workspace.id)}
+                    disabled={loadingAction === `inspect-${workspace.id}`}
+                    className="rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-bold text-cyan-200 transition hover:bg-cyan-500/10 disabled:opacity-60"
+                  >
+                    Inspect
+                  </button>
+                  <button
+                    onClick={() => diagnoseWorkspace(workspace.id)}
+                    disabled={loadingAction === `diagnose-${workspace.id}`}
+                    className="rounded-xl border border-violet-400/30 px-3 py-2 text-xs font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:opacity-60"
+                  >
+                    Diagnose
+                  </button>
+                  <button
+                    onClick={() => createPatchPlan(workspace.id)}
+                    disabled={loadingAction === `patch-plan-${workspace.id}`}
+                    className="rounded-xl bg-cyan-300 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+                  >
+                    Patch Plan
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {developerResult && (
+          <div className="max-h-96 overflow-y-auto rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3">
+            <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">
+              Latest Developer Output
+            </p>
+            <pre className="mt-3 whitespace-pre-wrap text-xs leading-5 text-slate-300">
+              {developerResult.content}
+            </pre>
+          </div>
+        )}
+
+        <div className="max-h-56 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
+          <p className="text-xs uppercase tracking-[0.25em] text-slate-500">
+            Developer Reports
+          </p>
+          {developerReports.length === 0 ? (
+            <p className="text-sm text-slate-500">No developer reports yet.</p>
+          ) : (
+            developerReports.slice(0, 8).map((report) => (
+              <div key={report.id} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm font-semibold text-slate-100">{report.title}</p>
+                  <span className="text-[10px] text-slate-500">#{report.id}</span>
+                </div>
+                <p className="mt-1 text-xs text-cyan-300">{report.report_type}</p>
+                <p className="mt-1 break-all text-xs text-slate-500">{report.artifact_path}</p>
+              </div>
+            ))
+          )}
+        </div>
+
+        <p className="text-xs leading-5 text-slate-500">
+          Safety: Developer Mode creates diagnosis and patch plans first. File edits require Command Approval.
+        </p>
+      </div>
+    </GlassPanel>
+  );
+}
 
 function WorkflowBlueprintsPanel({
   blueprints,

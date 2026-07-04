@@ -1,3 +1,26 @@
+## v3.0 — Agentic Workspace Developer Mode
+
+### Added
+
+- Developer Agent core
+- Workspace development inspection
+- Issue diagnosis reports
+- Approval-gated patch planning
+- Developer report artifacts
+- Workspace file patch approval request type
+- Workspace patch executor with backup creation
+- Developer Agent tools
+- Developer Agent API endpoints
+- Aurora OS Agentic Developer Mode panel
+
+### Safety
+
+- No silent file edits
+- Workspace patching requires manual approval
+- Patch execution is restricted to registered workspace paths
+- Existing files are backed up before patching
+- Developer Mode generates diagnosis and patch plans before modification
+
 ## v2.9 — Workflow Templates + Mission Blueprints
 
 ### Added

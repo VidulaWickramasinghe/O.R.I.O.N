@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v2.9 — Workflow Templates + Mission Blueprints**
+**v3.0 — Agentic Workspace Developer Mode**
 
 ## Core Capabilities
 
@@ -81,6 +81,11 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Reusable mission templates
 - Blueprint-to-mission generation
 - Standard release, research, bug-fix, and portfolio workflows
+- Agentic Workspace Developer Mode
+- Workspace inspection and diagnosis
+- Approval-gated patch planning
+- Developer report generation
+- Safe workspace file patching with backup
 
 
 

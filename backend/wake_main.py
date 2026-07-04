@@ -115,6 +115,14 @@ from tools.workflow_blueprint_tools import (
     create_mission_from_workflow_blueprint,
 )
 
+from tools.developer_agent_tools import (
+    inspect_workspace_for_development_tool,
+    diagnose_workspace_issue_tool,
+    create_workspace_patch_plan,
+    request_workspace_file_patch_tool,
+    list_developer_reports_tool,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -159,6 +167,11 @@ orion = Agent(
         list_workflow_blueprints,
         read_workflow_blueprint,
         create_mission_from_workflow_blueprint,
+        inspect_workspace_for_development_tool,
+        diagnose_workspace_issue_tool,
+        create_workspace_patch_plan,
+        request_workspace_file_patch_tool,
+        list_developer_reports_tool,
     ],
 )
 
