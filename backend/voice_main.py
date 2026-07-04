@@ -86,6 +86,26 @@ from tools.portfolio_demo_tools import (
     generate_portfolio_release_pack,
     set_demo_mode,
 )
+
+from tools.knowledge_tools import (
+    index_knowledge_document,
+    index_knowledge_folder_tool,
+    list_knowledge_documents_tool,
+    search_local_knowledge,
+    summarize_knowledge_document_tool,
+)
+
+from tools.vector_memory_tools import (
+    rebuild_vector_memory_index,
+    semantic_memory_search,
+    list_vector_memory_items,
+)
+
+from tools.workflow_blueprint_tools import (
+    list_workflow_blueprints,
+    read_workflow_blueprint,
+    create_mission_from_workflow_blueprint,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -114,6 +134,17 @@ orion = Agent(
         read_project_file,
         write_project_file,
         run_safe_command,
+        index_knowledge_document,
+        index_knowledge_folder_tool,
+        list_knowledge_documents_tool,
+        search_local_knowledge,
+        summarize_knowledge_document_tool,
+        rebuild_vector_memory_index,
+        semantic_memory_search,
+        list_vector_memory_items,
+        list_workflow_blueprints,
+        read_workflow_blueprint,
+        create_mission_from_workflow_blueprint,
     ],
 )
 

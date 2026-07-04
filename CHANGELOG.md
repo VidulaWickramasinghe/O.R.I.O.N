@@ -1,3 +1,65 @@
+## v2.9 — Workflow Templates + Mission Blueprints
+
+### Added
+
+- Workflow Blueprint core
+- Reusable mission templates
+- GitHub release workflow
+- Bug fix workflow
+- Research workflow
+- Portfolio project workflow
+- Assignment/report workflow
+- Workspace development workflow
+- Demo recording workflow
+- System cleanup workflow
+- Workflow Blueprint tools
+- Workflow Blueprint API endpoints
+- Aurora OS Workflow Blueprints panel
+
+### Purpose
+
+- Create structured missions faster
+- Standardize recurring workflows
+- Improve controlled automation
+- Prepare O.R.I.O.N. for developer-agent workflows
+
+## v2.8 — Vector Memory + Semantic Search
+
+### Added
+
+- SQLite vector memory database
+- OpenAI embeddings integration
+- Semantic search across persistent memory
+- Semantic search across indexed knowledge documents
+- Vector rebuild endpoint
+- Vector search endpoint
+- Aurora OS Semantic Memory panel
+- Context Engine semantic retrieval integration
+
+### Changed
+
+- Context retrieval can now include semantic results
+- O.R.I.O.N. can retrieve related information by meaning, not only exact keywords
+
+## v2.7 — Local Knowledge Base + Document Intelligence
+
+### Added
+
+- Local Knowledge Base database
+- Document indexing for markdown, text, JSON, CSV, code, CSS, and HTML files
+- Knowledge chunk storage
+- Local knowledge search
+- Knowledge document summaries
+- Knowledge API endpoints
+- Aurora OS Knowledge Base panel
+- Context Engine integration with local knowledge
+
+### Safety
+
+- Indexes local readable files only
+- Skips common heavy folders like `.git`, `node_modules`, `.next`, `.venv`, and `__pycache__`
+- Limits large file reads
+
 ## v2.6.3-D — Adaptive Aurora Layout + Dashboard Customization
 
 ### Added
