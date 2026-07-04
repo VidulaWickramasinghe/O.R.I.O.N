@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v2.6.3-C — TanStack Query API Layer**
+**v2.7 — Local Knowledge Base + Document Intelligence**
 
 ## Core Capabilities
 
@@ -69,6 +69,10 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Shared Aurora API client
 - Query-based automatic data refresh
 - Cleaner frontend module architecture
+- Local Knowledge Base
+- Document indexing and search
+- Knowledge-aware context retrieval
+- Aurora OS Knowledge Base panel
 
 
 
