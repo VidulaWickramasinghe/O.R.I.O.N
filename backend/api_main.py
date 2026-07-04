@@ -126,6 +126,13 @@ from core.vector_memory import (
     list_vector_items,
 )
 
+from core.workflow_blueprints import (
+    list_blueprints,
+    get_blueprint,
+    render_blueprint,
+    create_mission_from_blueprint,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -191,11 +198,17 @@ from tools.vector_memory_tools import (
     list_vector_memory_items,
 )
 
+from tools.workflow_blueprint_tools import (
+    list_workflow_blueprints,
+    read_workflow_blueprint,
+    create_mission_from_workflow_blueprint,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="2.8.0",
+    version="2.9.0",
 )
 
 app.add_middleware(
@@ -254,10 +267,13 @@ orion = Agent(
         rebuild_vector_memory_index,
         semantic_memory_search,
         list_vector_memory_items,
+        list_workflow_blueprints,
+        read_workflow_blueprint,
+        create_mission_from_workflow_blueprint,
     ],
 )
 
-session = SQLiteSession("orion_core_v28_vector_memory")
+session = SQLiteSession("orion_core_v29_workflow_blueprints")
 
 
 class ChatRequest(BaseModel):
@@ -637,6 +653,44 @@ class SemanticSearchResponse(BaseModel):
     results: List[SemanticSearchItem]
 
 
+class WorkflowBlueprintItem(BaseModel):
+    key: str
+    name: str
+    description: str
+    priority: int
+    step_count: int
+
+
+class WorkflowBlueprintsResponse(BaseModel):
+    blueprints: List[WorkflowBlueprintItem]
+
+
+class WorkflowBlueprintDetailResponse(BaseModel):
+    key: str
+    name: str
+    description: str
+    priority: int
+    steps: List[str]
+    rendered: str
+
+
+class CreateMissionFromBlueprintRequest(BaseModel):
+    mission_title: str = ""
+    custom_goal: str = ""
+    workspace_id: Optional[int] = None
+
+
+class CreateMissionFromBlueprintResponse(BaseModel):
+    status: str
+    mission_id: Optional[int] = None
+    blueprint_key: str
+    title: str = ""
+    goal: str = ""
+    step_count: int = 0
+    created_at: str = ""
+    message: str = ""
+
+
 @app.on_event("startup")
 def startup_event():
     init_memory_db()
@@ -649,7 +703,7 @@ def startup_event():
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v2.8.0 started with Vector Memory + Semantic Search enabled.",
+        "O.R.I.O.N. API v2.9.0 started with Workflow Templates + Mission Blueprints enabled.",
         "API",
     )
 
@@ -658,7 +712,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "2.8.0",
+        "version": "2.9.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -719,7 +773,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="2.8",
+        version="2.9",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -750,6 +804,7 @@ def status():
             "Portfolio Release + Demo Mode",
             "Local Knowledge Base + Document Intelligence",
             "Vector Memory + Semantic Search",
+            "Workflow Templates + Mission Blueprints",
         ],
     )
 
@@ -759,7 +814,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "2.8.0",
+        "version": "2.9.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -771,7 +826,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v2.8 Vector Memory + Semantic Search",
+        "release": "v2.9 Workflow Templates + Mission Blueprints",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -807,6 +862,10 @@ def mission():
             "Semantic search",
             "Embedding-based context retrieval",
             "Meaning-aware memory and knowledge search",
+            "Workflow Blueprints",
+            "Reusable mission templates",
+            "Blueprint-to-mission generation",
+            "Standard release, research, bug-fix, and portfolio workflows",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -1879,6 +1938,92 @@ def vector_search(request: SemanticSearchRequest):
             "O.R.I.O.N.",
         )
         return SemanticSearchResponse(results=[])
+
+
+@app.get("/api/workflows/blueprints", response_model=WorkflowBlueprintsResponse)
+def workflow_blueprints():
+    log_activity(
+        "WORKFLOW_BLUEPRINTS_VIEW",
+        "Aurora OS requested workflow blueprints.",
+        "Aurora OS",
+    )
+
+    return WorkflowBlueprintsResponse(blueprints=list_blueprints())
+
+
+@app.get(
+    "/api/workflows/blueprints/{blueprint_key}",
+    response_model=WorkflowBlueprintDetailResponse,
+)
+def workflow_blueprint_detail(blueprint_key: str):
+    blueprint = get_blueprint(blueprint_key)
+
+    if not blueprint:
+        return WorkflowBlueprintDetailResponse(
+            key=blueprint_key,
+            name="Blueprint not found",
+            description="No workflow blueprint found with this key.",
+            priority=0,
+            steps=[],
+            rendered="Workflow blueprint not found.",
+        )
+
+    log_activity(
+        "WORKFLOW_BLUEPRINT_OPEN",
+        f"Workflow blueprint opened: {blueprint_key}",
+        "Aurora OS",
+    )
+
+    return WorkflowBlueprintDetailResponse(
+        key=blueprint["key"],
+        name=blueprint["name"],
+        description=blueprint["description"],
+        priority=blueprint["priority"],
+        steps=blueprint["steps"],
+        rendered=render_blueprint(blueprint_key),
+    )
+
+
+@app.post(
+    "/api/workflows/blueprints/{blueprint_key}/create-mission",
+    response_model=CreateMissionFromBlueprintResponse,
+)
+def workflow_create_mission(
+    blueprint_key: str,
+    request: CreateMissionFromBlueprintRequest,
+):
+    try:
+        result = create_mission_from_blueprint(
+            blueprint_key=blueprint_key,
+            mission_title=request.mission_title,
+            custom_goal=request.custom_goal,
+            workspace_id=request.workspace_id,
+        )
+
+        log_activity(
+            "WORKFLOW_MISSION_CREATED",
+            f"Mission {result['mission_id']} created from blueprint {blueprint_key}.",
+            "O.R.I.O.N.",
+        )
+
+        return CreateMissionFromBlueprintResponse(
+            status="created",
+            mission_id=result["mission_id"],
+            blueprint_key=result["blueprint_key"],
+            title=result["title"],
+            goal=result["goal"],
+            step_count=result["step_count"],
+            created_at=result["created_at"],
+            message="Mission created from workflow blueprint.",
+        )
+
+    except Exception as error:
+        return CreateMissionFromBlueprintResponse(
+            status="failed",
+            mission_id=None,
+            blueprint_key=blueprint_key,
+            message=str(error),
+        )
 
 
 @app.post("/api/chat", response_model=ChatResponse)

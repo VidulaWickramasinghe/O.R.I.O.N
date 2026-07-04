@@ -53,6 +53,23 @@ type SemanticSearchItem = {
   updated_at: string;
 };
 
+type WorkflowBlueprintItem = {
+  key: string;
+  name: string;
+  description: string;
+  priority: number;
+  step_count: number;
+};
+
+type WorkflowBlueprintDetail = {
+  key: string;
+  name: string;
+  description: string;
+  priority: number;
+  steps: string[];
+  rendered: string;
+};
+
 export function DashboardWorkspace() {
   const [widgets, setWidgets] = useState([
     "Hero",
@@ -62,6 +79,7 @@ export function DashboardWorkspace() {
     "Timeline",
     "Knowledge Base",
     "Semantic Memory",
+    "Workflow Blueprints",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -74,6 +92,12 @@ export function DashboardWorkspace() {
   const [semanticResults, setSemanticResults] = useState<SemanticSearchItem[]>([]);
   const [vectorLoading, setVectorLoading] = useState(false);
   const [vectorMessage, setVectorMessage] = useState("");
+  const [workflowBlueprints, setWorkflowBlueprints] = useState<WorkflowBlueprintItem[]>([]);
+  const [selectedWorkflowBlueprint, setSelectedWorkflowBlueprint] =
+    useState<WorkflowBlueprintDetail | null>(null);
+  const [workflowLoadingKey, setWorkflowLoadingKey] = useState<string | null>(null);
+  const [workflowMessage, setWorkflowMessage] = useState("");
+  const [workflowWorkspaceId, setWorkflowWorkspaceId] = useState("1");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -208,12 +232,81 @@ export function DashboardWorkspace() {
     }
   }
 
+  async function loadWorkflowBlueprints() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/workflows/blueprints");
+      const data = await response.json();
+      setWorkflowBlueprints(data.blueprints || []);
+    } catch {
+      setWorkflowBlueprints([]);
+    }
+  }
+
+  async function openWorkflowBlueprint(blueprintKey: string) {
+    setWorkflowLoadingKey(blueprintKey);
+    setWorkflowMessage("");
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/workflows/blueprints/${blueprintKey}`
+      );
+      const data = await response.json();
+      setSelectedWorkflowBlueprint(data);
+    } catch {
+      setSelectedWorkflowBlueprint(null);
+      setWorkflowMessage("Workflow blueprint failed to load. Confirm backend is running.");
+    } finally {
+      setWorkflowLoadingKey(null);
+    }
+  }
+
+  async function createMissionFromBlueprintUI(blueprintKey: string) {
+    setWorkflowLoadingKey(blueprintKey);
+    setWorkflowMessage("");
+
+    try {
+      const parsedWorkspaceId = Number.parseInt(workflowWorkspaceId, 10);
+      const workspaceId = Number.isFinite(parsedWorkspaceId) && parsedWorkspaceId > 0
+        ? parsedWorkspaceId
+        : null;
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/workflows/blueprints/${blueprintKey}/create-mission`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            mission_title: "",
+            custom_goal: "",
+            workspace_id: workspaceId,
+          }),
+        }
+      );
+      const data = await response.json();
+
+      if (data.status === "created") {
+        setWorkflowMessage(
+          `Workflow mission created: Mission ${data.mission_id} · ${data.title} · ${data.step_count} steps`
+        );
+      } else {
+        setWorkflowMessage(`Workflow mission creation failed: ${data.message}`);
+      }
+    } catch {
+      setWorkflowMessage("Workflow mission creation failed. Confirm backend is running.");
+    } finally {
+      setWorkflowLoadingKey(null);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
+    void loadWorkflowBlueprints();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
+      void loadWorkflowBlueprints();
     }, 3000);
 
     return () => window.clearInterval(timer);
@@ -228,13 +321,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v2.8
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v2.9
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -251,11 +344,12 @@ export function DashboardWorkspace() {
       </GlassPanel>
 
       {widgets.includes("Metrics") && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
           <Metric label="Models Online" value="4" />
           <Metric label="Memory" value="87%" />
           <Metric label="Knowledge Docs" value={String(knowledgeDocuments.length)} />
           <Metric label="Vectors" value={String(vectorItems.length)} />
+          <Metric label="Blueprints" value={String(workflowBlueprints.length)} />
           <Metric label="Active Projects" value={String(projects.length)} />
           <Metric label="Running Agents" value={String(agents.filter((agent) => agent.status === "Running").length)} />
         </div>
@@ -346,6 +440,19 @@ export function DashboardWorkspace() {
             />
           )}
 
+          {widgets.includes("Workflow Blueprints") && (
+            <WorkflowBlueprintsPanel
+              blueprints={workflowBlueprints}
+              selectedBlueprint={selectedWorkflowBlueprint}
+              loadingKey={workflowLoadingKey}
+              message={workflowMessage}
+              workspaceId={workflowWorkspaceId}
+              setWorkspaceId={setWorkflowWorkspaceId}
+              inspectBlueprint={openWorkflowBlueprint}
+              createMission={createMissionFromBlueprintUI}
+            />
+          )}
+
           {widgets.includes("Timeline") && (
             <GlassPanel className="p-5">
               <h2 className="font-black text-white">Aurora Timeline</h2>
@@ -367,6 +474,114 @@ export function DashboardWorkspace() {
   );
 }
 
+
+
+function WorkflowBlueprintsPanel({
+  blueprints,
+  selectedBlueprint,
+  loadingKey,
+  message,
+  workspaceId,
+  setWorkspaceId,
+  inspectBlueprint,
+  createMission,
+}: {
+  blueprints: WorkflowBlueprintItem[];
+  selectedBlueprint: WorkflowBlueprintDetail | null;
+  loadingKey: string | null;
+  message: string;
+  workspaceId: string;
+  setWorkspaceId: (value: string) => void;
+  inspectBlueprint: (blueprintKey: string) => void;
+  createMission: (blueprintKey: string) => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Workflow Blueprints</h2>
+          <p className="text-sm text-slate-400">
+            Reusable mission templates for releases, bugs, research, and demos
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
+          {blueprints.length} blueprints
+        </span>
+      </div>
+
+      <div className="space-y-3 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <label className="block">
+          <span className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Workspace ID
+          </span>
+          <input
+            value={workspaceId}
+            onChange={(event) => setWorkspaceId(event.target.value)}
+            placeholder="1"
+            className="mt-2 w-full rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2"
+          />
+        </label>
+
+        {message && (
+          <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+            {message}
+          </p>
+        )}
+
+        {blueprints.length === 0 ? (
+          <p className="text-sm text-slate-500">No workflow blueprints loaded yet.</p>
+        ) : (
+          blueprints.map((blueprint) => (
+            <div key={blueprint.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <h3 className="text-sm font-semibold text-slate-100">{blueprint.name}</h3>
+                <span className="text-[10px] text-slate-500">{blueprint.step_count} steps</span>
+              </div>
+
+              <p className="text-xs text-cyan-300">
+                {blueprint.key} | Priority {blueprint.priority}
+              </p>
+
+              <p className="mt-2 text-sm leading-5 text-slate-400">{blueprint.description}</p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={() => inspectBlueprint(blueprint.key)}
+                  disabled={loadingKey === blueprint.key}
+                  className="rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-bold text-cyan-200 transition hover:bg-cyan-500/10 disabled:opacity-60"
+                >
+                  Inspect
+                </button>
+
+                <button
+                  onClick={() => createMission(blueprint.key)}
+                  disabled={loadingKey === blueprint.key}
+                  className="rounded-xl bg-cyan-300 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+                >
+                  Create Mission
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+
+        {selectedBlueprint && (
+          <div className="max-h-80 overflow-y-auto rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3">
+            <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">
+              Selected Blueprint
+            </p>
+            <h3 className="mt-2 text-sm font-semibold text-slate-100">
+              {selectedBlueprint.name}
+            </h3>
+            <pre className="mt-3 whitespace-pre-wrap text-xs leading-5 text-slate-300">
+              {selectedBlueprint.rendered}
+            </pre>
+          </div>
+        )}
+      </div>
+    </GlassPanel>
+  );
+}
 
 function SemanticMemoryPanel({
   vectorItems,

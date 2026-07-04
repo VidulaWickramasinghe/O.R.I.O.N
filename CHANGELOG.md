@@ -1,3 +1,28 @@
+## v2.9 — Workflow Templates + Mission Blueprints
+
+### Added
+
+- Workflow Blueprint core
+- Reusable mission templates
+- GitHub release workflow
+- Bug fix workflow
+- Research workflow
+- Portfolio project workflow
+- Assignment/report workflow
+- Workspace development workflow
+- Demo recording workflow
+- System cleanup workflow
+- Workflow Blueprint tools
+- Workflow Blueprint API endpoints
+- Aurora OS Workflow Blueprints panel
+
+### Purpose
+
+- Create structured missions faster
+- Standardize recurring workflows
+- Improve controlled automation
+- Prepare O.R.I.O.N. for developer-agent workflows
+
 ## v2.8 — Vector Memory + Semantic Search
 
 ### Added

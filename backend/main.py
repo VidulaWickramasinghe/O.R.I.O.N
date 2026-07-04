@@ -99,6 +99,12 @@ from tools.vector_memory_tools import (
     list_vector_memory_items,
 )
 
+from tools.workflow_blueprint_tools import (
+    list_workflow_blueprints,
+    read_workflow_blueprint,
+    create_mission_from_workflow_blueprint,
+)
+
 
 load_dotenv(dotenv_path="backend/.env")
 
@@ -135,6 +141,9 @@ orion = Agent(
         rebuild_vector_memory_index,
         semantic_memory_search,
         list_vector_memory_items,
+        list_workflow_blueprints,
+        read_workflow_blueprint,
+        create_mission_from_workflow_blueprint,
     ],
 )
 
