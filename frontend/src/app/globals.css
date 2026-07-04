@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -63,4 +63,27 @@ body {
 
 .react-flow__attribution {
   display: none;
+}
+
+.mission-flow-graph .react-flow__pane,
+.mission-flow-graph .react-flow__renderer,
+.mission-flow-graph .react-flow__viewport {
+  background: transparent !important;
+}
+
+.mission-flow-graph .react-flow__edge-path,
+.mission-flow-graph .react-flow__connection-path {
+  stroke: rgba(34, 211, 238, 0.58) !important;
+  stroke-width: 2 !important;
+}
+
+.mission-flow-graph .react-flow__controls-button {
+  background: rgba(2, 6, 23, 0.88) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(226, 232, 240, 0.9) !important;
+  fill: rgba(226, 232, 240, 0.9) !important;
+}
+
+.mission-flow-graph .react-flow__controls-button:hover {
+  background: rgba(8, 145, 178, 0.28) !important;
 }
