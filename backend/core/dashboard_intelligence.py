@@ -6,6 +6,7 @@ from core.developer_agent import list_developer_reports
 from core.knowledge_base import list_knowledge_documents
 from core.mission_planner import list_mission_records
 from core.mission_run_history import list_mission_runs
+from core.notification_engine import list_reminders, refresh_due_reminders
 from core.persistent_memory import list_recent_memory
 from core.vector_memory import list_vector_items
 from core.workspace_manager import detect_workspace_stack, list_workspace_records
@@ -224,6 +225,10 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
     risk_metrics = calculate_risk_metrics()
     activity_metrics = calculate_activity_metrics()
     developer_metrics = calculate_developer_metrics()
+    refresh_due_reminders()
+    reminders = list_reminders(limit=100)
+    due_reminders = [item for item in reminders if item.get("status") == "due"]
+    pending_reminders = [item for item in reminders if item.get("status") == "pending"]
     intelligence_score = calculate_system_intelligence_score(
         mission_metrics=mission_metrics,
         workspace_metrics=workspace_metrics,
@@ -269,6 +274,11 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
         "risk_metrics": risk_metrics,
         "activity_metrics": activity_metrics,
         "developer_metrics": developer_metrics,
+        "notification_metrics": {
+            "total_reminders": len(reminders),
+            "due_reminders": len(due_reminders),
+            "pending_reminders": len(pending_reminders),
+        },
         "recommendations": recommendations,
     }
 
@@ -317,6 +327,12 @@ def render_dashboard_intelligence_report() -> str:
 ## Developer Mode
 
 - Developer Reports: {data['developer_metrics']['developer_reports']}
+
+## Notifications
+
+- Total Reminders: {data['notification_metrics']['total_reminders']}
+- Due Reminders: {data['notification_metrics']['due_reminders']}
+- Pending Reminders: {data['notification_metrics']['pending_reminders']}
 
 ## Recommendations
 

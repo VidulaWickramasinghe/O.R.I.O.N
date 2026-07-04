@@ -148,6 +148,17 @@ from core.dashboard_intelligence import (
     render_dashboard_intelligence_report,
 )
 
+from core.notification_engine import (
+    init_notification_db,
+    create_reminder_record,
+    get_reminder,
+    list_reminders,
+    update_reminder_status,
+    refresh_due_reminders,
+    list_notification_events,
+    generate_startup_briefing,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -231,11 +242,19 @@ from tools.dashboard_intelligence_tools import (
     get_dashboard_intelligence_report,
 )
 
+from tools.notification_tools import (
+    create_local_reminder,
+    list_local_reminders,
+    complete_local_reminder,
+    refresh_due_reminders_tool,
+    generate_startup_briefing_tool,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="3.1.0",
+    version="3.2.0",
 )
 
 app.add_middleware(
@@ -303,10 +322,15 @@ orion = Agent(
         request_workspace_file_patch_tool,
         list_developer_reports_tool,
         get_dashboard_intelligence_report,
+        create_local_reminder,
+        list_local_reminders,
+        complete_local_reminder,
+        refresh_due_reminders_tool,
+        generate_startup_briefing_tool,
     ],
 )
 
-session = SQLiteSession("orion_core_v31_dashboard_intelligence")
+session = SQLiteSession("orion_core_v32_notifications")
 
 
 class ChatRequest(BaseModel):
@@ -761,6 +785,51 @@ class DeveloperReportsResponse(BaseModel):
     reports: List[DeveloperReportItem]
 
 
+class ReminderCreateRequest(BaseModel):
+    title: str
+    description: str = ""
+    due_at: str
+    priority: str = "medium"
+
+
+class ReminderStatusRequest(BaseModel):
+    status: str
+
+
+class ReminderItem(BaseModel):
+    id: int
+    title: str
+    description: str
+    due_at: str
+    status: str
+    priority: str
+    source: str
+    created_at: str
+    updated_at: str
+
+
+class RemindersResponse(BaseModel):
+    reminders: List[ReminderItem]
+
+
+class NotificationEventItem(BaseModel):
+    id: int
+    event_type: str
+    title: str
+    message: str
+    source: str
+    created_at: str
+
+
+class NotificationEventsResponse(BaseModel):
+    events: List[NotificationEventItem]
+
+
+class StartupBriefingResponse(BaseModel):
+    status: str
+    briefing: str
+
+
 class DashboardIntelligenceResponse(BaseModel):
     intelligence_score: int
     readiness_label: str
@@ -770,6 +839,7 @@ class DashboardIntelligenceResponse(BaseModel):
     risk_metrics: Dict[str, Any]
     activity_metrics: Dict[str, Any]
     developer_metrics: Dict[str, Any]
+    notification_metrics: Dict[str, Any]
     recommendations: List[str]
     report: str
 
@@ -784,10 +854,11 @@ def startup_event():
     init_knowledge_db()
     init_vector_db()
     init_developer_agent_db()
+    init_notification_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v3.1.0 started with Visual Dashboard Intelligence enabled.",
+        "O.R.I.O.N. API v3.2.0 started with Notification + Reminder Engine enabled.",
         "API",
     )
 
@@ -796,7 +867,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "3.1.0",
+        "version": "3.2.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -857,7 +928,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="3.1",
+        version="3.2",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -891,6 +962,7 @@ def status():
             "Workflow Templates + Mission Blueprints",
             "Agentic Workspace Developer Mode",
             "Visual Dashboard Intelligence",
+            "Notification + Reminder Engine",
         ],
     )
 
@@ -900,7 +972,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "3.1.0",
+        "version": "3.2.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -912,7 +984,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v3.1 Visual Dashboard Intelligence",
+        "release": "v3.2 Notification + Reminder Engine",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -962,6 +1034,11 @@ def mission():
             "Mission and workspace analytics",
             "Memory, knowledge, vector, approval, and activity metrics",
             "Readiness recommendations",
+            "Notification + Reminder Engine",
+            "Local reminders",
+            "Startup briefing",
+            "Due task tracking",
+            "Notification event log",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -974,6 +1051,7 @@ def mission():
             "Desktop control actions must pass through the Command Approval System",
             "Portfolio demo mode uses generated release artifacts and readiness reporting",
             "Local knowledge indexing reads supported local files only and skips heavy folders",
+            "Local reminders stay inside Aurora OS without external calendar, email, SMS, or push integrations",
         ],
     }
 
@@ -2237,6 +2315,89 @@ def developer_request_patch(workspace_id: int, request: DeveloperPatchRequest):
         )
 
 
+@app.get("/api/notifications/reminders", response_model=RemindersResponse)
+def notification_reminders():
+    refresh_due_reminders()
+
+    log_activity(
+        "REMINDERS_VIEW",
+        "Aurora OS requested local reminders.",
+        "Aurora OS",
+    )
+
+    return RemindersResponse(reminders=list_reminders(limit=100))
+
+
+@app.post("/api/notifications/reminders", response_model=ReminderItem)
+def notification_create_reminder(request: ReminderCreateRequest):
+    reminder = create_reminder_record(
+        title=request.title,
+        description=request.description,
+        due_at=request.due_at,
+        priority=request.priority,
+        source="Aurora OS",
+    )
+
+    log_activity(
+        "REMINDER_CREATED",
+        f"Reminder created: {reminder['title']}",
+        "Aurora OS",
+    )
+
+    return ReminderItem(**reminder)
+
+
+@app.post("/api/notifications/reminders/{reminder_id}/status", response_model=ReminderItem)
+def notification_update_reminder_status(
+    reminder_id: int,
+    request: ReminderStatusRequest,
+):
+    updated = update_reminder_status(
+        reminder_id=reminder_id,
+        status=request.status,
+    )
+    reminder = get_reminder(reminder_id)
+
+    if not updated or not reminder:
+        return ReminderItem(
+            id=reminder_id,
+            title="Reminder not found",
+            description="",
+            due_at="",
+            status="missing",
+            priority="medium",
+            source="O.R.I.O.N.",
+            created_at="",
+            updated_at="",
+        )
+
+    log_activity(
+        "REMINDER_STATUS_UPDATED",
+        f"Reminder {reminder_id} marked {request.status}.",
+        "Aurora OS",
+    )
+
+    return ReminderItem(**reminder)
+
+
+@app.get("/api/notifications/events", response_model=NotificationEventsResponse)
+def notification_events():
+    return NotificationEventsResponse(events=list_notification_events(limit=100))
+
+
+@app.get("/api/notifications/startup-briefing", response_model=StartupBriefingResponse)
+def notification_startup_briefing():
+    briefing = generate_startup_briefing()
+
+    log_activity(
+        "STARTUP_BRIEFING",
+        "Startup briefing generated.",
+        "O.R.I.O.N.",
+    )
+
+    return StartupBriefingResponse(status="generated", briefing=briefing)
+
+
 @app.get("/api/dashboard/intelligence", response_model=DashboardIntelligenceResponse)
 def dashboard_intelligence():
     data = generate_dashboard_intelligence()
@@ -2257,6 +2418,7 @@ def dashboard_intelligence():
         risk_metrics=data["risk_metrics"],
         activity_metrics=data["activity_metrics"],
         developer_metrics=data["developer_metrics"],
+        notification_metrics=data["notification_metrics"],
         recommendations=data["recommendations"],
         report=report,
     )

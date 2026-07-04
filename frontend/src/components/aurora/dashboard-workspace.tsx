@@ -96,6 +96,32 @@ type DeveloperInspectResult = {
   content: string;
 };
 
+type ReminderItem = {
+  id: number;
+  title: string;
+  description: string;
+  due_at: string;
+  status: string;
+  priority: string;
+  source: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type NotificationEventItem = {
+  id: number;
+  event_type: string;
+  title: string;
+  message: string;
+  source: string;
+  created_at: string;
+};
+
+type StartupBriefing = {
+  status: string;
+  briefing: string;
+};
+
 type DashboardIntelligence = {
   intelligence_score: number;
   readiness_label: string;
@@ -105,6 +131,7 @@ type DashboardIntelligence = {
   risk_metrics: Record<string, unknown>;
   activity_metrics: Record<string, unknown>;
   developer_metrics: Record<string, unknown>;
+  notification_metrics: Record<string, unknown>;
   recommendations: string[];
   report: string;
 };
@@ -121,6 +148,7 @@ export function DashboardWorkspace() {
     "Workflow Blueprints",
     "Developer Mode",
     "Dashboard Intelligence",
+    "Notification Engine",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -149,6 +177,13 @@ export function DashboardWorkspace() {
     useState<DashboardIntelligence | null>(null);
   const [dashboardIntelligenceLoading, setDashboardIntelligenceLoading] = useState(false);
   const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
+  const [reminders, setReminders] = useState<ReminderItem[]>([]);
+  const [notificationEvents, setNotificationEvents] = useState<NotificationEventItem[]>([]);
+  const [startupBriefing, setStartupBriefing] = useState<StartupBriefing | null>(null);
+  const [reminderTitle, setReminderTitle] = useState("");
+  const [reminderDueAt, setReminderDueAt] = useState("tomorrow");
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -483,6 +518,91 @@ export function DashboardWorkspace() {
     }
   }
 
+
+  async function loadReminders() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/notifications/reminders");
+      const data = await response.json();
+      setReminders(data.reminders || []);
+    } catch {
+      setReminders([]);
+    }
+  }
+
+  async function loadNotificationEvents() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/notifications/events");
+      const data = await response.json();
+      setNotificationEvents(data.events || []);
+    } catch {
+      setNotificationEvents([]);
+    }
+  }
+
+  async function loadStartupBriefing(showMessage = false) {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/notifications/startup-briefing");
+      const data = await response.json();
+      setStartupBriefing(data);
+      if (showMessage) {
+        setNotificationMessage("Startup briefing generated.");
+      }
+    } catch {
+      if (showMessage) {
+        setNotificationMessage("Startup briefing failed. Confirm backend is running.");
+      }
+    }
+  }
+
+  async function createReminderFromUI() {
+    const cleanTitle = reminderTitle.trim();
+    if (!cleanTitle || reminderLoading) return;
+
+    setReminderLoading(true);
+    setNotificationMessage("");
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/notifications/reminders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: cleanTitle,
+          description: "Created from Aurora OS Notification Engine.",
+          due_at: reminderDueAt,
+          priority: "medium",
+        }),
+      });
+      const data = await response.json();
+      setNotificationMessage(`Reminder created: ${data.title} · Due ${data.due_at}`);
+      setReminderTitle("");
+      await loadReminders();
+      await loadNotificationEvents();
+    } catch {
+      setNotificationMessage("Reminder creation failed. Confirm backend is running.");
+    } finally {
+      setReminderLoading(false);
+    }
+  }
+
+  async function updateReminderStatusFromUI(reminderId: number, status: string) {
+    try {
+      await fetch(`http://127.0.0.1:8000/api/notifications/reminders/${reminderId}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status }),
+      });
+      setNotificationMessage(`Reminder ${reminderId} marked ${status}.`);
+      await loadReminders();
+      await loadNotificationEvents();
+    } catch {
+      setNotificationMessage(`Could not update reminder ${reminderId}.`);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
@@ -490,6 +610,9 @@ export function DashboardWorkspace() {
     void loadWorkspaces();
     void loadDeveloperReports();
     void loadDashboardIntelligence();
+    void loadReminders();
+    void loadNotificationEvents();
+    void loadStartupBriefing();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
@@ -497,6 +620,8 @@ export function DashboardWorkspace() {
       void loadWorkspaces();
       void loadDeveloperReports();
       void loadDashboardIntelligence();
+      void loadReminders();
+      void loadNotificationEvents();
     }, 5000);
 
     return () => window.clearInterval(timer);
@@ -528,13 +653,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.1
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.2
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -551,7 +676,7 @@ export function DashboardWorkspace() {
       </GlassPanel>
 
       {widgets.includes("Metrics") && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-9">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-10">
           <Metric label="Models Online" value="4" />
           <Metric label="Memory" value="87%" />
           <Metric label="Knowledge Docs" value={String(knowledgeDocuments.length)} />
@@ -559,6 +684,7 @@ export function DashboardWorkspace() {
           <Metric label="Blueprints" value={String(workflowBlueprints.length)} />
           <Metric label="Dev Reports" value={String(developerReports.length)} />
           <Metric label="Intel Score" value={dashboardIntelligence ? `${dashboardIntelligence.intelligence_score}` : "—"} />
+          <Metric label="Reminders" value={String(reminders.length)} />
           <Metric label="Active Projects" value={String(projects.length)} />
           <Metric label="Running Agents" value={String(agents.filter((agent) => agent.status === "Running").length)} />
         </div>
@@ -629,6 +755,23 @@ export function DashboardWorkspace() {
               metricValue={metricValue}
               scoreTone={scoreTone}
               refreshIntelligence={() => loadDashboardIntelligence(true)}
+            />
+          )}
+
+          {widgets.includes("Notification Engine") && (
+            <NotificationEnginePanel
+              reminders={reminders}
+              events={notificationEvents}
+              startupBriefing={startupBriefing}
+              reminderTitle={reminderTitle}
+              reminderDueAt={reminderDueAt}
+              loading={reminderLoading}
+              message={notificationMessage}
+              setReminderTitle={setReminderTitle}
+              setReminderDueAt={setReminderDueAt}
+              createReminder={createReminderFromUI}
+              updateReminderStatus={updateReminderStatusFromUI}
+              generateStartupBriefing={() => loadStartupBriefing(true)}
             />
           )}
 
@@ -713,6 +856,170 @@ export function DashboardWorkspace() {
 
 
 
+
+function NotificationEnginePanel({
+  reminders,
+  events,
+  startupBriefing,
+  reminderTitle,
+  reminderDueAt,
+  loading,
+  message,
+  setReminderTitle,
+  setReminderDueAt,
+  createReminder,
+  updateReminderStatus,
+  generateStartupBriefing,
+}: {
+  reminders: ReminderItem[];
+  events: NotificationEventItem[];
+  startupBriefing: StartupBriefing | null;
+  reminderTitle: string;
+  reminderDueAt: string;
+  loading: boolean;
+  message: string;
+  setReminderTitle: (value: string) => void;
+  setReminderDueAt: (value: string) => void;
+  createReminder: () => void;
+  updateReminderStatus: (reminderId: number, status: string) => void;
+  generateStartupBriefing: () => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Notification Engine</h2>
+          <p className="text-sm text-slate-400">
+            Local reminders, due tasks, notification events, and startup briefing
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
+          v3.2
+        </span>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <div className="grid gap-2">
+          <input
+            value={reminderTitle}
+            onChange={(event) => setReminderTitle(event.target.value)}
+            placeholder="Reminder title..."
+            className="w-full rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2"
+          />
+          <input
+            value={reminderDueAt}
+            onChange={(event) => setReminderDueAt(event.target.value)}
+            placeholder="tomorrow, 30 minutes, 2 hours, or ISO date..."
+            className="w-full rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm text-slate-100 outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2"
+          />
+          <button
+            onClick={createReminder}
+            disabled={loading}
+            className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+          >
+            {loading ? "Creating..." : "Create Reminder"}
+          </button>
+        </div>
+
+        <button
+          onClick={generateStartupBriefing}
+          className="w-full rounded-2xl border border-violet-400/30 px-4 py-3 text-sm font-bold text-violet-200 transition hover:bg-violet-500/10"
+        >
+          Generate Startup Briefing
+        </button>
+
+        {message && (
+          <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+            {message}
+          </p>
+        )}
+
+        {startupBriefing && (
+          <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-cyan-200">
+              Startup Briefing
+            </summary>
+            <pre className="mt-3 max-h-72 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">
+              {startupBriefing.briefing}
+            </pre>
+          </details>
+        )}
+
+        <div className="max-h-80 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Reminders</p>
+            <span className="text-xs text-cyan-300">{reminders.length}</span>
+          </div>
+
+          {reminders.length === 0 ? (
+            <p className="text-sm text-slate-500">No reminders yet.</p>
+          ) : (
+            reminders.map((reminder) => (
+              <div key={reminder.id} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-slate-100">{reminder.title}</h3>
+                  <span
+                    className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${
+                      reminder.status === "due"
+                        ? "border-red-400/30 text-red-200"
+                        : reminder.status === "completed"
+                          ? "border-emerald-400/30 text-emerald-200"
+                          : "border-cyan-400/30 text-cyan-200"
+                    }`}
+                  >
+                    {reminder.status}
+                  </span>
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Due: {reminder.due_at} | Priority: {reminder.priority}
+                </p>
+                {reminder.description && (
+                  <p className="mt-2 text-xs leading-5 text-slate-400">{reminder.description}</p>
+                )}
+                {reminder.status !== "completed" && reminder.status !== "cancelled" && (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => updateReminderStatus(reminder.id, "completed")}
+                      className="rounded-xl border border-emerald-400/30 px-3 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/10"
+                    >
+                      Complete
+                    </button>
+                    <button
+                      onClick={() => updateReminderStatus(reminder.id, "cancelled")}
+                      className="rounded-xl border border-red-400/30 px-3 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/10"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+
+        <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-cyan-200">
+            Notification Events
+          </summary>
+          <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+            {events.length === 0 ? (
+              <p className="text-sm text-slate-500">No notification events yet.</p>
+            ) : (
+              events.slice(0, 12).map((event) => (
+                <div key={event.id} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">{event.event_type}</p>
+                  <p className="mt-1 text-sm font-semibold text-slate-100">{event.title}</p>
+                  <p className="mt-1 text-xs text-slate-500">{event.created_at}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </details>
+      </div>
+    </GlassPanel>
+  );
+}
+
 function DashboardIntelligencePanel({
   intelligence,
   loading,
@@ -738,7 +1045,7 @@ function DashboardIntelligencePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.1
+          v3.2
         </span>
       </div>
 
@@ -784,6 +1091,8 @@ function DashboardIntelligencePanel({
               <IntelMetric label="Knowledge Docs" value={metricValue(intelligence.memory_metrics, "knowledge_documents")} />
               <IntelMetric label="Vectors" value={metricValue(intelligence.memory_metrics, "vector_items")} />
               <IntelMetric label="Pending Approvals" value={metricValue(intelligence.risk_metrics, "pending_approvals")} />
+              <IntelMetric label="Total Reminders" value={metricValue(intelligence.notification_metrics, "total_reminders")} />
+              <IntelMetric label="Due Reminders" value={metricValue(intelligence.notification_metrics, "due_reminders")} />
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -857,7 +1166,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.1
+          v3.2
         </span>
       </div>
 

@@ -118,6 +118,14 @@ from tools.developer_agent_tools import (
 from tools.dashboard_intelligence_tools import (
     get_dashboard_intelligence_report,
 )
+
+from tools.notification_tools import (
+    create_local_reminder,
+    list_local_reminders,
+    complete_local_reminder,
+    refresh_due_reminders_tool,
+    generate_startup_briefing_tool,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -163,6 +171,11 @@ orion = Agent(
         request_workspace_file_patch_tool,
         list_developer_reports_tool,
         get_dashboard_intelligence_report,
+        create_local_reminder,
+        list_local_reminders,
+        complete_local_reminder,
+        refresh_due_reminders_tool,
+        generate_startup_briefing_tool,
     ],
 )
 

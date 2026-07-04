@@ -1,3 +1,25 @@
+## v3.2 — Notification + Reminder Engine
+
+### Added
+
+- Local Notification Engine
+- SQLite reminder database
+- Notification event log
+- Local reminder creation
+- Reminder status updates
+- Due reminder refresh system
+- Startup briefing generator
+- Notification tools
+- Notification API endpoints
+- Aurora OS Notification Engine panel
+- Dashboard Intelligence notification metrics
+
+### Safety
+
+- Local-only reminder system
+- No external calendar, email, SMS, or push notification integration yet
+- User remains in control of reminder completion and cancellation
+
 ## v3.1 — Visual Dashboard Intelligence
 
 ### Added

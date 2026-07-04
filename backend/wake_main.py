@@ -127,6 +127,14 @@ from tools.dashboard_intelligence_tools import (
     get_dashboard_intelligence_report,
 )
 
+from tools.notification_tools import (
+    create_local_reminder,
+    list_local_reminders,
+    complete_local_reminder,
+    refresh_due_reminders_tool,
+    generate_startup_briefing_tool,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -177,6 +185,11 @@ orion = Agent(
         request_workspace_file_patch_tool,
         list_developer_reports_tool,
         get_dashboard_intelligence_report,
+        create_local_reminder,
+        list_local_reminders,
+        complete_local_reminder,
+        refresh_due_reminders_tool,
+        generate_startup_briefing_tool,
     ],
 )
 

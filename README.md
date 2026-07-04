@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.1 — Visual Dashboard Intelligence**
+**v3.2 — Notification + Reminder Engine**
 
 ## Core Capabilities
 
@@ -91,6 +91,11 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Mission and workspace analytics
 - Memory, knowledge, vector, approval, and activity metrics
 - Readiness recommendations
+- Notification + Reminder Engine
+- Local reminders
+- Startup briefing
+- Due task tracking
+- Notification event log
 
 
 
