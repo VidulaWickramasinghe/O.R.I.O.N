@@ -110,6 +110,15 @@ from core.context_engine import (
     get_context_preview,
 )
 
+from core.knowledge_base import (
+    init_knowledge_db,
+    index_document,
+    index_knowledge_folder,
+    list_knowledge_documents,
+    search_knowledge,
+    summarize_knowledge_document,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -161,11 +170,19 @@ from tools.workspace_tools import (
     summarize_workspace as summarize_workspace_tool,
 )
 
+from tools.knowledge_tools import (
+    index_knowledge_document,
+    index_knowledge_folder_tool,
+    list_knowledge_documents_tool,
+    search_local_knowledge,
+    summarize_knowledge_document_tool,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="2.5.0",
+    version="2.7.0",
 )
 
 app.add_middleware(
@@ -216,10 +233,15 @@ orion = Agent(
         read_workspace_key_file,
         detect_workspace_tech_stack,
         summarize_workspace_tool,
+        index_knowledge_document,
+        index_knowledge_folder_tool,
+        list_knowledge_documents_tool,
+        search_local_knowledge,
+        summarize_knowledge_document_tool,
     ],
 )
 
-session = SQLiteSession("orion_core_v25_dashboard")
+session = SQLiteSession("orion_core_v27_knowledge")
 
 
 class ChatRequest(BaseModel):
@@ -509,6 +531,55 @@ class DemoReleasePackResponse(BaseModel):
     files: List[str]
 
 
+class KnowledgeIndexRequest(BaseModel):
+    path: str
+    summary: str = ""
+
+
+class KnowledgeFolderIndexRequest(BaseModel):
+    folder_path: str
+
+
+class KnowledgeSearchRequest(BaseModel):
+    query: str
+    limit: int = 10
+
+
+class KnowledgeDocumentItem(BaseModel):
+    id: int
+    title: str
+    source_path: str
+    extension: str
+    size_bytes: int
+    summary: str
+    indexed_at: str
+    updated_at: str
+
+
+class KnowledgeDocumentsResponse(BaseModel):
+    documents: List[KnowledgeDocumentItem]
+
+
+class KnowledgeSearchItem(BaseModel):
+    chunk_id: int
+    document_id: int
+    chunk_index: int
+    content: str
+    title: str
+    source_path: str
+    extension: str
+
+
+class KnowledgeSearchResponse(BaseModel):
+    results: List[KnowledgeSearchItem]
+
+
+class KnowledgeActionResponse(BaseModel):
+    status: str
+    message: str
+    data: Dict[str, Any] = Field(default_factory=dict)
+
+
 @app.on_event("startup")
 def startup_event():
     init_memory_db()
@@ -516,10 +587,11 @@ def startup_event():
     init_approval_db()
     init_mission_run_db()
     init_workspace_db()
+    init_knowledge_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v2.5.0 started with Portfolio Release + Demo Mode enabled.",
+        "O.R.I.O.N. API v2.7.0 started with Local Knowledge Base + Document Intelligence enabled.",
         "API",
     )
 
@@ -528,7 +600,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "2.5.0",
+        "version": "2.7.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -589,7 +661,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="2.5",
+        version="2.7",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -618,6 +690,7 @@ def status():
             "Controlled Multi-Step Mission Mode",
             "Desktop Control Layer",
             "Portfolio Release + Demo Mode",
+            "Local Knowledge Base + Document Intelligence",
         ],
     )
 
@@ -627,7 +700,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "2.5.0",
+        "version": "2.7.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -639,7 +712,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v2.5 Portfolio Release + Demo Mode",
+        "release": "v2.7 Local Knowledge Base + Document Intelligence",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -667,6 +740,10 @@ def mission():
             "Portfolio demo mode",
             "Demo readiness report",
             "Portfolio release pack generation",
+            "Local Knowledge Base",
+            "Document indexing and search",
+            "Knowledge-aware context retrieval",
+            "Aurora OS Knowledge Base panel",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -678,6 +755,7 @@ def mission():
             "Multi-step mission mode stops on approval, completion, error, or repeated step detection",
             "Desktop control actions must pass through the Command Approval System",
             "Portfolio demo mode uses generated release artifacts and readiness reporting",
+            "Local knowledge indexing reads supported local files only and skips heavy folders",
         ],
     }
 
@@ -1588,6 +1666,98 @@ def demo_release_pack():
         status=result["status"],
         generated_at=result["generated_at"],
         files=result["files"],
+    )
+
+
+@app.get("/api/knowledge/documents", response_model=KnowledgeDocumentsResponse)
+def knowledge_documents():
+    log_activity(
+        "KNOWLEDGE_DOCUMENTS_VIEW",
+        "Aurora OS requested indexed knowledge documents.",
+        "Aurora OS",
+    )
+    return KnowledgeDocumentsResponse(documents=list_knowledge_documents(limit=100))
+
+
+@app.post("/api/knowledge/index", response_model=KnowledgeActionResponse)
+def knowledge_index(request: KnowledgeIndexRequest):
+    try:
+        result = index_document(
+            path=request.path,
+            summary=request.summary,
+        )
+        log_activity(
+            "KNOWLEDGE_INDEXED",
+            f"Knowledge document indexed: {result['title']}",
+            "O.R.I.O.N.",
+        )
+        return KnowledgeActionResponse(
+            status="indexed",
+            message="Knowledge document indexed successfully.",
+            data=result,
+        )
+    except Exception as error:
+        return KnowledgeActionResponse(
+            status="failed",
+            message=str(error),
+            data={},
+        )
+
+
+@app.post("/api/knowledge/index-folder", response_model=KnowledgeActionResponse)
+def knowledge_index_folder(request: KnowledgeFolderIndexRequest):
+    try:
+        result = index_knowledge_folder(request.folder_path)
+        log_activity(
+            "KNOWLEDGE_FOLDER_INDEXED",
+            f"Knowledge folder indexed: {request.folder_path}",
+            "O.R.I.O.N.",
+        )
+        return KnowledgeActionResponse(
+            status="indexed",
+            message="Knowledge folder indexed successfully.",
+            data=result,
+        )
+    except Exception as error:
+        return KnowledgeActionResponse(
+            status="failed",
+            message=str(error),
+            data={},
+        )
+
+
+@app.post("/api/knowledge/search", response_model=KnowledgeSearchResponse)
+def knowledge_search(request: KnowledgeSearchRequest):
+    results = search_knowledge(
+        query=request.query,
+        limit=request.limit,
+    )
+    log_activity(
+        "KNOWLEDGE_SEARCH",
+        f"Knowledge search completed for query: {request.query}",
+        "O.R.I.O.N.",
+    )
+    return KnowledgeSearchResponse(results=results)
+
+
+@app.get(
+    "/api/knowledge/documents/{document_id}/summary",
+    response_model=KnowledgeActionResponse,
+)
+def knowledge_document_summary(document_id: int):
+    summary = summarize_knowledge_document(document_id)
+    log_activity(
+        "KNOWLEDGE_SUMMARY",
+        f"Knowledge document summary requested: {document_id}",
+        "O.R.I.O.N.",
+    )
+    return KnowledgeActionResponse(
+        status="generated",
+        message="Knowledge document summary generated.",
+        data={
+            "document_id": document_id,
+            "summary": summary,
+        },
     )
 
 

@@ -1,3 +1,22 @@
+## v2.7 — Local Knowledge Base + Document Intelligence
+
+### Added
+
+- Local Knowledge Base database
+- Document indexing for markdown, text, JSON, CSV, code, CSS, and HTML files
+- Knowledge chunk storage
+- Local knowledge search
+- Knowledge document summaries
+- Knowledge API endpoints
+- Aurora OS Knowledge Base panel
+- Context Engine integration with local knowledge
+
+### Safety
+
+- Indexes local readable files only
+- Skips common heavy folders like `.git`, `node_modules`, `.next`, `.venv`, and `__pycache__`
+- Limits large file reads
+
 ## v2.6.3-D — Adaptive Aurora Layout + Dashboard Customization
 
 ### Added
