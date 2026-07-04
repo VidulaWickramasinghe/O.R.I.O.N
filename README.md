@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.0 — Agentic Workspace Developer Mode**
+**v3.1 — Visual Dashboard Intelligence**
 
 ## Core Capabilities
 
@@ -86,6 +86,11 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Approval-gated patch planning
 - Developer report generation
 - Safe workspace file patching with backup
+- Dashboard Intelligence
+- System intelligence score
+- Mission and workspace analytics
+- Memory, knowledge, vector, approval, and activity metrics
+- Readiness recommendations
 
 
 

@@ -114,6 +114,10 @@ from tools.developer_agent_tools import (
     request_workspace_file_patch_tool,
     list_developer_reports_tool,
 )
+
+from tools.dashboard_intelligence_tools import (
+    get_dashboard_intelligence_report,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -158,6 +162,7 @@ orion = Agent(
         create_workspace_patch_plan,
         request_workspace_file_patch_tool,
         list_developer_reports_tool,
+        get_dashboard_intelligence_report,
     ],
 )
 

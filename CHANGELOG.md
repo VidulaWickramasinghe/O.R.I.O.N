@@ -1,3 +1,25 @@
+## v3.1 — Visual Dashboard Intelligence
+
+### Added
+
+- Dashboard Intelligence core
+- System intelligence score
+- Mission analytics
+- Workspace readiness metrics
+- Memory, knowledge, and vector counts
+- Approval/risk metrics
+- Recent activity health metrics
+- Developer report metrics
+- Dashboard Intelligence API endpoint
+- Aurora OS Dashboard Intelligence panel
+
+### Purpose
+
+- Make Aurora OS feel more like a true command center
+- Provide visual readiness signals
+- Give O.R.I.O.N. measurable system health
+- Help prioritize next actions
+
 ## v3.0 — Agentic Workspace Developer Mode
 
 ### Added

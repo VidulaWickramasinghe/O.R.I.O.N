@@ -143,6 +143,11 @@ from core.developer_agent import (
     execute_approved_workspace_patch,
 )
 
+from core.dashboard_intelligence import (
+    generate_dashboard_intelligence,
+    render_dashboard_intelligence_report,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -222,11 +227,15 @@ from tools.developer_agent_tools import (
     list_developer_reports_tool,
 )
 
+from tools.dashboard_intelligence_tools import (
+    get_dashboard_intelligence_report,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="3.0.0",
+    version="3.1.0",
 )
 
 app.add_middleware(
@@ -293,10 +302,11 @@ orion = Agent(
         create_workspace_patch_plan,
         request_workspace_file_patch_tool,
         list_developer_reports_tool,
+        get_dashboard_intelligence_report,
     ],
 )
 
-session = SQLiteSession("orion_core_v30_developer_mode")
+session = SQLiteSession("orion_core_v31_dashboard_intelligence")
 
 
 class ChatRequest(BaseModel):
@@ -751,6 +761,19 @@ class DeveloperReportsResponse(BaseModel):
     reports: List[DeveloperReportItem]
 
 
+class DashboardIntelligenceResponse(BaseModel):
+    intelligence_score: int
+    readiness_label: str
+    mission_metrics: Dict[str, Any]
+    workspace_metrics: Dict[str, Any]
+    memory_metrics: Dict[str, Any]
+    risk_metrics: Dict[str, Any]
+    activity_metrics: Dict[str, Any]
+    developer_metrics: Dict[str, Any]
+    recommendations: List[str]
+    report: str
+
+
 @app.on_event("startup")
 def startup_event():
     init_memory_db()
@@ -764,7 +787,7 @@ def startup_event():
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v3.0.0 started with Agentic Workspace Developer Mode enabled.",
+        "O.R.I.O.N. API v3.1.0 started with Visual Dashboard Intelligence enabled.",
         "API",
     )
 
@@ -773,7 +796,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "3.0.0",
+        "version": "3.1.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -834,7 +857,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="3.0",
+        version="3.1",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -867,6 +890,7 @@ def status():
             "Vector Memory + Semantic Search",
             "Workflow Templates + Mission Blueprints",
             "Agentic Workspace Developer Mode",
+            "Visual Dashboard Intelligence",
         ],
     )
 
@@ -876,7 +900,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "3.0.0",
+        "version": "3.1.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -888,7 +912,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v3.0 Agentic Workspace Developer Mode",
+        "release": "v3.1 Visual Dashboard Intelligence",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -933,6 +957,11 @@ def mission():
             "Approval-gated patch planning",
             "Developer report generation",
             "Safe workspace file patching with backup",
+            "Dashboard Intelligence",
+            "System intelligence score",
+            "Mission and workspace analytics",
+            "Memory, knowledge, vector, approval, and activity metrics",
+            "Readiness recommendations",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -2206,6 +2235,31 @@ def developer_request_patch(workspace_id: int, request: DeveloperPatchRequest):
             approval_id=None,
             message=str(error),
         )
+
+
+@app.get("/api/dashboard/intelligence", response_model=DashboardIntelligenceResponse)
+def dashboard_intelligence():
+    data = generate_dashboard_intelligence()
+    report = render_dashboard_intelligence_report()
+
+    log_activity(
+        "DASHBOARD_INTELLIGENCE",
+        f"Dashboard intelligence generated. Score: {data['intelligence_score']}.",
+        "O.R.I.O.N.",
+    )
+
+    return DashboardIntelligenceResponse(
+        intelligence_score=data["intelligence_score"],
+        readiness_label=data["readiness_label"],
+        mission_metrics=data["mission_metrics"],
+        workspace_metrics=data["workspace_metrics"],
+        memory_metrics=data["memory_metrics"],
+        risk_metrics=data["risk_metrics"],
+        activity_metrics=data["activity_metrics"],
+        developer_metrics=data["developer_metrics"],
+        recommendations=data["recommendations"],
+        report=report,
+    )
 
 
 @app.post("/api/chat", response_model=ChatResponse)

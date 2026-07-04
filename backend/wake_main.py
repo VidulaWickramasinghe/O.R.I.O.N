@@ -123,6 +123,10 @@ from tools.developer_agent_tools import (
     list_developer_reports_tool,
 )
 
+from tools.dashboard_intelligence_tools import (
+    get_dashboard_intelligence_report,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -172,6 +176,7 @@ orion = Agent(
         create_workspace_patch_plan,
         request_workspace_file_patch_tool,
         list_developer_reports_tool,
+        get_dashboard_intelligence_report,
     ],
 )
 

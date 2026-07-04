@@ -96,6 +96,19 @@ type DeveloperInspectResult = {
   content: string;
 };
 
+type DashboardIntelligence = {
+  intelligence_score: number;
+  readiness_label: string;
+  mission_metrics: Record<string, unknown>;
+  workspace_metrics: Record<string, unknown>;
+  memory_metrics: Record<string, unknown>;
+  risk_metrics: Record<string, unknown>;
+  activity_metrics: Record<string, unknown>;
+  developer_metrics: Record<string, unknown>;
+  recommendations: string[];
+  report: string;
+};
+
 export function DashboardWorkspace() {
   const [widgets, setWidgets] = useState([
     "Hero",
@@ -107,6 +120,7 @@ export function DashboardWorkspace() {
     "Semantic Memory",
     "Workflow Blueprints",
     "Developer Mode",
+    "Dashboard Intelligence",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -131,6 +145,10 @@ export function DashboardWorkspace() {
   const [developerIssue, setDeveloperIssue] = useState("");
   const [developerLoadingAction, setDeveloperLoadingAction] = useState<string | null>(null);
   const [developerMessage, setDeveloperMessage] = useState("");
+  const [dashboardIntelligence, setDashboardIntelligence] =
+    useState<DashboardIntelligence | null>(null);
+  const [dashboardIntelligenceLoading, setDashboardIntelligenceLoading] = useState(false);
+  const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -441,22 +459,65 @@ export function DashboardWorkspace() {
     }
   }
 
+  async function loadDashboardIntelligence(showMessage = false) {
+    setDashboardIntelligenceLoading(true);
+    if (showMessage) {
+      setDashboardIntelligenceMessage("");
+    }
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/dashboard/intelligence");
+      const data = await response.json();
+      setDashboardIntelligence(data);
+      if (showMessage) {
+        setDashboardIntelligenceMessage(
+          `Dashboard Intelligence generated: ${data.intelligence_score}/100 · ${data.readiness_label}`
+        );
+      }
+    } catch {
+      if (showMessage) {
+        setDashboardIntelligenceMessage("Dashboard Intelligence failed. Confirm backend is running.");
+      }
+    } finally {
+      setDashboardIntelligenceLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
     void loadWorkflowBlueprints();
     void loadWorkspaces();
     void loadDeveloperReports();
+    void loadDashboardIntelligence();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
       void loadWorkflowBlueprints();
       void loadWorkspaces();
       void loadDeveloperReports();
-    }, 3000);
+      void loadDashboardIntelligence();
+    }, 5000);
 
     return () => window.clearInterval(timer);
   }, []);
+
+  function metricValue(
+    source: Record<string, unknown> | undefined,
+    key: string,
+    fallback = "0"
+  ) {
+    const value = source?.[key];
+    if (value === undefined || value === null) return fallback;
+    return String(value);
+  }
+
+  function scoreTone(score: number) {
+    if (score >= 85) return "text-emerald-200 border-emerald-400/30 bg-emerald-500/10";
+    if (score >= 70) return "text-cyan-200 border-cyan-400/30 bg-cyan-500/10";
+    if (score >= 50) return "text-yellow-200 border-yellow-400/30 bg-yellow-500/10";
+    return "text-red-200 border-red-400/30 bg-red-500/10";
+  }
 
   return (
     <div className="space-y-4">
@@ -467,13 +528,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.0
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.1
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -490,13 +551,14 @@ export function DashboardWorkspace() {
       </GlassPanel>
 
       {widgets.includes("Metrics") && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-8">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-9">
           <Metric label="Models Online" value="4" />
           <Metric label="Memory" value="87%" />
           <Metric label="Knowledge Docs" value={String(knowledgeDocuments.length)} />
           <Metric label="Vectors" value={String(vectorItems.length)} />
           <Metric label="Blueprints" value={String(workflowBlueprints.length)} />
           <Metric label="Dev Reports" value={String(developerReports.length)} />
+          <Metric label="Intel Score" value={dashboardIntelligence ? `${dashboardIntelligence.intelligence_score}` : "—"} />
           <Metric label="Active Projects" value={String(projects.length)} />
           <Metric label="Running Agents" value={String(agents.filter((agent) => agent.status === "Running").length)} />
         </div>
@@ -559,6 +621,17 @@ export function DashboardWorkspace() {
         </div>
 
         <div className="space-y-4">
+          {widgets.includes("Dashboard Intelligence") && (
+            <DashboardIntelligencePanel
+              intelligence={dashboardIntelligence}
+              loading={dashboardIntelligenceLoading}
+              message={dashboardIntelligenceMessage}
+              metricValue={metricValue}
+              scoreTone={scoreTone}
+              refreshIntelligence={() => loadDashboardIntelligence(true)}
+            />
+          )}
+
           {widgets.includes("Knowledge Base") && (
             <KnowledgeBasePanel
               documents={knowledgeDocuments}
@@ -639,6 +712,118 @@ export function DashboardWorkspace() {
 
 
 
+
+function DashboardIntelligencePanel({
+  intelligence,
+  loading,
+  message,
+  metricValue,
+  scoreTone,
+  refreshIntelligence,
+}: {
+  intelligence: DashboardIntelligence | null;
+  loading: boolean;
+  message: string;
+  metricValue: (source: Record<string, unknown> | undefined, key: string, fallback?: string) => string;
+  scoreTone: (score: number) => string;
+  refreshIntelligence: () => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Dashboard Intelligence</h2>
+          <p className="text-sm text-slate-400">
+            System scores, mission analytics, risk state, and readiness signals
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
+          v3.1
+        </span>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <button
+          onClick={refreshIntelligence}
+          disabled={loading}
+          className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+        >
+          {loading ? "Analyzing..." : "Refresh Intelligence"}
+        </button>
+
+        {message && (
+          <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+            {message}
+          </p>
+        )}
+
+        {!intelligence ? (
+          <p className="text-sm text-slate-500">Dashboard intelligence has not loaded yet.</p>
+        ) : (
+          <>
+            <div className={`rounded-2xl border p-4 ${scoreTone(intelligence.intelligence_score)}`}>
+              <p className="text-xs uppercase tracking-[0.25em]">Intelligence Score</p>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <span className="text-5xl font-black">{intelligence.intelligence_score}</span>
+                <span className="text-sm uppercase tracking-[0.25em]">
+                  {intelligence.readiness_label}
+                </span>
+              </div>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/30">
+                <div
+                  className="h-full rounded-full bg-current"
+                  style={{ width: `${intelligence.intelligence_score}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <IntelMetric label="Missions" value={metricValue(intelligence.mission_metrics, "total_missions")} />
+              <IntelMetric label="Mission Runs" value={metricValue(intelligence.mission_metrics, "mission_runs")} />
+              <IntelMetric label="Workspaces" value={metricValue(intelligence.workspace_metrics, "total_workspaces")} />
+              <IntelMetric label="Knowledge Docs" value={metricValue(intelligence.memory_metrics, "knowledge_documents")} />
+              <IntelMetric label="Vectors" value={metricValue(intelligence.memory_metrics, "vector_items")} />
+              <IntelMetric label="Pending Approvals" value={metricValue(intelligence.risk_metrics, "pending_approvals")} />
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">Recommendations</p>
+              <div className="mt-3 space-y-2">
+                {intelligence.recommendations.map((item) => (
+                  <p
+                    key={item}
+                    className="rounded-xl border border-white/10 bg-black/30 p-2 text-xs leading-5 text-slate-300"
+                  >
+                    {item}
+                  </p>
+                ))}
+              </div>
+            </div>
+
+            <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-cyan-200">
+                Full Intelligence Report
+              </summary>
+              <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">
+                {intelligence.report}
+              </pre>
+            </details>
+          </>
+        )}
+      </div>
+    </GlassPanel>
+  );
+}
+
+function IntelMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 text-2xl font-bold text-slate-100">{value}</p>
+    </div>
+  );
+}
+
 function AgenticDeveloperModePanel({
   workspaces,
   developerIssue,
@@ -672,7 +857,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.0
+          v3.1
         </span>
       </div>
 
