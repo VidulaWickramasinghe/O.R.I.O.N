@@ -85,6 +85,20 @@ from tools.portfolio_demo_tools import (
     set_demo_mode,
 )
 
+from tools.knowledge_tools import (
+    index_knowledge_document,
+    index_knowledge_folder_tool,
+    list_knowledge_documents_tool,
+    search_local_knowledge,
+    summarize_knowledge_document_tool,
+)
+
+from tools.vector_memory_tools import (
+    rebuild_vector_memory_index,
+    semantic_memory_search,
+    list_vector_memory_items,
+)
+
 
 load_dotenv(dotenv_path="backend/.env")
 
@@ -113,6 +127,14 @@ orion = Agent(
         read_project_file,
         write_project_file,
         run_safe_command,
+        index_knowledge_document,
+        index_knowledge_folder_tool,
+        list_knowledge_documents_tool,
+        search_local_knowledge,
+        summarize_knowledge_document_tool,
+        rebuild_vector_memory_index,
+        semantic_memory_search,
+        list_vector_memory_items,
     ],
 )
 
