@@ -8,8 +8,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: Arial, Helvetica, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -63,4 +63,82 @@ body {
 
 .react-flow__attribution {
   display: none;
+}
+
+.mission-flow-graph .react-flow__pane,
+.mission-flow-graph .react-flow__renderer,
+.mission-flow-graph .react-flow__viewport {
+  background: transparent !important;
+}
+
+.mission-flow-graph .react-flow__edge-path,
+.mission-flow-graph .react-flow__connection-path {
+  stroke: rgba(34, 211, 238, 0.58) !important;
+  stroke-width: 2 !important;
+}
+
+.mission-flow-graph .react-flow__controls-button {
+  background: rgba(2, 6, 23, 0.88) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: rgba(226, 232, 240, 0.9) !important;
+  fill: rgba(226, 232, 240, 0.9) !important;
+}
+
+.mission-flow-graph .react-flow__controls-button:hover {
+  background: rgba(8, 145, 178, 0.28) !important;
+}
+
+.aurora-wave-field {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 64%, rgba(34, 211, 238, 0.35), transparent 10%),
+    radial-gradient(circle at 48% 55%, rgba(96, 165, 250, 0.28), transparent 12%),
+    radial-gradient(circle at 78% 50%, rgba(139, 92, 246, 0.24), transparent 13%),
+    linear-gradient(180deg, rgba(2, 6, 23, 0.18), rgba(2, 6, 23, 0.74));
+}
+
+.aurora-wave-field::before,
+.aurora-wave-field::after {
+  content: "";
+  position: absolute;
+  inset: 22% -8% 18%;
+  background:
+    repeating-linear-gradient(
+      170deg,
+      transparent 0 22px,
+      rgba(34, 211, 238, 0.32) 23px,
+      transparent 24px 44px
+    ),
+    radial-gradient(ellipse at center, rgba(59, 130, 246, 0.3), transparent 55%);
+  clip-path: polygon(0 63%, 9% 48%, 18% 61%, 28% 42%, 39% 58%, 52% 46%, 63% 63%, 75% 39%, 88% 55%, 100% 34%, 100% 74%, 0 78%);
+  filter: drop-shadow(0 0 14px rgba(34, 211, 238, 0.7));
+}
+
+.aurora-wave-field::after {
+  inset: 30% -5% 10%;
+  opacity: 0.75;
+  transform: scaleY(-1) translateY(-12px);
+  background:
+    repeating-linear-gradient(
+      12deg,
+      transparent 0 20px,
+      rgba(99, 102, 241, 0.28) 21px,
+      transparent 22px 40px
+    ),
+    radial-gradient(ellipse at center, rgba(34, 211, 238, 0.28), transparent 60%);
+}
+
+.aurora-mini-wave {
+  background:
+    linear-gradient(135deg, transparent 0 12%, rgba(45, 212, 191, 0.85) 13% 15%, transparent 16% 27%, rgba(34, 211, 238, 0.9) 28% 30%, transparent 31% 43%, rgba(96, 165, 250, 0.75) 44% 46%, transparent 47% 61%, rgba(34, 211, 238, 0.88) 62% 64%, transparent 65%),
+    radial-gradient(circle at 70% 50%, rgba(34, 211, 238, 0.32), transparent 45%);
+  filter: drop-shadow(0 0 9px rgba(34, 211, 238, 0.55));
+}
+
+.aurora-core-orb {
+  background:
+    radial-gradient(circle, rgba(34, 211, 238, 0.28), transparent 28%),
+    radial-gradient(circle at 50% 58%, rgba(59, 130, 246, 0.25), transparent 38%),
+    repeating-radial-gradient(circle, transparent 0 28px, rgba(34, 211, 238, 0.15) 29px 30px, transparent 31px 56px);
 }

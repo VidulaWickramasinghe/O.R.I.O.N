@@ -172,31 +172,36 @@ export function MissionFlowGraph({ missions, runs }: MissionFlowGraphProps) {
         id: "mission-planner",
         source: "mission",
         target: "planner",
-        markerEnd: { type: MarkerType.ArrowClosed },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(34, 211, 238, 0.75)" },
+        style: { stroke: "rgba(34, 211, 238, 0.58)", strokeWidth: 2 },
       },
       {
         id: "mission-approval",
         source: "mission",
         target: "approval",
-        markerEnd: { type: MarkerType.ArrowClosed },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(34, 211, 238, 0.75)" },
+        style: { stroke: "rgba(34, 211, 238, 0.58)", strokeWidth: 2 },
       },
       {
         id: "planner-report",
         source: "planner",
         target: "report",
-        markerEnd: { type: MarkerType.ArrowClosed },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(34, 211, 238, 0.75)" },
+        style: { stroke: "rgba(34, 211, 238, 0.58)", strokeWidth: 2 },
       },
       {
         id: "approval-report",
         source: "approval",
         target: "report",
-        markerEnd: { type: MarkerType.ArrowClosed },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(34, 211, 238, 0.75)" },
+        style: { stroke: "rgba(34, 211, 238, 0.58)", strokeWidth: 2 },
       },
       ...missionRuns.map((run) => ({
         id: `report-run-${run.id}`,
         source: "report",
         target: `run-${run.id}`,
-        markerEnd: { type: MarkerType.ArrowClosed },
+        markerEnd: { type: MarkerType.ArrowClosed, color: "rgba(34, 211, 238, 0.75)" },
+        style: { stroke: "rgba(34, 211, 238, 0.58)", strokeWidth: 2 },
       })),
     ];
 
@@ -207,7 +212,7 @@ export function MissionFlowGraph({ missions, runs }: MissionFlowGraphProps) {
   }, [missions, runs]);
 
   return (
-    <div className="h-[440px] overflow-hidden rounded-3xl border border-cyan-400/20 bg-[#030712]">
+    <div className="mission-flow-graph h-[440px] overflow-hidden rounded-3xl border border-cyan-400/20 bg-[#030712]">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -222,7 +227,7 @@ export function MissionFlowGraph({ missions, runs }: MissionFlowGraphProps) {
         proOptions={{ hideAttribution: true }}
       >
         <Background gap={26} size={1} color="rgba(148, 163, 184, 0.18)" />
-        <Controls />
+        <Controls showInteractive={false} />
       </ReactFlow>
     </div>
   );
