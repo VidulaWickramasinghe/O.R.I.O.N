@@ -1,6 +1,5 @@
 import {
   Brain,
-  Briefcase,
   FolderPlus,
   MessageSquarePlus,
   Search,
@@ -115,8 +114,10 @@ export function AuroraDashboard({
           <div className="grid gap-8 xl:grid-cols-[1.25fr_0.75fr]">
             <div>
               <div className="flex flex-wrap gap-3">
-                <AuroraStatusPill tone="green">System Online</AuroraStatusPill>
-                <AuroraStatusPill tone="cyan">Aurora OS v2.6.1</AuroraStatusPill>
+                <AuroraStatusPill tone={status?.status === "online" ? "green" : "red"}>
+                  {status?.status === "online" ? "System Online" : "System Offline"}
+                </AuroraStatusPill>
+                <AuroraStatusPill tone="cyan">Aurora OS v2.6.3-D</AuroraStatusPill>
               </div>
 
               <p className="mt-8 text-sm uppercase tracking-[0.45em] text-cyan-300">
@@ -134,14 +135,30 @@ export function AuroraDashboard({
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <MetricCard label="System Health" value="94%" />
-              <MetricCard label="Memory" value="87%" />
-              <MetricCard label="Projects" value={String(projects.length)} />
-              <MetricCard label="Workspaces" value={String(workspaces.length)} />
+            <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.06] p-6 shadow-2xl shadow-cyan-950/30">
+              <p className="text-xs uppercase tracking-[0.32em] text-cyan-200">
+                Adaptive layout
+              </p>
+              <h3 className="mt-4 text-2xl font-black text-white">
+                Panels, widgets, and mission graph stay under your control.
+              </h3>
+              <p className="mt-4 text-sm leading-7 text-slate-400">
+                Collapse the side rails into OS-style instruments and filter the
+                dashboard to match your current operational mode.
+              </p>
             </div>
           </div>
         </AuroraCard>
+      )}
+
+
+      {widgetEnabled("metrics") && (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard label="System Health" value={status?.status === "online" ? "94%" : "--"} />
+          <MetricCard label="Memory" value="87%" />
+          <MetricCard label="Projects" value={String(projects.length)} />
+          <MetricCard label="Workspaces" value={String(workspaces.length)} />
+        </div>
       )}
 
       {(widgetEnabled("quickActions") || widgetEnabled("models")) && (

@@ -11,7 +11,6 @@ import {
   MessageSquare,
   Mic,
   MonitorCog,
-  Settings,
   Terminal,
   Wrench,
 } from "lucide-react";
