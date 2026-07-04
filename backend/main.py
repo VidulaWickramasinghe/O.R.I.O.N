@@ -85,6 +85,46 @@ from tools.portfolio_demo_tools import (
     set_demo_mode,
 )
 
+from tools.knowledge_tools import (
+    index_knowledge_document,
+    index_knowledge_folder_tool,
+    list_knowledge_documents_tool,
+    search_local_knowledge,
+    summarize_knowledge_document_tool,
+)
+
+from tools.vector_memory_tools import (
+    rebuild_vector_memory_index,
+    semantic_memory_search,
+    list_vector_memory_items,
+)
+
+from tools.workflow_blueprint_tools import (
+    list_workflow_blueprints,
+    read_workflow_blueprint,
+    create_mission_from_workflow_blueprint,
+)
+
+from tools.developer_agent_tools import (
+    inspect_workspace_for_development_tool,
+    diagnose_workspace_issue_tool,
+    create_workspace_patch_plan,
+    request_workspace_file_patch_tool,
+    list_developer_reports_tool,
+)
+
+from tools.dashboard_intelligence_tools import (
+    get_dashboard_intelligence_report,
+)
+
+from tools.notification_tools import (
+    create_local_reminder,
+    list_local_reminders,
+    complete_local_reminder,
+    refresh_due_reminders_tool,
+    generate_startup_briefing_tool,
+)
+
 
 load_dotenv(dotenv_path="backend/.env")
 
@@ -113,6 +153,28 @@ orion = Agent(
         read_project_file,
         write_project_file,
         run_safe_command,
+        index_knowledge_document,
+        index_knowledge_folder_tool,
+        list_knowledge_documents_tool,
+        search_local_knowledge,
+        summarize_knowledge_document_tool,
+        rebuild_vector_memory_index,
+        semantic_memory_search,
+        list_vector_memory_items,
+        list_workflow_blueprints,
+        read_workflow_blueprint,
+        create_mission_from_workflow_blueprint,
+        inspect_workspace_for_development_tool,
+        diagnose_workspace_issue_tool,
+        create_workspace_patch_plan,
+        request_workspace_file_patch_tool,
+        list_developer_reports_tool,
+        get_dashboard_intelligence_report,
+        create_local_reminder,
+        list_local_reminders,
+        complete_local_reminder,
+        refresh_due_reminders_tool,
+        generate_startup_briefing_tool,
     ],
 )
 
