@@ -8,6 +8,8 @@ from core.mission_planner import list_mission_records, get_mission_record
 from core.mission_run_history import list_mission_runs
 from core.approvals import list_approval_requests
 from core.activity import get_recent_activity
+from core.knowledge_base import search_knowledge, list_knowledge_documents
+from core.vector_memory import semantic_search
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -73,6 +75,13 @@ def build_context_bundle(user_message: str) -> Dict[str, Any]:
 
     relevant_memories = search_memory_items(query=query, limit=6) if query else []
     recent_memories = list_recent_memory(limit=6)
+    knowledge_results = search_knowledge(query=query, limit=5) if query else []
+    semantic_results = []
+    try:
+        semantic_results = semantic_search(query=query, limit=5) if query else []
+    except Exception:
+        semantic_results = []
+    knowledge_documents = list_knowledge_documents(limit=8)
     projects = _load_projects()[:10]
     workspaces = list_workspace_records(limit=8)
     missions = list_mission_records(limit=8)
@@ -99,6 +108,9 @@ def build_context_bundle(user_message: str) -> Dict[str, Any]:
         "query": query,
         "relevant_memories": relevant_memories,
         "recent_memories": recent_memories,
+        "knowledge_results": knowledge_results,
+        "semantic_results": semantic_results,
+        "knowledge_documents": knowledge_documents,
         "projects": projects,
         "workspaces": workspaces,
         "workspace_stack": workspace_stack,
@@ -129,6 +141,45 @@ def render_context_bundle(bundle: Dict[str, Any]) -> str:
                 f"{_shorten(item['content'], 420)}"
             ),
             "No relevant persistent memories found.",
+        )
+    )
+
+
+
+    sections.append(
+        _format_items(
+            "Semantic Memory Results",
+            bundle.get("semantic_results", []),
+            lambda item: (
+                f"- {item['title']} | Source: {item['source_type']}:{item['source_id']} | "
+                f"Score: {item['score']:.4f} | {_shorten(item['content'], 420)}"
+            ),
+            "No semantic memory results found.",
+        )
+    )
+
+    sections.append(
+        _format_items(
+            "Relevant Local Knowledge",
+            bundle.get("knowledge_results", []),
+            lambda item: (
+                f"- Document {item['document_id']}: {item['title']} | "
+                f"Chunk {item['chunk_index']} | "
+                f"{_shorten(item['content'], 420)}"
+            ),
+            "No relevant local knowledge found.",
+        )
+    )
+
+    sections.append(
+        _format_items(
+            "Indexed Knowledge Documents",
+            bundle.get("knowledge_documents", []),
+            lambda doc: (
+                f"- Document {doc['id']}: {doc['title']} | "
+                f"Type: {doc['extension']} | Path: {doc['source_path']}"
+            ),
+            "No indexed knowledge documents found.",
         )
     )
 
@@ -272,6 +323,8 @@ def save_context_history(bundle: Dict[str, Any]) -> None:
         {
             "query": bundle.get("query", ""),
             "memory_count": len(bundle.get("relevant_memories", [])),
+            "knowledge_count": len(bundle.get("knowledge_results", [])),
+            "semantic_count": len(bundle.get("semantic_results", [])),
             "project_count": len(bundle.get("projects", [])),
             "workspace_count": len(bundle.get("workspaces", [])),
             "mission_count": len(bundle.get("missions", [])),
