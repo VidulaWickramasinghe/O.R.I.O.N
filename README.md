@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.2 — Notification + Reminder Engine**
+**v3.3 — Secure User Profiles + Settings**
 
 ## Core Capabilities
 
@@ -96,6 +96,11 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Startup briefing
 - Due task tracking
 - Notification event log
+- Secure local user profile settings
+- Safety level configuration
+- Default workspace preference
+- Voice, theme, and model preferences
+- Settings-aware context retrieval
 
 
 

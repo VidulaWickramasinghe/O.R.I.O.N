@@ -10,6 +10,7 @@ from core.approvals import list_approval_requests
 from core.activity import get_recent_activity
 from core.knowledge_base import search_knowledge, list_knowledge_documents
 from core.vector_memory import semantic_search
+from core.user_settings import get_user_settings_map, render_user_profile_summary
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -88,6 +89,8 @@ def build_context_bundle(user_message: str) -> Dict[str, Any]:
     mission_runs = list_mission_runs(limit=8)
     pending_approvals = list_approval_requests(limit=8, status="pending")
     recent_activity = get_recent_activity(limit=8)
+    user_settings = get_user_settings_map()
+    user_profile_summary = render_user_profile_summary()
 
     workspace_stack = []
 
@@ -118,6 +121,8 @@ def build_context_bundle(user_message: str) -> Dict[str, Any]:
         "mission_runs": mission_runs,
         "pending_approvals": pending_approvals,
         "recent_activity": recent_activity,
+        "user_settings": user_settings,
+        "user_profile_summary": user_profile_summary,
     }
 
     save_context_history(bundle)
@@ -130,6 +135,11 @@ def render_context_bundle(bundle: Dict[str, Any]) -> str:
     Render retrieved context into a compact text block for the agent.
     """
     sections = []
+
+    sections.append(
+        "## User Profile Settings\n\n"
+        + bundle.get("user_profile_summary", "No user profile settings found.")
+    )
 
     sections.append(
         _format_items(
@@ -329,6 +339,7 @@ def save_context_history(bundle: Dict[str, Any]) -> None:
             "workspace_count": len(bundle.get("workspaces", [])),
             "mission_count": len(bundle.get("missions", [])),
             "approval_count": len(bundle.get("pending_approvals", [])),
+            "user_profile_loaded": bool(bundle.get("user_settings")),
         }
     )
 

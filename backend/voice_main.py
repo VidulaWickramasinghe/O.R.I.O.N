@@ -126,6 +126,13 @@ from tools.notification_tools import (
     refresh_due_reminders_tool,
     generate_startup_briefing_tool,
 )
+
+from tools.user_settings_tools import (
+    list_user_profile_settings,
+    update_user_profile_setting,
+    reset_user_profile_settings,
+    get_user_profile_summary,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -176,6 +183,10 @@ orion = Agent(
         complete_local_reminder,
         refresh_due_reminders_tool,
         generate_startup_briefing_tool,
+        list_user_profile_settings,
+        update_user_profile_setting,
+        reset_user_profile_settings,
+        get_user_profile_summary,
     ],
 )
 

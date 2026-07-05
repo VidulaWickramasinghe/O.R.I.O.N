@@ -1,3 +1,30 @@
+## v3.3 — Secure User Profiles + Settings
+
+### Added
+
+- Local user settings database
+- User profile summary
+- Display name setting
+- Default workspace ID setting
+- Safety level setting
+- Voice mode setting
+- Theme mode setting
+- Preferred model setting
+- Developer mode preference
+- Startup briefing preference
+- User settings tools
+- User settings API endpoints
+- Aurora OS User Profile + Settings panel
+- Context Engine profile awareness
+- Dashboard Intelligence settings awareness
+- Startup Briefing settings awareness
+
+### Safety
+
+- Local preferences only
+- Secrets, API keys, tokens, and passwords are not stored in user profile settings
+- Safety level defaults to strict
+
 ## v3.2 — Notification + Reminder Engine
 
 ### Added

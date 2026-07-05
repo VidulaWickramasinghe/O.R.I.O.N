@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from core.user_settings import get_user_settings_map
+
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BACKEND_DIR / "data"
@@ -313,6 +315,10 @@ def generate_startup_briefing() -> str:
     due = list_reminders(limit=10, status="due")
     pending = list_reminders(limit=10, status="pending")
     events = list_notification_events(limit=10)
+    settings = get_user_settings_map()
+    startup_enabled = settings.get("startup_briefing_enabled", "true")
+    display_name = settings.get("display_name", "O.R.I.O.N. User")
+    default_workspace_id = settings.get("default_workspace_id", "")
 
     due_text = "\n".join(
         f"- [{item['id']}] {item['title']} | Priority: {item['priority']} | Due: {item['due_at']}"
@@ -328,6 +334,10 @@ def generate_startup_briefing() -> str:
     ) or "No notification events."
 
     return f"""# O.R.I.O.N. Startup Briefing
+
+Display Name: {display_name}
+Startup Briefing Enabled: {startup_enabled}
+Default Workspace ID: {default_workspace_id or 'Not set'}
 
 ## Due Reminders
 

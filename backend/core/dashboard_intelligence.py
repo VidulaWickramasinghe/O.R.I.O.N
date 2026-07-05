@@ -8,6 +8,7 @@ from core.mission_planner import list_mission_records
 from core.mission_run_history import list_mission_runs
 from core.notification_engine import list_reminders, refresh_due_reminders
 from core.persistent_memory import list_recent_memory
+from core.user_settings import get_user_settings_map
 from core.vector_memory import list_vector_items
 from core.workspace_manager import detect_workspace_stack, list_workspace_records
 
@@ -229,6 +230,7 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
     reminders = list_reminders(limit=100)
     due_reminders = [item for item in reminders if item.get("status") == "due"]
     pending_reminders = [item for item in reminders if item.get("status") == "pending"]
+    user_settings = get_user_settings_map()
     intelligence_score = calculate_system_intelligence_score(
         mission_metrics=mission_metrics,
         workspace_metrics=workspace_metrics,
@@ -278,6 +280,15 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
             "total_reminders": len(reminders),
             "due_reminders": len(due_reminders),
             "pending_reminders": len(pending_reminders),
+        },
+        "user_settings": {
+            "display_name": user_settings.get("display_name", "O.R.I.O.N. User"),
+            "default_workspace_id": user_settings.get("default_workspace_id", ""),
+            "safety_level": user_settings.get("safety_level", "strict"),
+            "voice_mode": user_settings.get("voice_mode", "text_first"),
+            "theme_mode": user_settings.get("theme_mode", "aurora_dark"),
+            "developer_mode_enabled": user_settings.get("developer_mode_enabled", "false"),
+            "startup_briefing_enabled": user_settings.get("startup_briefing_enabled", "true"),
         },
         "recommendations": recommendations,
     }
@@ -333,6 +344,16 @@ def render_dashboard_intelligence_report() -> str:
 - Total Reminders: {data['notification_metrics']['total_reminders']}
 - Due Reminders: {data['notification_metrics']['due_reminders']}
 - Pending Reminders: {data['notification_metrics']['pending_reminders']}
+
+## User Settings
+
+- Display Name: {data['user_settings']['display_name']}
+- Default Workspace ID: {data['user_settings']['default_workspace_id'] or 'Not set'}
+- Safety Level: {data['user_settings']['safety_level']}
+- Voice Mode: {data['user_settings']['voice_mode']}
+- Theme Mode: {data['user_settings']['theme_mode']}
+- Developer Mode Enabled: {data['user_settings']['developer_mode_enabled']}
+- Startup Briefing Enabled: {data['user_settings']['startup_briefing_enabled']}
 
 ## Recommendations
 

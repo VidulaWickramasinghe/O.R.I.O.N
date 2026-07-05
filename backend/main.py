@@ -125,6 +125,13 @@ from tools.notification_tools import (
     generate_startup_briefing_tool,
 )
 
+from tools.user_settings_tools import (
+    list_user_profile_settings,
+    update_user_profile_setting,
+    reset_user_profile_settings,
+    get_user_profile_summary,
+)
+
 
 load_dotenv(dotenv_path="backend/.env")
 
@@ -175,6 +182,10 @@ orion = Agent(
         complete_local_reminder,
         refresh_due_reminders_tool,
         generate_startup_briefing_tool,
+        list_user_profile_settings,
+        update_user_profile_setting,
+        reset_user_profile_settings,
+        get_user_profile_summary,
     ],
 )
 

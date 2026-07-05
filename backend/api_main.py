@@ -159,6 +159,15 @@ from core.notification_engine import (
     generate_startup_briefing,
 )
 
+from core.user_settings import (
+    init_user_settings_db,
+    list_user_settings,
+    get_user_settings_map,
+    update_user_setting,
+    reset_user_settings,
+    render_user_profile_summary,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -250,11 +259,18 @@ from tools.notification_tools import (
     generate_startup_briefing_tool,
 )
 
+from tools.user_settings_tools import (
+    list_user_profile_settings,
+    update_user_profile_setting,
+    reset_user_profile_settings,
+    get_user_profile_summary,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="3.2.0",
+    version="3.3.0",
 )
 
 app.add_middleware(
@@ -327,10 +343,14 @@ orion = Agent(
         complete_local_reminder,
         refresh_due_reminders_tool,
         generate_startup_briefing_tool,
+        list_user_profile_settings,
+        update_user_profile_setting,
+        reset_user_profile_settings,
+        get_user_profile_summary,
     ],
 )
 
-session = SQLiteSession("orion_core_v32_notifications")
+session = SQLiteSession("orion_core_v33_user_settings")
 
 
 class ChatRequest(BaseModel):
@@ -830,6 +850,30 @@ class StartupBriefingResponse(BaseModel):
     briefing: str
 
 
+class UserSettingItem(BaseModel):
+    key: str
+    value: str
+    description: str
+    updated_at: str
+    options: List[str] = Field(default_factory=list)
+
+
+class UserSettingsResponse(BaseModel):
+    settings: List[UserSettingItem]
+    settings_map: Dict[str, str]
+    profile_summary: str
+
+
+class UserSettingUpdateRequest(BaseModel):
+    value: str
+
+
+class UserSettingUpdateResponse(BaseModel):
+    status: str
+    setting: Optional[UserSettingItem] = None
+    message: str
+
+
 class DashboardIntelligenceResponse(BaseModel):
     intelligence_score: int
     readiness_label: str
@@ -840,6 +884,7 @@ class DashboardIntelligenceResponse(BaseModel):
     activity_metrics: Dict[str, Any]
     developer_metrics: Dict[str, Any]
     notification_metrics: Dict[str, Any]
+    user_settings: Dict[str, str]
     recommendations: List[str]
     report: str
 
@@ -855,10 +900,11 @@ def startup_event():
     init_vector_db()
     init_developer_agent_db()
     init_notification_db()
+    init_user_settings_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v3.2.0 started with Notification + Reminder Engine enabled.",
+        "O.R.I.O.N. API v3.3.0 started with Secure User Profiles + Settings enabled.",
         "API",
     )
 
@@ -867,7 +913,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "3.2.0",
+        "version": "3.3.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -928,7 +974,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="3.2",
+        version="3.3",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -963,6 +1009,7 @@ def status():
             "Agentic Workspace Developer Mode",
             "Visual Dashboard Intelligence",
             "Notification + Reminder Engine",
+            "Secure User Profiles + Settings",
         ],
     )
 
@@ -972,7 +1019,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "3.2.0",
+        "version": "3.3.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -984,7 +1031,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v3.2 Notification + Reminder Engine",
+        "release": "v3.3 Secure User Profiles + Settings",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -1035,10 +1082,16 @@ def mission():
             "Memory, knowledge, vector, approval, and activity metrics",
             "Readiness recommendations",
             "Notification + Reminder Engine",
+            "Secure User Profiles + Settings",
             "Local reminders",
             "Startup briefing",
             "Due task tracking",
             "Notification event log",
+            "Secure local user profile settings",
+            "Safety level configuration",
+            "Default workspace preference",
+            "Voice, theme, and model preferences",
+            "Settings-aware context retrieval",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -2419,9 +2472,66 @@ def dashboard_intelligence():
         activity_metrics=data["activity_metrics"],
         developer_metrics=data["developer_metrics"],
         notification_metrics=data["notification_metrics"],
+        user_settings=data["user_settings"],
         recommendations=data["recommendations"],
         report=report,
     )
+
+
+@app.get("/api/settings/profile", response_model=UserSettingsResponse)
+def settings_profile():
+    log_activity(
+        "USER_SETTINGS_VIEW",
+        "Aurora OS requested user profile settings.",
+        "Aurora OS",
+    )
+
+    return UserSettingsResponse(
+        settings=list_user_settings(),
+        settings_map=get_user_settings_map(),
+        profile_summary=render_user_profile_summary(),
+    )
+
+
+@app.post("/api/settings/profile/reset", response_model=UserSettingsResponse)
+def settings_reset():
+    reset_user_settings()
+
+    log_activity(
+        "USER_SETTINGS_RESET",
+        "User profile settings reset to defaults.",
+        "Aurora OS",
+    )
+
+    return UserSettingsResponse(
+        settings=list_user_settings(),
+        settings_map=get_user_settings_map(),
+        profile_summary=render_user_profile_summary(),
+    )
+
+
+@app.post("/api/settings/profile/{setting_key}", response_model=UserSettingUpdateResponse)
+def settings_update(setting_key: str, request: UserSettingUpdateRequest):
+    try:
+        setting = update_user_setting(setting_key, request.value)
+
+        log_activity(
+            "USER_SETTING_UPDATED",
+            f"User setting updated: {setting_key}",
+            "Aurora OS",
+        )
+
+        return UserSettingUpdateResponse(
+            status="updated",
+            setting=UserSettingItem(**setting),
+            message=f"Setting {setting_key} updated.",
+        )
+    except Exception as error:
+        return UserSettingUpdateResponse(
+            status="failed",
+            setting=None,
+            message=str(error),
+        )
 
 
 @app.post("/api/chat", response_model=ChatResponse)
