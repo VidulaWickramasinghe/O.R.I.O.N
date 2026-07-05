@@ -44,6 +44,7 @@ temp/
 backend/data/*.sqlite
 backend/data/*.sqlite3
 backend/data/*.db
+backend/data/sidecar/
 
 # Archives and generated media
 *.zip

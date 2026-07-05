@@ -45,3 +45,14 @@ frontend/src-tauri/target/release/bundle/
 ## Current Limitation
 
 The backend must be started locally before or with the desktop shell. Future versions may package the backend as a controlled sidecar.
+
+
+## v3.6 One-Click Launch
+
+O.R.I.O.N. v3.6 introduces the backend sidecar launcher:
+
+```bash
+./scripts/orion_desktop.sh
+```
+
+This starts the backend if needed and opens the Tauri desktop shell.

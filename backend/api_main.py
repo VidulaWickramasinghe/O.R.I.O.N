@@ -177,6 +177,14 @@ from core.plugin_registry import (
     render_plugin_registry_report,
 )
 
+from core.backend_sidecar import (
+    get_sidecar_status,
+    start_backend_sidecar,
+    stop_backend_sidecar,
+    restart_backend_sidecar,
+    render_sidecar_report,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -227,6 +235,8 @@ from tools.workspace_tools import (
     detect_workspace_tech_stack,
     summarize_workspace as summarize_workspace_tool,
 )
+
+from tools.system_doctor_tools import run_system_doctor_tool
 
 from tools.knowledge_tools import (
     index_knowledge_document,
@@ -282,11 +292,18 @@ from tools.plugin_registry_tools import (
     get_plugin_registry_report,
 )
 
+from tools.backend_sidecar_tools import (
+    get_backend_sidecar_status,
+    start_backend_sidecar_tool,
+    stop_backend_sidecar_tool,
+    restart_backend_sidecar_tool,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="3.5.0",
+    version="3.6.0",
 )
 
 app.add_middleware(
@@ -337,6 +354,7 @@ orion = Agent(
         read_workspace_key_file,
         detect_workspace_tech_stack,
         summarize_workspace_tool,
+        run_system_doctor_tool,
         index_knowledge_document,
         index_knowledge_folder_tool,
         list_knowledge_documents_tool,
@@ -367,10 +385,14 @@ orion = Agent(
         inspect_orion_plugin,
         set_orion_plugin_enabled,
         get_plugin_registry_report,
+        get_backend_sidecar_status,
+        start_backend_sidecar_tool,
+        stop_backend_sidecar_tool,
+        restart_backend_sidecar_tool,
     ],
 )
 
-session = SQLiteSession("orion_core_v35_desktop_shell")
+session = SQLiteSession("orion_core_v36_backend_sidecar")
 
 
 class ChatRequest(BaseModel):
@@ -646,6 +668,29 @@ class DesktopShellStatusResponse(BaseModel):
     backend_url: str
     frontend_mode: str
     message: str
+
+
+class BackendSidecarStatusResponse(BaseModel):
+    managed_by: str
+    status: str
+    pid: Optional[int] = None
+    host: str
+    port: int
+    backend_url: str
+    started_at: str
+    updated_at: str
+    last_error: str
+    pid_running: bool
+    port_open: bool
+    log_file: str
+    state_file: str
+    report: str
+
+
+class BackendSidecarActionResponse(BaseModel):
+    status: str
+    message: str
+    sidecar: BackendSidecarStatusResponse
 
 
 class DemoStatusResponse(BaseModel):
@@ -964,7 +1009,7 @@ def startup_event():
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v3.5.0 started with Packaged Desktop App Shell enabled.",
+        "O.R.I.O.N. API v3.6.0 started with Backend Sidecar + One-Click Desktop Launch enabled.",
         "API",
     )
 
@@ -973,7 +1018,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "3.5.0",
+        "version": "3.6.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -1034,7 +1079,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="3.5",
+        version="3.6",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -1072,6 +1117,7 @@ def status():
             "Secure User Profiles + Settings",
             "Plugin System + Tool Registry",
             "Packaged Desktop App Shell",
+            "Backend Sidecar + One-Click Desktop Launch",
         ],
     )
 
@@ -1081,7 +1127,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "3.5.0",
+        "version": "3.6.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -1093,7 +1139,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v3.5 Packaged Desktop App Shell",
+        "release": "v3.6 Backend Sidecar + One-Click Desktop Launch",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -1165,6 +1211,11 @@ def mission():
             "Static Aurora OS frontend export",
             "Desktop shell backend status",
             "Local desktop launch scripts",
+            "Backend sidecar manager",
+            "One-click desktop launch",
+            "Sidecar status panel",
+            "Local desktop shortcut installer",
+            "Backend process health tracking",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -2664,6 +2715,81 @@ def plugins_update_status(plugin_key: str, request: PluginStatusUpdateRequest):
         )
 
 
+def _sidecar_response(status_data: Dict[str, Any]) -> BackendSidecarStatusResponse:
+    return BackendSidecarStatusResponse(
+        managed_by=status_data.get("managed_by", "O.R.I.O.N. Backend Sidecar"),
+        status=status_data.get("status", "unknown"),
+        pid=status_data.get("pid"),
+        host=status_data.get("host", "127.0.0.1"),
+        port=int(status_data.get("port", 8000)),
+        backend_url=status_data.get("backend_url", "http://127.0.0.1:8000"),
+        started_at=status_data.get("started_at", ""),
+        updated_at=status_data.get("updated_at", ""),
+        last_error=status_data.get("last_error", ""),
+        pid_running=bool(status_data.get("pid_running", False)),
+        port_open=bool(status_data.get("port_open", False)),
+        log_file=status_data.get("log_file", ""),
+        state_file=status_data.get("state_file", ""),
+        report=render_sidecar_report(),
+    )
+
+
+@app.get("/api/sidecar/status", response_model=BackendSidecarStatusResponse)
+def sidecar_status():
+    status_data = get_sidecar_status()
+    log_activity(
+        "SIDECAR_STATUS",
+        f"Backend sidecar status checked: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return _sidecar_response(status_data)
+
+
+@app.post("/api/sidecar/start", response_model=BackendSidecarActionResponse)
+def sidecar_start():
+    status_data = start_backend_sidecar()
+    log_activity(
+        "SIDECAR_START",
+        f"Backend sidecar start requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar start requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
+@app.post("/api/sidecar/stop", response_model=BackendSidecarActionResponse)
+def sidecar_stop():
+    status_data = stop_backend_sidecar()
+    log_activity(
+        "SIDECAR_STOP",
+        f"Backend sidecar stop requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar stop requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
+@app.post("/api/sidecar/restart", response_model=BackendSidecarActionResponse)
+def sidecar_restart():
+    status_data = restart_backend_sidecar()
+    log_activity(
+        "SIDECAR_RESTART",
+        f"Backend sidecar restart requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar restart requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
 @app.get("/api/desktop-shell/status", response_model=DesktopShellStatusResponse)
 def desktop_shell_status():
     log_activity(
@@ -2675,10 +2801,10 @@ def desktop_shell_status():
     return DesktopShellStatusResponse(
         status="online",
         app_name="O.R.I.O.N. Aurora OS",
-        shell_version="3.5.0",
+        shell_version="3.6.0",
         backend_url="http://127.0.0.1:8000",
         frontend_mode="tauri_static_shell",
-        message="Desktop shell connected to O.R.I.O.N. backend.",
+        message="Desktop shell connected to O.R.I.O.N. backend with sidecar support.",
     )
 
 

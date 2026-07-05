@@ -193,6 +193,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {
+        "key": "backend_sidecar",
+        "name": "Backend Sidecar",
+        "description": "Local backend process manager and one-click desktop launch support.",
+        "category": "desktop",
+        "risk_level": "medium",
+        "permissions": ["backend_start", "backend_stop", "process_status"],
+        "default_enabled": True,
+    },
+    {
         "key": "user_settings",
         "name": "User Profile + Settings",
         "description": "Local profile preferences, safety level, theme, voice, and default workspace.",

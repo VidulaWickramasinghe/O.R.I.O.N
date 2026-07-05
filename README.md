@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.5 — Packaged Desktop App Shell**
+**v3.6 — Backend Sidecar + One-Click Desktop Launch**
 
 ## Core Capabilities
 
@@ -111,8 +111,25 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Static Aurora OS frontend export
 - Desktop shell backend status
 - Local desktop launch scripts
+- Backend sidecar manager
+- One-click desktop launch
+- Sidecar status panel
+- Local desktop shortcut installer
+- Backend process health tracking
 
+## One-Click Desktop Launch
 
+Run the desktop launcher, which starts the local backend if needed and opens Aurora OS in the Tauri shell:
+
+```bash
+./scripts/orion_desktop.sh
+```
+
+Install the Linux desktop shortcut:
+
+```bash
+./scripts/install_linux_desktop_shortcut.sh
+```
 
 
 ## Architecture

@@ -1,3 +1,28 @@
+## v3.6 — Backend Sidecar + One-Click Desktop Launch
+
+### Added
+
+- Backend Sidecar core
+- Backend process status tracking
+- Sidecar state file
+- Sidecar log file
+- Sidecar start/stop/restart tools
+- Sidecar API endpoints
+- Aurora OS Backend Sidecar panel
+- One-click desktop launcher script
+- Linux desktop shortcut installer
+- System Doctor sidecar check
+- Plugin Registry backend sidecar plugin
+- Backend sidecar documentation
+
+### Safety
+
+- Sidecar manages only local FastAPI backend
+- Backend binds to 127.0.0.1
+- No approval gates are bypassed
+- No arbitrary shell command execution
+- Desktop app still connects to local backend only
+
 ## v3.5 — Packaged Desktop App Shell
 
 ### Added

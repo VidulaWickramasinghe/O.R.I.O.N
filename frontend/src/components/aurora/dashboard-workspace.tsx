@@ -164,6 +164,29 @@ type DesktopShellStatus = {
   message: string;
 };
 
+type BackendSidecarStatus = {
+  managed_by: string;
+  status: string;
+  pid?: number | null;
+  host: string;
+  port: number;
+  backend_url: string;
+  started_at: string;
+  updated_at: string;
+  last_error: string;
+  pid_running: boolean;
+  port_open: boolean;
+  log_file: string;
+  state_file: string;
+  report: string;
+};
+
+type BackendSidecarAction = {
+  status: string;
+  message: string;
+  sidecar: BackendSidecarStatus;
+};
+
 type DashboardIntelligence = {
   intelligence_score: number;
   readiness_label: string;
@@ -196,6 +219,7 @@ export function DashboardWorkspace() {
     "User Settings",
     "Plugin System",
     "Desktop Shell",
+    "Backend Sidecar",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -241,6 +265,10 @@ export function DashboardWorkspace() {
   const [pluginMessage, setPluginMessage] = useState("");
   const [desktopShellStatus, setDesktopShellStatus] = useState<DesktopShellStatus | null>(null);
   const [desktopShellLoading, setDesktopShellLoading] = useState(false);
+  const [backendSidecarStatus, setBackendSidecarStatus] =
+    useState<BackendSidecarStatus | null>(null);
+  const [backendSidecarLoading, setBackendSidecarLoading] = useState(false);
+  const [backendSidecarMessage, setBackendSidecarMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -770,13 +798,75 @@ export function DashboardWorkspace() {
       setDesktopShellStatus({
         status: "offline",
         app_name: "O.R.I.O.N. Aurora OS",
-        shell_version: "3.5.0",
+        shell_version: "3.6.0",
         backend_url: "http://127.0.0.1:8000",
         frontend_mode: "tauri_static_shell",
         message: "Backend is offline. Start O.R.I.O.N. backend first.",
       });
     } finally {
       setDesktopShellLoading(false);
+    }
+  }
+
+  async function loadBackendSidecarStatus(showMessage = false) {
+    setBackendSidecarLoading(true);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/sidecar/status");
+      const data: BackendSidecarStatus = await response.json();
+      setBackendSidecarStatus(data);
+      if (showMessage) {
+        setBackendSidecarMessage(
+          `Backend sidecar status: ${data.status}. PID: ${data.pid || "N/A"}. Port open: ${data.port_open}.`
+        );
+      }
+    } catch {
+      setBackendSidecarStatus({
+        managed_by: "O.R.I.O.N. Backend Sidecar",
+        status: "offline",
+        pid: null,
+        host: "127.0.0.1",
+        port: 8000,
+        backend_url: "http://127.0.0.1:8000",
+        started_at: "",
+        updated_at: "",
+        last_error: "Backend unavailable.",
+        pid_running: false,
+        port_open: false,
+        log_file: "",
+        state_file: "",
+        report: "Backend is offline or unreachable.",
+      });
+      if (showMessage) {
+        setBackendSidecarMessage(
+          "Sidecar status unavailable. If the backend is fully offline, start it with ./scripts/orion_desktop.sh."
+        );
+      }
+    } finally {
+      setBackendSidecarLoading(false);
+    }
+  }
+
+  async function runBackendSidecarAction(action: "start" | "stop" | "restart") {
+    setBackendSidecarLoading(true);
+    setBackendSidecarMessage("");
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/sidecar/${action}`, {
+        method: "POST",
+      });
+      const data: BackendSidecarAction = await response.json();
+      setBackendSidecarStatus(data.sidecar);
+      setBackendSidecarMessage(
+        `Backend sidecar ${action} requested. Status: ${data.status}. ${data.message}`
+      );
+      await loadDesktopShellStatus();
+    } catch {
+      setBackendSidecarMessage(
+        "Sidecar action failed. If the backend is fully offline, start it with ./scripts/orion_desktop.sh."
+      );
+    } finally {
+      setBackendSidecarLoading(false);
     }
   }
 
@@ -793,6 +883,7 @@ export function DashboardWorkspace() {
     void loadUserSettingsProfile();
     void loadPlugins();
     void loadDesktopShellStatus();
+    void loadBackendSidecarStatus();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
@@ -805,6 +896,7 @@ export function DashboardWorkspace() {
       void loadUserSettingsProfile();
       void loadPlugins();
       void loadDesktopShellStatus();
+      void loadBackendSidecarStatus();
     }, 5000);
 
     return () => window.clearInterval(timer);
@@ -836,13 +928,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.5
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.6
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System", "Desktop Shell"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System", "Desktop Shell", "Backend Sidecar"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -859,7 +951,7 @@ export function DashboardWorkspace() {
       </GlassPanel>
 
       {widgets.includes("Metrics") && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-13">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-14">
           <Metric label="Models Online" value="4" />
           <Metric label="Memory" value="87%" />
           <Metric label="Knowledge Docs" value={String(knowledgeDocuments.length)} />
@@ -871,6 +963,7 @@ export function DashboardWorkspace() {
           <Metric label="Settings" value={String(userSettingsProfile?.settings.length || 0)} />
           <Metric label="Plugins" value={String(plugins.length)} />
           <Metric label="Desktop" value={desktopShellStatus?.status || "—"} />
+          <Metric label="Sidecar" value={backendSidecarStatus?.status || "—"} />
           <Metric label="Active Projects" value={String(projects.length)} />
           <Metric label="Running Agents" value={String(agents.filter((agent) => agent.status === "Running").length)} />
         </div>
@@ -949,6 +1042,16 @@ export function DashboardWorkspace() {
               status={desktopShellStatus}
               loading={desktopShellLoading}
               refreshStatus={loadDesktopShellStatus}
+            />
+          )}
+
+          {widgets.includes("Backend Sidecar") && (
+            <BackendSidecarPanel
+              status={backendSidecarStatus}
+              loading={backendSidecarLoading}
+              message={backendSidecarMessage}
+              refreshStatus={() => loadBackendSidecarStatus(true)}
+              runAction={runBackendSidecarAction}
             />
           )}
 
@@ -1094,7 +1197,7 @@ function DesktopShellPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.5
+          v3.6
         </span>
       </div>
 
@@ -1142,6 +1245,114 @@ function DesktopShellPanel({
   );
 }
 
+function BackendSidecarPanel({
+  status,
+  loading,
+  message,
+  refreshStatus,
+  runAction,
+}: {
+  status: BackendSidecarStatus | null;
+  loading: boolean;
+  message: string;
+  refreshStatus: () => void;
+  runAction: (action: "start" | "stop" | "restart") => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Backend Sidecar</h2>
+          <p className="text-sm text-slate-400">
+            Local backend process manager and one-click desktop launch support
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
+          v3.6
+        </span>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <div className="grid grid-cols-3 gap-2">
+          <button
+            onClick={() => runAction("start")}
+            disabled={loading}
+            className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+          >
+            Start
+          </button>
+          <button
+            onClick={() => runAction("restart")}
+            disabled={loading}
+            className="rounded-2xl border border-violet-400/30 px-4 py-3 text-sm font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:opacity-60"
+          >
+            Restart
+          </button>
+          <button
+            onClick={() => runAction("stop")}
+            disabled={loading}
+            className="rounded-2xl border border-red-400/30 px-4 py-3 text-sm font-bold text-red-200 transition hover:bg-red-500/10 disabled:opacity-60"
+          >
+            Stop
+          </button>
+        </div>
+
+        <button
+          onClick={refreshStatus}
+          disabled={loading}
+          className="w-full rounded-2xl border border-cyan-400/30 px-4 py-3 text-sm font-bold text-cyan-200 transition hover:bg-cyan-500/10 disabled:opacity-60"
+        >
+          {loading ? "Checking..." : "Check Sidecar Status"}
+        </button>
+
+        {message && <p className="text-xs leading-5 text-cyan-200">{message}</p>}
+
+        {!status ? (
+          <p className="text-sm text-slate-500">Backend sidecar status has not loaded yet.</p>
+        ) : (
+          <div
+            className={`rounded-2xl border p-4 ${
+              status.port_open
+                ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+                : "border-red-400/30 bg-red-500/10 text-red-200"
+            }`}
+          >
+            <p className="text-xs uppercase tracking-[0.25em]">Sidecar Status</p>
+            <div className="mt-3 flex items-end justify-between gap-3">
+              <span className="text-3xl font-black">{status.status}</span>
+              <span className="text-xs uppercase tracking-[0.2em]">
+                PID {status.pid || "N/A"}
+              </span>
+            </div>
+            <div className="mt-4 space-y-2 text-xs leading-5">
+              <p><strong>Backend:</strong> {status.backend_url}</p>
+              <p><strong>PID Running:</strong> {String(status.pid_running)}</p>
+              <p><strong>Port Open:</strong> {String(status.port_open)}</p>
+              <p className="break-all"><strong>Log:</strong> {status.log_file}</p>
+              {status.last_error && <p><strong>Error:</strong> {status.last_error}</p>}
+            </div>
+          </div>
+        )}
+
+        {status && (
+          <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            <summary className="cursor-pointer text-sm font-semibold text-cyan-200">
+              Sidecar Report
+            </summary>
+            <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">
+              {status.report}
+            </pre>
+          </details>
+        )}
+
+        <p className="text-xs leading-5 text-slate-500">
+          Safety: the sidecar only manages the local FastAPI backend on 127.0.0.1:8000. Tool execution remains approval-gated.
+        </p>
+      </div>
+    </GlassPanel>
+  );
+}
+
 function PluginSystemPanel({
   plugins,
   metrics,
@@ -1169,7 +1380,7 @@ function PluginSystemPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.5
+          v3.6
         </span>
       </div>
 
@@ -1263,7 +1474,7 @@ function PluginSystemPanel({
         </details>
 
         <p className="text-xs leading-5 text-slate-500">
-          Safety: v3.5 tracks plugin metadata, permissions, and enable/disable state. It does not dynamically execute third-party plugin code.
+          Safety: v3.4 tracks plugin metadata, permissions, and enable/disable state. It does not dynamically execute third-party plugin code.
         </p>
       </div>
     </GlassPanel>
@@ -1295,7 +1506,7 @@ function UserSettingsPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.5
+          v3.6
         </span>
       </div>
 
@@ -1417,7 +1628,7 @@ function NotificationEnginePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.5
+          v3.6
         </span>
       </div>
 
@@ -1568,7 +1779,7 @@ function DashboardIntelligencePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.5
+          v3.6
         </span>
       </div>
 
@@ -1693,7 +1904,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.5
+          v3.6
         </span>
       </div>
 

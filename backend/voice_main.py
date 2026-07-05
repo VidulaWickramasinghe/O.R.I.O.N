@@ -87,6 +87,8 @@ from tools.portfolio_demo_tools import (
     set_demo_mode,
 )
 
+from tools.system_doctor_tools import run_system_doctor_tool
+
 from tools.knowledge_tools import (
     index_knowledge_document,
     index_knowledge_folder_tool,
@@ -140,6 +142,13 @@ from tools.plugin_registry_tools import (
     set_orion_plugin_enabled,
     get_plugin_registry_report,
 )
+
+from tools.backend_sidecar_tools import (
+    get_backend_sidecar_status,
+    start_backend_sidecar_tool,
+    stop_backend_sidecar_tool,
+    restart_backend_sidecar_tool,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -162,6 +171,7 @@ orion = Agent(
         add_project_note,
         save_project_roadmap,
         save_portfolio_summary,
+        run_system_doctor_tool,
 
         get_system_status,
         list_directory,
@@ -198,6 +208,10 @@ orion = Agent(
         inspect_orion_plugin,
         set_orion_plugin_enabled,
         get_plugin_registry_report,
+        get_backend_sidecar_status,
+        start_backend_sidecar_tool,
+        stop_backend_sidecar_tool,
+        restart_backend_sidecar_tool,
     ],
 )
 
