@@ -1,0 +1,20 @@
+"use client";
+import { useEffect, useState } from "react";
+import { Mic, Paperclip, Send, ShieldCheck } from "lucide-react";
+import { executionSteps, reasoningSteps, toolCalls } from "@/lib/assistant-data";
+import { useAssistantStore } from "@/store/assistant-store";
+import { useUiStore } from "@/store/ui-store";
+import { GlassPanel } from "../aurora/glass-panel";
+import { StatusChip } from "../aurora/status-chip";
+
+export function AssistantWorkspace() {
+  const [draft, setDraft] = useState("");
+  const messages = useAssistantStore((state) => state.messages);
+  const thinking = useAssistantStore((state) => state.thinking);
+  const sendMessage = useAssistantStore((state) => state.sendMessage);
+  const setOrbState = useUiStore((state) => state.setOrbState);
+  useEffect(() => setOrbState(thinking ? "thinking" : "idle"), [setOrbState, thinking]);
+  function submit() { if (!draft.trim() || thinking) return; sendMessage(draft.trim()); setDraft(""); }
+  return <div className="grid h-full gap-4 xl:grid-cols-[minmax(0,1fr)_360px]"><GlassPanel className="flex min-h-[640px] flex-col overflow-hidden"><div className="border-b border-white/10 p-5"><div className="flex flex-wrap items-center gap-2"><h1 className="mr-auto text-2xl font-black text-white">O.R.I.O.N. Assistant</h1><StatusChip tone="success">Assistant Online</StatusChip><StatusChip tone="primary">Active Model</StatusChip><StatusChip tone="secondary">Memory Active</StatusChip><StatusChip tone="warning">Safety Approval Mode</StatusChip></div><p className="mt-2 text-slate-400">Central command interface for thinking, planning, acting, and learning.</p></div><div className="flex-1 space-y-4 overflow-y-auto p-5">{messages.map((message) => <div key={message.id} className={`max-w-3xl rounded-2xl border p-4 ${message.role === "assistant" ? "border-[#61DFFF]/20 bg-[#4F8BFF]/10" : "ml-auto border-white/10 bg-white/[0.05]"}`}><p className="text-xs uppercase tracking-[0.2em] text-slate-500">{message.role} · {message.time}</p><p className="mt-2 text-sm leading-6 text-slate-100">{message.content}</p></div>)}{thinking && <p className="text-sm text-[#61DFFF]">O.R.I.O.N. is reasoning transparently...</p>}</div><div className="border-t border-white/10 p-4"><textarea value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); submit(); } }} className="min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-[#05070B]/70 p-4 text-sm outline-none focus:border-[#61DFFF]/40" placeholder="Ask O.R.I.O.N. to plan, inspect, build, or explain..."/><div className="mt-3 flex justify-between"><div className="flex gap-2"><button aria-label="Attach file" className="rounded-xl border border-white/10 p-3 text-slate-400"><Paperclip size={17}/></button><button aria-label="Microphone" className="rounded-xl border border-white/10 p-3 text-slate-400"><Mic size={17}/></button></div><button disabled={thinking} onClick={submit} className="rounded-xl bg-[#4F8BFF] px-4 py-3 font-bold text-white disabled:opacity-50"><Send className="inline" size={17}/> Send</button></div></div></GlassPanel><div className="space-y-4"><Side title="Reasoning Steps" items={reasoningSteps}/><Side title="Execution Timeline" items={executionSteps}/><Side title="Tool Call Feed" items={toolCalls}/><GlassPanel className="p-4"><h3 className="font-bold text-white">Voice Status</h3><p className="mt-3 text-sm text-slate-400">Wake Phrase: Hey Orion<br/>Speech Input: Standby<br/>Voice Output: Enabled</p><div className="mt-4"><StatusChip tone="success"><ShieldCheck size={13}/> Project Context Active</StatusChip></div></GlassPanel></div></div>;
+}
+function Side({ title, items }: { title: string; items: string[] }) { return <GlassPanel className="p-4"><h3 className="font-bold text-white">{title}</h3><div className="mt-3 space-y-2">{items.map((item) => <div key={item} className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-slate-300">{item}</div>)}</div></GlassPanel>; }
