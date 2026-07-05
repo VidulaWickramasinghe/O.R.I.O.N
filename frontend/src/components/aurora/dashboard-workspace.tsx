@@ -155,6 +155,15 @@ type PluginsResponse = {
   report: string;
 };
 
+type DesktopShellStatus = {
+  status: string;
+  app_name: string;
+  shell_version: string;
+  backend_url: string;
+  frontend_mode: string;
+  message: string;
+};
+
 type DashboardIntelligence = {
   intelligence_score: number;
   readiness_label: string;
@@ -186,6 +195,7 @@ export function DashboardWorkspace() {
     "Notification Engine",
     "User Settings",
     "Plugin System",
+    "Desktop Shell",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -229,6 +239,8 @@ export function DashboardWorkspace() {
   const [pluginMetrics, setPluginMetrics] = useState<Record<string, unknown>>({});
   const [pluginLoadingKey, setPluginLoadingKey] = useState<string | null>(null);
   const [pluginMessage, setPluginMessage] = useState("");
+  const [desktopShellStatus, setDesktopShellStatus] = useState<DesktopShellStatus | null>(null);
+  const [desktopShellLoading, setDesktopShellLoading] = useState(false);
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -747,6 +759,27 @@ export function DashboardWorkspace() {
     }
   }
 
+  async function loadDesktopShellStatus() {
+    setDesktopShellLoading(true);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/desktop-shell/status");
+      const data: DesktopShellStatus = await response.json();
+      setDesktopShellStatus(data);
+    } catch {
+      setDesktopShellStatus({
+        status: "offline",
+        app_name: "O.R.I.O.N. Aurora OS",
+        shell_version: "3.5.0",
+        backend_url: "http://127.0.0.1:8000",
+        frontend_mode: "tauri_static_shell",
+        message: "Backend is offline. Start O.R.I.O.N. backend first.",
+      });
+    } finally {
+      setDesktopShellLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
@@ -759,6 +792,7 @@ export function DashboardWorkspace() {
     void loadStartupBriefing();
     void loadUserSettingsProfile();
     void loadPlugins();
+    void loadDesktopShellStatus();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
@@ -770,6 +804,7 @@ export function DashboardWorkspace() {
       void loadNotificationEvents();
       void loadUserSettingsProfile();
       void loadPlugins();
+      void loadDesktopShellStatus();
     }, 5000);
 
     return () => window.clearInterval(timer);
@@ -801,13 +836,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.4
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.5
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System", "Desktop Shell"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -824,7 +859,7 @@ export function DashboardWorkspace() {
       </GlassPanel>
 
       {widgets.includes("Metrics") && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-13">
           <Metric label="Models Online" value="4" />
           <Metric label="Memory" value="87%" />
           <Metric label="Knowledge Docs" value={String(knowledgeDocuments.length)} />
@@ -835,6 +870,7 @@ export function DashboardWorkspace() {
           <Metric label="Reminders" value={String(reminders.length)} />
           <Metric label="Settings" value={String(userSettingsProfile?.settings.length || 0)} />
           <Metric label="Plugins" value={String(plugins.length)} />
+          <Metric label="Desktop" value={desktopShellStatus?.status || "—"} />
           <Metric label="Active Projects" value={String(projects.length)} />
           <Metric label="Running Agents" value={String(agents.filter((agent) => agent.status === "Running").length)} />
         </div>
@@ -905,6 +941,14 @@ export function DashboardWorkspace() {
               metricValue={metricValue}
               scoreTone={scoreTone}
               refreshIntelligence={() => loadDashboardIntelligence(true)}
+            />
+          )}
+
+          {widgets.includes("Desktop Shell") && (
+            <DesktopShellPanel
+              status={desktopShellStatus}
+              loading={desktopShellLoading}
+              refreshStatus={loadDesktopShellStatus}
             />
           )}
 
@@ -1031,6 +1075,73 @@ export function DashboardWorkspace() {
 
 
 
+function DesktopShellPanel({
+  status,
+  loading,
+  refreshStatus,
+}: {
+  status: DesktopShellStatus | null;
+  loading: boolean;
+  refreshStatus: () => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Desktop App Shell</h2>
+          <p className="text-sm text-slate-400">
+            Tauri desktop wrapper, backend connection, and packaged app status
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
+          v3.5
+        </span>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <button
+          onClick={refreshStatus}
+          disabled={loading}
+          className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+        >
+          {loading ? "Checking..." : "Check Desktop Shell"}
+        </button>
+
+        {!status ? (
+          <p className="text-sm text-slate-500">Desktop shell status has not loaded yet.</p>
+        ) : (
+          <div
+            className={`rounded-2xl border p-4 ${
+              status.status === "online"
+                ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+                : "border-red-400/30 bg-red-500/10 text-red-200"
+            }`}
+          >
+            <p className="text-xs uppercase tracking-[0.25em]">Shell Status</p>
+            <div className="mt-3 flex items-end justify-between gap-3">
+              <span className="text-3xl font-black">{status.status}</span>
+              <span className="text-xs uppercase tracking-[0.2em]">{status.shell_version}</span>
+            </div>
+            <div className="mt-4 space-y-2 text-xs leading-5">
+              <p><strong>App:</strong> {status.app_name}</p>
+              <p><strong>Backend:</strong> {status.backend_url}</p>
+              <p><strong>Mode:</strong> {status.frontend_mode}</p>
+              <p>{status.message}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">Launch Notes</p>
+          <p className="mt-3 text-xs leading-5 text-slate-400">
+            Start the FastAPI backend first, then run the Tauri desktop shell. In this version, the packaged app connects to the local backend at 127.0.0.1:8000.
+          </p>
+        </div>
+      </div>
+    </GlassPanel>
+  );
+}
+
 function PluginSystemPanel({
   plugins,
   metrics,
@@ -1058,7 +1169,7 @@ function PluginSystemPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.4
+          v3.5
         </span>
       </div>
 
@@ -1152,7 +1263,7 @@ function PluginSystemPanel({
         </details>
 
         <p className="text-xs leading-5 text-slate-500">
-          Safety: v3.4 tracks plugin metadata, permissions, and enable/disable state. It does not dynamically execute third-party plugin code.
+          Safety: v3.5 tracks plugin metadata, permissions, and enable/disable state. It does not dynamically execute third-party plugin code.
         </p>
       </div>
     </GlassPanel>
@@ -1184,7 +1295,7 @@ function UserSettingsPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.4
+          v3.5
         </span>
       </div>
 
@@ -1306,7 +1417,7 @@ function NotificationEnginePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.4
+          v3.5
         </span>
       </div>
 
@@ -1457,7 +1568,7 @@ function DashboardIntelligencePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.4
+          v3.5
         </span>
       </div>
 
@@ -1582,7 +1693,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.4
+          v3.5
         </span>
       </div>
 

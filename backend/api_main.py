@@ -286,7 +286,7 @@ from tools.plugin_registry_tools import (
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="3.4.0",
+    version="3.5.0",
 )
 
 app.add_middleware(
@@ -370,7 +370,7 @@ orion = Agent(
     ],
 )
 
-session = SQLiteSession("orion_core_v34_plugins")
+session = SQLiteSession("orion_core_v35_desktop_shell")
 
 
 class ChatRequest(BaseModel):
@@ -636,6 +636,15 @@ class DesktopUrlRequest(BaseModel):
 class DesktopActionResponse(BaseModel):
     status: str
     approval_id: Optional[int] = None
+    message: str
+
+
+class DesktopShellStatusResponse(BaseModel):
+    status: str
+    app_name: str
+    shell_version: str
+    backend_url: str
+    frontend_mode: str
     message: str
 
 
@@ -955,7 +964,7 @@ def startup_event():
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v3.4.0 started with Plugin System + Tool Registry enabled.",
+        "O.R.I.O.N. API v3.5.0 started with Packaged Desktop App Shell enabled.",
         "API",
     )
 
@@ -964,7 +973,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "3.4.0",
+        "version": "3.5.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -1025,7 +1034,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="3.4",
+        version="3.5",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -1062,6 +1071,7 @@ def status():
             "Notification + Reminder Engine",
             "Secure User Profiles + Settings",
             "Plugin System + Tool Registry",
+            "Packaged Desktop App Shell",
         ],
     )
 
@@ -1071,7 +1081,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "3.4.0",
+        "version": "3.5.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -1083,7 +1093,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v3.4 Plugin System + Tool Registry",
+        "release": "v3.5 Packaged Desktop App Shell",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -1150,6 +1160,11 @@ def mission():
             "Enable/disable plugin state",
             "Plugin registry reports",
             "Modular tool architecture foundation",
+            "Packaged desktop app shell",
+            "Tauri desktop wrapper",
+            "Static Aurora OS frontend export",
+            "Desktop shell backend status",
+            "Local desktop launch scripts",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -2647,6 +2662,24 @@ def plugins_update_status(plugin_key: str, request: PluginStatusUpdateRequest):
             plugin=None,
             message=str(error),
         )
+
+
+@app.get("/api/desktop-shell/status", response_model=DesktopShellStatusResponse)
+def desktop_shell_status():
+    log_activity(
+        "DESKTOP_SHELL_STATUS",
+        "Aurora OS desktop shell checked backend status.",
+        "Aurora OS Desktop",
+    )
+
+    return DesktopShellStatusResponse(
+        status="online",
+        app_name="O.R.I.O.N. Aurora OS",
+        shell_version="3.5.0",
+        backend_url="http://127.0.0.1:8000",
+        frontend_mode="tauri_static_shell",
+        message="Desktop shell connected to O.R.I.O.N. backend.",
+    )
 
 
 @app.post("/api/chat", response_model=ChatResponse)

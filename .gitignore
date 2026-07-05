@@ -28,6 +28,15 @@ coverage/
 frontend/coverage/
 *.tsbuildinfo
 
+# Static exports, desktop build outputs, and temporary screenshots
+out/
+frontend/out/
+frontend/src-tauri/target/
+target/
+screenshots/
+tmp/
+temp/
+
 # Generated databases and local app state
 *.sqlite
 *.sqlite3

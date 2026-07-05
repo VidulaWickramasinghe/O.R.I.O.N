@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.4 — Plugin System + Tool Registry**
+**v3.5 — Packaged Desktop App Shell**
 
 ## Core Capabilities
 
@@ -106,6 +106,11 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Enable/disable plugin state
 - Plugin registry reports
 - Modular tool architecture foundation
+- Packaged desktop app shell
+- Tauri desktop wrapper
+- Static Aurora OS frontend export
+- Desktop shell backend status
+- Local desktop launch scripts
 
 
 
@@ -130,3 +135,23 @@ Project Memory / Notes / Developer Tools
 Activity Timeline
 
 - [Screenshot Showcase](docs/screenshot-showcase.md)
+
+## Desktop App Shell
+
+Run desktop development mode:
+
+```bash
+./scripts/run_desktop_dev.sh
+```
+
+Build desktop app:
+
+```bash
+./scripts/build_desktop_app.sh
+```
+
+Desktop bundle output:
+
+```text
+frontend/src-tauri/target/release/bundle/
+```

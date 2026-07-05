@@ -1,3 +1,24 @@
+## v3.5 — Packaged Desktop App Shell
+
+### Added
+
+- Tauri desktop shell
+- Aurora OS packaged desktop window
+- Static Next.js export configuration
+- Desktop Shell backend status endpoint
+- Aurora OS Desktop App Shell panel
+- Desktop development launch script
+- Desktop production build script
+- Desktop shell documentation
+
+### Safety
+
+- Desktop shell is local-only
+- Backend remains approval-gated
+- No broad frontend filesystem permissions added
+- No untrusted dynamic plugin execution
+- Backend still runs locally at 127.0.0.1:8000
+
 ## v3.4 — Plugin System + Tool Registry
 
 ### Added
