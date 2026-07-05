@@ -85,7 +85,7 @@ export function AuroraContextPanel({
             <li>1. Stabilize Aurora OS shell</li>
             <li>2. Add module routing</li>
             <li>3. Reconnect panels cleanly</li>
-            <li>4. Prepare v2.7 knowledge base</li>
+            <li>4. Prepare v3.3 secure user settings</li>
           </ol>
         </Panel>
 

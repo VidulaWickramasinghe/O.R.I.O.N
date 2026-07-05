@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v2.6.3-C — TanStack Query API Layer**
+**v3.3 — Secure User Profiles + Settings**
 
 ## Core Capabilities
 
@@ -69,6 +69,38 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Shared Aurora API client
 - Query-based automatic data refresh
 - Cleaner frontend module architecture
+- Local Knowledge Base
+- Document indexing and search
+- Knowledge-aware context retrieval
+- Aurora OS Knowledge Base panel
+- Vector Memory
+- Semantic search
+- Embedding-based context retrieval
+- Meaning-aware memory and knowledge search
+- Workflow Blueprints
+- Reusable mission templates
+- Blueprint-to-mission generation
+- Standard release, research, bug-fix, and portfolio workflows
+- Agentic Workspace Developer Mode
+- Workspace inspection and diagnosis
+- Approval-gated patch planning
+- Developer report generation
+- Safe workspace file patching with backup
+- Dashboard Intelligence
+- System intelligence score
+- Mission and workspace analytics
+- Memory, knowledge, vector, approval, and activity metrics
+- Readiness recommendations
+- Notification + Reminder Engine
+- Local reminders
+- Startup briefing
+- Due task tracking
+- Notification event log
+- Secure local user profile settings
+- Safety level configuration
+- Default workspace preference
+- Voice, theme, and model preferences
+- Settings-aware context retrieval
 
 
 
