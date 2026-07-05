@@ -1,7 +1,82 @@
+# Environment
 .env
+.env.*
 backend/.env
-.env.example
-backend/.env.example
+backend/.env.*
+!.env.example
+!backend/.env.example
+
+# Python
 .venv/
-node_modules/
+venv/
 __pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / frontend
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+dist/
+frontend/dist/
+build/
+frontend/build/
+coverage/
+frontend/coverage/
+*.tsbuildinfo
+
+# Static exports, desktop build outputs, and temporary screenshots
+out/
+frontend/out/
+frontend/src-tauri/target/
+target/
+screenshots/
+tmp/
+temp/
+
+# Generated databases and local app state
+*.sqlite
+*.sqlite3
+*.db
+backend/data/*.sqlite
+backend/data/*.sqlite3
+backend/data/*.db
+
+# Archives and generated media
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.mov
+*.mp4
+*.webm
+
+# OS / editor temp files
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+*.swo
+
+# Tooling / deploy
+.vercel/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
