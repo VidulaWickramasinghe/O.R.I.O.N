@@ -142,6 +142,13 @@ from tools.user_settings_tools import (
     get_user_profile_summary,
 )
 
+from tools.plugin_registry_tools import (
+    list_orion_plugins,
+    inspect_orion_plugin,
+    set_orion_plugin_enabled,
+    get_plugin_registry_report,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -201,6 +208,10 @@ orion = Agent(
         update_user_profile_setting,
         reset_user_profile_settings,
         get_user_profile_summary,
+        list_orion_plugins,
+        inspect_orion_plugin,
+        set_orion_plugin_enabled,
+        get_plugin_registry_report,
     ],
 )
 

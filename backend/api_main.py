@@ -168,6 +168,15 @@ from core.user_settings import (
     render_user_profile_summary,
 )
 
+from core.plugin_registry import (
+    init_plugin_registry_db,
+    list_plugins,
+    get_plugin,
+    set_plugin_enabled,
+    get_plugin_metrics,
+    render_plugin_registry_report,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -266,11 +275,18 @@ from tools.user_settings_tools import (
     get_user_profile_summary,
 )
 
+from tools.plugin_registry_tools import (
+    list_orion_plugins,
+    inspect_orion_plugin,
+    set_orion_plugin_enabled,
+    get_plugin_registry_report,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="3.3.0",
+    version="3.4.0",
 )
 
 app.add_middleware(
@@ -347,10 +363,14 @@ orion = Agent(
         update_user_profile_setting,
         reset_user_profile_settings,
         get_user_profile_summary,
+        list_orion_plugins,
+        inspect_orion_plugin,
+        set_orion_plugin_enabled,
+        get_plugin_registry_report,
     ],
 )
 
-session = SQLiteSession("orion_core_v33_user_settings")
+session = SQLiteSession("orion_core_v34_plugins")
 
 
 class ChatRequest(BaseModel):
@@ -874,6 +894,35 @@ class UserSettingUpdateResponse(BaseModel):
     message: str
 
 
+class PluginItem(BaseModel):
+    key: str
+    name: str
+    description: str
+    category: str
+    risk_level: str
+    permissions: List[str]
+    enabled: bool
+    built_in: bool
+    created_at: str
+    updated_at: str
+
+
+class PluginsResponse(BaseModel):
+    plugins: List[PluginItem]
+    metrics: Dict[str, Any]
+    report: str
+
+
+class PluginStatusUpdateRequest(BaseModel):
+    enabled: bool
+
+
+class PluginStatusUpdateResponse(BaseModel):
+    status: str
+    plugin: Optional[PluginItem] = None
+    message: str
+
+
 class DashboardIntelligenceResponse(BaseModel):
     intelligence_score: int
     readiness_label: str
@@ -885,6 +934,7 @@ class DashboardIntelligenceResponse(BaseModel):
     developer_metrics: Dict[str, Any]
     notification_metrics: Dict[str, Any]
     user_settings: Dict[str, str]
+    plugin_metrics: Dict[str, Any]
     recommendations: List[str]
     report: str
 
@@ -901,10 +951,11 @@ def startup_event():
     init_developer_agent_db()
     init_notification_db()
     init_user_settings_db()
+    init_plugin_registry_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v3.3.0 started with Secure User Profiles + Settings enabled.",
+        "O.R.I.O.N. API v3.4.0 started with Plugin System + Tool Registry enabled.",
         "API",
     )
 
@@ -913,7 +964,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "3.3.0",
+        "version": "3.4.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -974,7 +1025,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="3.3",
+        version="3.4",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -1010,6 +1061,7 @@ def status():
             "Visual Dashboard Intelligence",
             "Notification + Reminder Engine",
             "Secure User Profiles + Settings",
+            "Plugin System + Tool Registry",
         ],
     )
 
@@ -1019,7 +1071,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "3.3.0",
+        "version": "3.4.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -1031,7 +1083,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v3.3 Secure User Profiles + Settings",
+        "release": "v3.4 Plugin System + Tool Registry",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -1083,6 +1135,7 @@ def mission():
             "Readiness recommendations",
             "Notification + Reminder Engine",
             "Secure User Profiles + Settings",
+            "Plugin System + Tool Registry",
             "Local reminders",
             "Startup briefing",
             "Due task tracking",
@@ -1092,6 +1145,11 @@ def mission():
             "Default workspace preference",
             "Voice, theme, and model preferences",
             "Settings-aware context retrieval",
+            "Plugin System + Tool Registry",
+            "Plugin permissions and risk levels",
+            "Enable/disable plugin state",
+            "Plugin registry reports",
+            "Modular tool architecture foundation",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -2473,6 +2531,7 @@ def dashboard_intelligence():
         developer_metrics=data["developer_metrics"],
         notification_metrics=data["notification_metrics"],
         user_settings=data["user_settings"],
+        plugin_metrics=data["plugin_metrics"],
         recommendations=data["recommendations"],
         report=report,
     )
@@ -2530,6 +2589,62 @@ def settings_update(setting_key: str, request: UserSettingUpdateRequest):
         return UserSettingUpdateResponse(
             status="failed",
             setting=None,
+            message=str(error),
+        )
+
+
+@app.get("/api/plugins", response_model=PluginsResponse)
+def plugins_list():
+    log_activity(
+        "PLUGIN_REGISTRY_VIEW",
+        "Aurora OS requested plugin registry.",
+        "Aurora OS",
+    )
+
+    return PluginsResponse(
+        plugins=list_plugins(limit=200),
+        metrics=get_plugin_metrics(),
+        report=render_plugin_registry_report(),
+    )
+
+
+@app.get("/api/plugins/{plugin_key}", response_model=PluginStatusUpdateResponse)
+def plugins_get(plugin_key: str):
+    plugin = get_plugin(plugin_key)
+    if not plugin:
+        return PluginStatusUpdateResponse(
+            status="missing",
+            plugin=None,
+            message="Plugin not found.",
+        )
+
+    return PluginStatusUpdateResponse(
+        status="found",
+        plugin=PluginItem(**plugin),
+        message="Plugin found.",
+    )
+
+
+@app.post("/api/plugins/{plugin_key}/status", response_model=PluginStatusUpdateResponse)
+def plugins_update_status(plugin_key: str, request: PluginStatusUpdateRequest):
+    try:
+        plugin = set_plugin_enabled(plugin_key, request.enabled)
+
+        log_activity(
+            "PLUGIN_STATUS_UPDATED",
+            f"Plugin {plugin_key} enabled set to {request.enabled}.",
+            "Aurora OS",
+        )
+
+        return PluginStatusUpdateResponse(
+            status="updated",
+            plugin=PluginItem(**plugin),
+            message=f"Plugin {plugin_key} updated.",
+        )
+    except Exception as error:
+        return PluginStatusUpdateResponse(
+            status="failed",
+            plugin=None,
             message=str(error),
         )
 

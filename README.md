@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.3 — Secure User Profiles + Settings**
+**v3.4 — Plugin System + Tool Registry**
 
 ## Core Capabilities
 
@@ -101,6 +101,11 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Default workspace preference
 - Voice, theme, and model preferences
 - Settings-aware context retrieval
+- Plugin System + Tool Registry
+- Plugin permissions and risk levels
+- Enable/disable plugin state
+- Plugin registry reports
+- Modular tool architecture foundation
 
 
 

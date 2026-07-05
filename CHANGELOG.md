@@ -1,3 +1,27 @@
+## v3.4 — Plugin System + Tool Registry
+
+### Added
+
+- Plugin Registry core
+- SQLite plugin registry database
+- Built-in plugin definitions
+- Plugin permissions metadata
+- Plugin risk levels
+- Plugin enable/disable state
+- Plugin metrics
+- Plugin Registry tools
+- Plugin Registry API endpoints
+- Aurora OS Plugin System panel
+- Context Engine plugin awareness
+- Dashboard Intelligence plugin metrics
+
+### Safety
+
+- v3.4 tracks plugin metadata and plugin state only
+- It does not dynamically load or execute untrusted third-party plugin code
+- High-risk plugins are clearly labelled
+- Plugin enable/disable state prepares the system for future tool enforcement
+
 ## v3.3 — Secure User Profiles + Settings
 
 ### Added

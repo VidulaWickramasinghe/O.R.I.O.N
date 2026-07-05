@@ -11,6 +11,7 @@ from core.activity import get_recent_activity
 from core.knowledge_base import search_knowledge, list_knowledge_documents
 from core.vector_memory import semantic_search
 from core.user_settings import get_user_settings_map, render_user_profile_summary
+from core.plugin_registry import get_plugin_metrics, list_plugins
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -91,6 +92,8 @@ def build_context_bundle(user_message: str) -> Dict[str, Any]:
     recent_activity = get_recent_activity(limit=8)
     user_settings = get_user_settings_map()
     user_profile_summary = render_user_profile_summary()
+    plugin_metrics = get_plugin_metrics()
+    enabled_plugins = list_plugins(enabled=True, limit=30)
 
     workspace_stack = []
 
@@ -123,6 +126,8 @@ def build_context_bundle(user_message: str) -> Dict[str, Any]:
         "recent_activity": recent_activity,
         "user_settings": user_settings,
         "user_profile_summary": user_profile_summary,
+        "plugin_metrics": plugin_metrics,
+        "enabled_plugins": enabled_plugins,
     }
 
     save_context_history(bundle)
@@ -139,6 +144,26 @@ def render_context_bundle(bundle: Dict[str, Any]) -> str:
     sections.append(
         "## User Profile Settings\n\n"
         + bundle.get("user_profile_summary", "No user profile settings found.")
+    )
+
+    sections.append(
+        "## Plugin Registry\n\n"
+        f"- Total Plugins: {bundle.get('plugin_metrics', {}).get('total_plugins', 0)}\n"
+        f"- Enabled Plugins: {bundle.get('plugin_metrics', {}).get('enabled_plugins', 0)}\n"
+        f"- Disabled Plugins: {bundle.get('plugin_metrics', {}).get('disabled_plugins', 0)}\n"
+        f"- High-Risk Enabled: {bundle.get('plugin_metrics', {}).get('high_risk_enabled', 0)}"
+    )
+
+    sections.append(
+        _format_items(
+            "Enabled Plugins",
+            bundle.get("enabled_plugins", []),
+            lambda plugin: (
+                f"- {plugin['key']} | {plugin['name']} | "
+                f"Risk: {plugin['risk_level']} | Category: {plugin['category']}"
+            ),
+            "No enabled plugins found.",
+        )
     )
 
     sections.append(
@@ -340,6 +365,7 @@ def save_context_history(bundle: Dict[str, Any]) -> None:
             "mission_count": len(bundle.get("missions", [])),
             "approval_count": len(bundle.get("pending_approvals", [])),
             "user_profile_loaded": bool(bundle.get("user_settings")),
+            "enabled_plugins": bundle.get("plugin_metrics", {}).get("enabled_plugins", 0),
         }
     )
 

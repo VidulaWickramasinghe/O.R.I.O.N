@@ -136,6 +136,25 @@ type UserSettingsProfile = {
   profile_summary: string;
 };
 
+type PluginItem = {
+  key: string;
+  name: string;
+  description: string;
+  category: string;
+  risk_level: string;
+  permissions: string[];
+  enabled: boolean;
+  built_in: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+type PluginsResponse = {
+  plugins: PluginItem[];
+  metrics: Record<string, unknown>;
+  report: string;
+};
+
 type DashboardIntelligence = {
   intelligence_score: number;
   readiness_label: string;
@@ -147,6 +166,7 @@ type DashboardIntelligence = {
   developer_metrics: Record<string, unknown>;
   notification_metrics: Record<string, unknown>;
   user_settings?: Record<string, string>;
+  plugin_metrics?: Record<string, unknown>;
   recommendations: string[];
   report: string;
 };
@@ -165,6 +185,7 @@ export function DashboardWorkspace() {
     "Dashboard Intelligence",
     "Notification Engine",
     "User Settings",
+    "Plugin System",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -203,6 +224,11 @@ export function DashboardWorkspace() {
   const [userSettingsProfile, setUserSettingsProfile] = useState<UserSettingsProfile | null>(null);
   const [settingsLoadingKey, setSettingsLoadingKey] = useState<string | null>(null);
   const [settingsMessage, setSettingsMessage] = useState("");
+  const [plugins, setPlugins] = useState<PluginItem[]>([]);
+  const [pluginRegistryReport, setPluginRegistryReport] = useState("");
+  const [pluginMetrics, setPluginMetrics] = useState<Record<string, unknown>>({});
+  const [pluginLoadingKey, setPluginLoadingKey] = useState<string | null>(null);
+  const [pluginMessage, setPluginMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -680,6 +706,47 @@ export function DashboardWorkspace() {
     }
   }
 
+  async function loadPlugins() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/plugins");
+      const data: PluginsResponse = await response.json();
+      setPlugins(data.plugins || []);
+      setPluginMetrics(data.metrics || {});
+      setPluginRegistryReport(data.report || "");
+    } catch {
+      setPlugins([]);
+      setPluginMetrics({});
+      setPluginRegistryReport("");
+    }
+  }
+
+  async function updatePluginStatusFromUI(pluginKey: string, enabled: boolean) {
+    setPluginLoadingKey(pluginKey);
+    setPluginMessage("");
+
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/plugins/${pluginKey}/status`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ enabled }),
+      });
+      const data = await response.json();
+      setPluginMessage(
+        data.status === "updated"
+          ? `Plugin updated: ${pluginKey} = ${enabled ? "enabled" : "disabled"}`
+          : `Plugin update failed: ${data.message}`
+      );
+      await loadPlugins();
+      await loadDashboardIntelligence();
+    } catch {
+      setPluginMessage(`Plugin update failed for ${pluginKey}.`);
+    } finally {
+      setPluginLoadingKey(null);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
@@ -691,6 +758,7 @@ export function DashboardWorkspace() {
     void loadNotificationEvents();
     void loadStartupBriefing();
     void loadUserSettingsProfile();
+    void loadPlugins();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
@@ -701,6 +769,7 @@ export function DashboardWorkspace() {
       void loadReminders();
       void loadNotificationEvents();
       void loadUserSettingsProfile();
+      void loadPlugins();
     }, 5000);
 
     return () => window.clearInterval(timer);
@@ -732,13 +801,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.3
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.4
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -755,7 +824,7 @@ export function DashboardWorkspace() {
       </GlassPanel>
 
       {widgets.includes("Metrics") && (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-11">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">
           <Metric label="Models Online" value="4" />
           <Metric label="Memory" value="87%" />
           <Metric label="Knowledge Docs" value={String(knowledgeDocuments.length)} />
@@ -765,6 +834,7 @@ export function DashboardWorkspace() {
           <Metric label="Intel Score" value={dashboardIntelligence ? `${dashboardIntelligence.intelligence_score}` : "—"} />
           <Metric label="Reminders" value={String(reminders.length)} />
           <Metric label="Settings" value={String(userSettingsProfile?.settings.length || 0)} />
+          <Metric label="Plugins" value={String(plugins.length)} />
           <Metric label="Active Projects" value={String(projects.length)} />
           <Metric label="Running Agents" value={String(agents.filter((agent) => agent.status === "Running").length)} />
         </div>
@@ -866,6 +936,18 @@ export function DashboardWorkspace() {
             />
           )}
 
+          {widgets.includes("Plugin System") && (
+            <PluginSystemPanel
+              plugins={plugins}
+              metrics={pluginMetrics}
+              report={pluginRegistryReport}
+              loadingKey={pluginLoadingKey}
+              message={pluginMessage}
+              metricValue={metricValue}
+              updatePluginStatus={updatePluginStatusFromUI}
+            />
+          )}
+
           {widgets.includes("Knowledge Base") && (
             <KnowledgeBasePanel
               documents={knowledgeDocuments}
@@ -949,6 +1031,134 @@ export function DashboardWorkspace() {
 
 
 
+function PluginSystemPanel({
+  plugins,
+  metrics,
+  report,
+  loadingKey,
+  message,
+  metricValue,
+  updatePluginStatus,
+}: {
+  plugins: PluginItem[];
+  metrics: Record<string, unknown>;
+  report: string;
+  loadingKey: string | null;
+  message: string;
+  metricValue: (source: Record<string, unknown> | undefined, key: string, fallback?: string) => string;
+  updatePluginStatus: (pluginKey: string, enabled: boolean) => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Plugin System</h2>
+          <p className="text-sm text-slate-400">
+            Tool registry, plugin permissions, risk levels, and module status
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
+          v3.4
+        </span>
+      </div>
+
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <IntelMetric label="Total" value={metricValue(metrics, "total_plugins")} />
+          <IntelMetric label="Enabled" value={metricValue(metrics, "enabled_plugins")} />
+          <IntelMetric label="Disabled" value={metricValue(metrics, "disabled_plugins")} />
+          <IntelMetric label="High Risk" value={metricValue(metrics, "high_risk_enabled")} />
+        </div>
+
+        {message && (
+          <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+            {message}
+          </p>
+        )}
+
+        <div className="max-h-96 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
+          {plugins.length === 0 ? (
+            <p className="text-sm text-slate-500">No plugins registered yet.</p>
+          ) : (
+            plugins.map((plugin) => (
+              <div key={plugin.key} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-100">{plugin.name}</h3>
+                    <p className="mt-1 text-xs text-cyan-300">
+                      {plugin.key} | {plugin.category}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${
+                      plugin.risk_level === "high"
+                        ? "border-red-400/30 text-red-200"
+                        : plugin.risk_level === "medium"
+                          ? "border-yellow-400/30 text-yellow-200"
+                          : "border-emerald-400/30 text-emerald-200"
+                    }`}
+                  >
+                    {plugin.risk_level}
+                  </span>
+                </div>
+
+                <p className="mt-2 text-xs leading-5 text-slate-400">{plugin.description}</p>
+
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {plugin.permissions.map((permission) => (
+                    <span
+                      key={permission}
+                      className="rounded-full border border-white/10 bg-white/5 px-2 py-1 text-[10px] text-slate-400"
+                    >
+                      {permission}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <span
+                    className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${
+                      plugin.enabled
+                        ? "border-emerald-400/30 text-emerald-200"
+                        : "border-slate-400/30 text-slate-300"
+                    }`}
+                  >
+                    {plugin.enabled ? "enabled" : "disabled"}
+                  </span>
+                  <button
+                    onClick={() => updatePluginStatus(plugin.key, !plugin.enabled)}
+                    disabled={loadingKey === plugin.key}
+                    className={`rounded-xl border px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${
+                      plugin.enabled
+                        ? "border-red-400/30 text-red-200 hover:bg-red-500/10"
+                        : "border-emerald-400/30 text-emerald-200 hover:bg-emerald-500/10"
+                    }`}
+                  >
+                    {plugin.enabled ? "Disable" : "Enable"}
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-cyan-200">
+            Plugin Registry Report
+          </summary>
+          <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">
+            {report || "No plugin registry report loaded yet."}
+          </pre>
+        </details>
+
+        <p className="text-xs leading-5 text-slate-500">
+          Safety: v3.4 tracks plugin metadata, permissions, and enable/disable state. It does not dynamically execute third-party plugin code.
+        </p>
+      </div>
+    </GlassPanel>
+  );
+}
+
 function UserSettingsPanel({
   profile,
   loadingKey,
@@ -974,7 +1184,7 @@ function UserSettingsPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.3
+          v3.4
         </span>
       </div>
 
@@ -1096,7 +1306,7 @@ function NotificationEnginePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.3
+          v3.4
         </span>
       </div>
 
@@ -1247,7 +1457,7 @@ function DashboardIntelligencePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.3
+          v3.4
         </span>
       </div>
 
@@ -1297,6 +1507,8 @@ function DashboardIntelligencePanel({
               <IntelMetric label="Due Reminders" value={metricValue(intelligence.notification_metrics, "due_reminders")} />
               <IntelMetric label="Safety Level" value={intelligence.user_settings?.safety_level || "strict"} />
               <IntelMetric label="Voice Mode" value={intelligence.user_settings?.voice_mode || "text_first"} />
+              <IntelMetric label="Plugins" value={metricValue(intelligence.plugin_metrics, "total_plugins")} />
+              <IntelMetric label="Enabled Plugins" value={metricValue(intelligence.plugin_metrics, "enabled_plugins")} />
             </div>
 
             <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -1370,7 +1582,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.3
+          v3.4
         </span>
       </div>
 

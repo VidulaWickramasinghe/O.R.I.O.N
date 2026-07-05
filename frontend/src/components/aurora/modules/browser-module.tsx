@@ -45,7 +45,7 @@ export function BrowserModule({ onAssistantMessage }: BrowserModuleProps) {
     <ModuleShell
       title="Browser Research"
       description="Safe public webpage inspection and research extraction."
-      badge="v3.3"
+      badge="v3.4"
     >
       <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
         <section className="rounded-3xl border border-white/10 bg-black/30 p-5">
