@@ -1,6 +1,7 @@
 from agents import function_tool
 
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 from core.vector_memory import (
     list_vector_items,
     rebuild_vector_index,
@@ -10,6 +11,7 @@ from core.vector_memory import (
 
 @function_tool
 @instrument_tool("rebuild_vector_memory_index")
+@enforce_tool_permission("rebuild_vector_memory_index")
 def rebuild_vector_memory_index() -> str:
     """
     Rebuild vector memory index from persistent memory and indexed knowledge documents.
@@ -29,6 +31,7 @@ Knowledge failed: {result['knowledge']['failed_count']}
 
 @function_tool
 @instrument_tool("semantic_memory_search")
+@enforce_tool_permission("semantic_memory_search")
 def semantic_memory_search(query: str, limit: int = 8) -> str:
     """
     Search memory and knowledge semantically by meaning.
@@ -41,6 +44,7 @@ def semantic_memory_search(query: str, limit: int = 8) -> str:
 
 @function_tool
 @instrument_tool("list_vector_memory_items")
+@enforce_tool_permission("list_vector_memory_items")
 def list_vector_memory_items(limit: int = 20) -> str:
     """
     List indexed vector memory items.

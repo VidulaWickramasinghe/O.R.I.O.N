@@ -7,10 +7,12 @@ from core.backend_sidecar import (
     stop_backend_sidecar,
 )
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 
 
 @function_tool
 @instrument_tool("get_backend_sidecar_status")
+@enforce_tool_permission("get_backend_sidecar_status")
 def get_backend_sidecar_status() -> str:
     """
     Get local O.R.I.O.N. backend sidecar status.
@@ -20,6 +22,7 @@ def get_backend_sidecar_status() -> str:
 
 @function_tool
 @instrument_tool("start_backend_sidecar")
+@enforce_tool_permission("start_backend_sidecar")
 def start_backend_sidecar_tool() -> str:
     """
     Start the local O.R.I.O.N. backend sidecar.
@@ -30,6 +33,7 @@ def start_backend_sidecar_tool() -> str:
 
 @function_tool
 @instrument_tool("stop_backend_sidecar")
+@enforce_tool_permission("stop_backend_sidecar")
 def stop_backend_sidecar_tool() -> str:
     """
     Stop the local O.R.I.O.N. backend sidecar.
@@ -40,6 +44,7 @@ def stop_backend_sidecar_tool() -> str:
 
 @function_tool
 @instrument_tool("restart_backend_sidecar")
+@enforce_tool_permission("restart_backend_sidecar")
 def restart_backend_sidecar_tool() -> str:
     """
     Restart the local O.R.I.O.N. backend sidecar.

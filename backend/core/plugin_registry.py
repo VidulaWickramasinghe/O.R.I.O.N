@@ -202,6 +202,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {
+        "key": "tool_permission_enforcement",
+        "name": "Tool Permission Enforcement",
+        "description": "Checks plugin enabled/disabled state before protected tools execute.",
+        "category": "safety",
+        "risk_level": "high",
+        "permissions": ["tool_gate", "plugin_enforcement", "blocked_tool_logging"],
+        "default_enabled": True,
+    },
+    {
         "key": "user_settings",
         "name": "User Profile + Settings",
         "description": "Local profile preferences, safety level, theme, voice, and default workspace.",

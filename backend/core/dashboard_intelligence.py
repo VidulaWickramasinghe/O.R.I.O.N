@@ -8,6 +8,7 @@ from core.mission_planner import list_mission_records
 from core.mission_run_history import list_mission_runs
 from core.notification_engine import list_reminders, refresh_due_reminders
 from core.plugin_registry import get_plugin_metrics
+from core.tool_permissions import get_tool_permission_metrics
 from core.persistent_memory import list_recent_memory
 from core.user_settings import get_user_settings_map
 from core.vector_memory import list_vector_items
@@ -233,6 +234,7 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
     pending_reminders = [item for item in reminders if item.get("status") == "pending"]
     user_settings = get_user_settings_map()
     plugin_metrics = get_plugin_metrics()
+    tool_permission_metrics = get_tool_permission_metrics()
     intelligence_score = calculate_system_intelligence_score(
         mission_metrics=mission_metrics,
         workspace_metrics=workspace_metrics,
@@ -284,6 +286,7 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
             "pending_reminders": len(pending_reminders),
         },
         "plugin_metrics": plugin_metrics,
+        "tool_permission_metrics": tool_permission_metrics,
         "user_settings": {
             "display_name": user_settings.get("display_name", "O.R.I.O.N. User"),
             "default_workspace_id": user_settings.get("default_workspace_id", ""),
@@ -364,6 +367,14 @@ def render_dashboard_intelligence_report() -> str:
 - Enabled Plugins: {data['plugin_metrics']['enabled_plugins']}
 - Disabled Plugins: {data['plugin_metrics']['disabled_plugins']}
 - High-Risk Enabled Plugins: {data['plugin_metrics']['high_risk_enabled']}
+
+## Tool Permission Enforcement
+
+- Total Mapped Tools: {data['tool_permission_metrics']['total_mapped_tools']}
+- Allowed Tools: {data['tool_permission_metrics']['allowed_tools']}
+- Blocked Tools: {data['tool_permission_metrics']['blocked_tools']}
+- High-Risk Tools: {data['tool_permission_metrics']['high_risk_tools']}
+- High-Risk Allowed: {data['tool_permission_metrics']['high_risk_allowed']}
 
 ## Recommendations
 

@@ -158,6 +158,13 @@ from tools.backend_sidecar_tools import (
     restart_backend_sidecar_tool,
 )
 
+from tools.tool_permission_tools import (
+    get_tool_permission_report,
+    check_tool_permission,
+    get_tool_permission_metrics_tool,
+    list_tool_permission_matrix,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -226,6 +233,10 @@ orion = Agent(
         start_backend_sidecar_tool,
         stop_backend_sidecar_tool,
         restart_backend_sidecar_tool,
+        get_tool_permission_report,
+        check_tool_permission,
+        get_tool_permission_metrics_tool,
+        list_tool_permission_matrix,
     ],
 )
 

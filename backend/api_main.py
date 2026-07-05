@@ -185,6 +185,13 @@ from core.backend_sidecar import (
     render_sidecar_report,
 )
 
+from core.tool_permissions import (
+    get_tool_permission_matrix,
+    get_tool_permission_metrics,
+    is_tool_allowed,
+    render_tool_permission_report,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -299,11 +306,18 @@ from tools.backend_sidecar_tools import (
     restart_backend_sidecar_tool,
 )
 
+from tools.tool_permission_tools import (
+    get_tool_permission_report,
+    check_tool_permission,
+    get_tool_permission_metrics_tool,
+    list_tool_permission_matrix,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="3.6.0",
+    version="3.7.0",
 )
 
 app.add_middleware(
@@ -389,10 +403,14 @@ orion = Agent(
         start_backend_sidecar_tool,
         stop_backend_sidecar_tool,
         restart_backend_sidecar_tool,
+        get_tool_permission_report,
+        check_tool_permission,
+        get_tool_permission_metrics_tool,
+        list_tool_permission_matrix,
     ],
 )
 
-session = SQLiteSession("orion_core_v36_backend_sidecar")
+session = SQLiteSession("orion_core_v37_tool_permissions")
 
 
 class ChatRequest(BaseModel):
@@ -693,6 +711,30 @@ class BackendSidecarActionResponse(BaseModel):
     sidecar: BackendSidecarStatusResponse
 
 
+class ToolPermissionItem(BaseModel):
+    tool_name: str
+    plugin_key: str
+    plugin_name: str
+    enabled: bool
+    risk_level: str
+    category: str
+    permissions: List[str]
+    protected: bool
+
+
+class ToolPermissionResponse(BaseModel):
+    metrics: Dict[str, Any]
+    matrix: List[ToolPermissionItem]
+    report: str
+
+
+class ToolPermissionCheckResponse(BaseModel):
+    allowed: bool
+    tool_name: str
+    plugin_key: str
+    reason: str
+
+
 class DemoStatusResponse(BaseModel):
     demo_mode: bool
     release_version: str
@@ -989,6 +1031,7 @@ class DashboardIntelligenceResponse(BaseModel):
     notification_metrics: Dict[str, Any]
     user_settings: Dict[str, str]
     plugin_metrics: Dict[str, Any]
+    tool_permission_metrics: Dict[str, Any]
     recommendations: List[str]
     report: str
 
@@ -1009,7 +1052,7 @@ def startup_event():
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v3.6.0 started with Backend Sidecar + One-Click Desktop Launch enabled.",
+        "O.R.I.O.N. API v3.7.0 started with Tool Permission Enforcement Layer enabled.",
         "API",
     )
 
@@ -1018,7 +1061,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "3.6.0",
+        "version": "3.7.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -1079,7 +1122,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="3.6",
+        version="3.7",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -1118,6 +1161,7 @@ def status():
             "Plugin System + Tool Registry",
             "Packaged Desktop App Shell",
             "Backend Sidecar + One-Click Desktop Launch",
+            "Tool Permission Enforcement Layer",
         ],
     )
 
@@ -1127,7 +1171,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "3.6.0",
+        "version": "3.7.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -1139,7 +1183,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v3.6 Backend Sidecar + One-Click Desktop Launch",
+        "release": "v3.7 Tool Permission Enforcement Layer",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -1216,6 +1260,11 @@ def mission():
             "Sidecar status panel",
             "Local desktop shortcut installer",
             "Backend process health tracking",
+            "Tool Permission Enforcement",
+            "Plugin-controlled tool access",
+            "Blocked tool logging",
+            "Tool-to-plugin permission matrix",
+            "High-risk tool visibility",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -2598,6 +2647,7 @@ def dashboard_intelligence():
         notification_metrics=data["notification_metrics"],
         user_settings=data["user_settings"],
         plugin_metrics=data["plugin_metrics"],
+        tool_permission_metrics=data["tool_permission_metrics"],
         recommendations=data["recommendations"],
         report=report,
     )
@@ -2715,6 +2765,31 @@ def plugins_update_status(plugin_key: str, request: PluginStatusUpdateRequest):
         )
 
 
+@app.get("/api/tools/permissions", response_model=ToolPermissionResponse)
+def tool_permissions():
+    log_activity(
+        "TOOL_PERMISSION_VIEW",
+        "Aurora OS requested tool permission matrix.",
+        "Aurora OS",
+    )
+    return ToolPermissionResponse(
+        metrics=get_tool_permission_metrics(),
+        matrix=get_tool_permission_matrix(),
+        report=render_tool_permission_report(),
+    )
+
+
+@app.get("/api/tools/permissions/{tool_name}", response_model=ToolPermissionCheckResponse)
+def tool_permission_check(tool_name: str):
+    decision = is_tool_allowed(tool_name)
+    return ToolPermissionCheckResponse(
+        allowed=decision["allowed"],
+        tool_name=decision["tool_name"],
+        plugin_key=decision["plugin_key"],
+        reason=decision["reason"],
+    )
+
+
 def _sidecar_response(status_data: Dict[str, Any]) -> BackendSidecarStatusResponse:
     return BackendSidecarStatusResponse(
         managed_by=status_data.get("managed_by", "O.R.I.O.N. Backend Sidecar"),
@@ -2801,7 +2876,7 @@ def desktop_shell_status():
     return DesktopShellStatusResponse(
         status="online",
         app_name="O.R.I.O.N. Aurora OS",
-        shell_version="3.6.0",
+        shell_version="3.7.0",
         backend_url="http://127.0.0.1:8000",
         frontend_mode="tauri_static_shell",
         message="Desktop shell connected to O.R.I.O.N. backend with sidecar support.",

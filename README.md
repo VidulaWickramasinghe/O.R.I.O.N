@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.6 — Backend Sidecar + One-Click Desktop Launch**
+**v3.7 — Tool Permission Enforcement Layer**
 
 ## Core Capabilities
 
@@ -116,6 +116,21 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Sidecar status panel
 - Local desktop shortcut installer
 - Backend process health tracking
+- Tool Permission Enforcement
+- Plugin-controlled tool access
+- Blocked tool logging
+- Tool-to-plugin permission matrix
+- High-risk tool visibility
+
+## Tool Permission Enforcement
+
+O.R.I.O.N. v3.7 maps selected high-impact tools to Plugin Registry entries. Disabled plugins now block mapped protected tools safely and log blocked attempts.
+
+View the enforcement matrix in Aurora OS or through:
+
+```bash
+curl http://127.0.0.1:8000/api/tools/permissions
+```
 
 ## One-Click Desktop Launch
 

@@ -8,10 +8,12 @@ from core.knowledge_base import (
     summarize_knowledge_document,
 )
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 
 
 @function_tool
 @instrument_tool("index_knowledge_document")
+@enforce_tool_permission("index_knowledge_document")
 def index_knowledge_document(path: str, summary: str = "") -> str:
     """
     Index a supported local knowledge document.
@@ -35,6 +37,7 @@ Size: {result['size_bytes']} bytes
 
 @function_tool
 @instrument_tool("index_knowledge_folder")
+@enforce_tool_permission("index_knowledge_folder")
 def index_knowledge_folder_tool(folder_path: str) -> str:
     """
     Index supported documents inside a local folder.
@@ -53,6 +56,7 @@ Failed: {result['failed_count']}
 
 @function_tool
 @instrument_tool("list_knowledge_documents")
+@enforce_tool_permission("list_knowledge_documents")
 def list_knowledge_documents_tool(limit: int = 20) -> str:
     """
     List indexed knowledge documents.
@@ -69,6 +73,7 @@ def list_knowledge_documents_tool(limit: int = 20) -> str:
 
 @function_tool
 @instrument_tool("search_local_knowledge")
+@enforce_tool_permission("search_local_knowledge")
 def search_local_knowledge(query: str, limit: int = 10) -> str:
     """
     Search indexed local knowledge documents.
@@ -88,6 +93,7 @@ def search_local_knowledge(query: str, limit: int = 10) -> str:
 
 @function_tool
 @instrument_tool("summarize_knowledge_document")
+@enforce_tool_permission("summarize_knowledge_document")
 def summarize_knowledge_document_tool(document_id: int) -> str:
     """
     Summarize an indexed knowledge document using stored chunks.

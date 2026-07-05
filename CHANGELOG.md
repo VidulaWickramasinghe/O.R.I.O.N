@@ -1,3 +1,35 @@
+## v3.7 — Tool Permission Enforcement Layer
+
+### Added
+
+- Tool Permission Enforcement core
+- Plugin-to-tool mapping
+- Enforcement decorator
+- Blocked tool response system
+- Blocked tool activity logging
+- Tool permission tools
+- Tool permission API endpoints
+- Aurora OS Tool Permission Enforcement panel
+- Dashboard Intelligence tool permission metrics
+- Tool Permission Enforcement plugin registry entry
+
+### Enforced Modules
+
+- Developer tools
+- Desktop control tools
+- Agentic Developer Mode tools
+- Browser research tools
+- Knowledge Base tools
+- Vector Memory tools
+- Backend Sidecar tools
+
+### Safety
+
+- Disabled plugins now block mapped protected tools
+- Blocked attempts are logged
+- Plugin Registry and core settings remain protected
+- Approval gates remain active
+
 ## v3.6 — Backend Sidecar + One-Click Desktop Launch
 
 ### Added
