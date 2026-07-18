@@ -1,5 +1,3 @@
-https://share.gemini.google/lh9YEFPI0d8b
-
 # O.R.I.O.N. — Operational Response and Intelligent Orchestration Network
 
 **O.R.I.O.N.** is a personal AI desktop agent designed to help users think, plan, act, and learn through a safe agentic execution system.
