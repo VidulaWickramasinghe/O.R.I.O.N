@@ -1,5 +1,4 @@
-https://chatgpt.com/s/t_6a5bbc0c22988191a0e88958daaa3a7b
-
+https://chatgpt.com/share/6a412628-503c-83ec-bb11-6c32a75bb5a5
 
 # O.R.I.O.N. — Operational Response and Intelligent Orchestration Network
 
