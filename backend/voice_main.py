@@ -156,6 +156,12 @@ from tools.tool_permission_tools import (
     get_tool_permission_metrics_tool,
     list_tool_permission_matrix,
 )
+
+from tools.tool_audit_tools import (
+    get_tool_audit_report,
+    list_tool_audit_events_tool,
+    get_tool_audit_metrics_tool,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -223,6 +229,9 @@ orion = Agent(
         check_tool_permission,
         get_tool_permission_metrics_tool,
         list_tool_permission_matrix,
+        get_tool_audit_report,
+        list_tool_audit_events_tool,
+        get_tool_audit_metrics_tool,
     ],
 )
 

@@ -211,6 +211,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {
+        "key": "tool_audit_center",
+        "name": "Tool Audit Center",
+        "description": "Stores allowed and blocked tool permission events for security review.",
+        "category": "safety",
+        "risk_level": "medium",
+        "permissions": ["audit_read", "audit_write", "security_report"],
+        "default_enabled": True,
+    },
+    {
         "key": "user_settings",
         "name": "User Profile + Settings",
         "description": "Local profile preferences, safety level, theme, voice, and default workspace.",

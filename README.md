@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.7 — Tool Permission Enforcement Layer**
+**v3.8 — Tool Permission Enforcement Expansion + Audit Center**
 
 ## Core Capabilities
 
@@ -121,6 +121,21 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Blocked tool logging
 - Tool-to-plugin permission matrix
 - High-risk tool visibility
+- Tool Audit Center
+- Allowed/blocked tool event history
+- Security decision reports
+- Expanded plugin enforcement coverage
+- Audit-aware Dashboard Intelligence
+
+## Tool Audit Center
+
+O.R.I.O.N. v3.8 records protected tool decisions locally so allowed and blocked tool events can be reviewed in Aurora OS and Dashboard Intelligence.
+
+Review the audit stream through:
+
+```bash
+curl http://127.0.0.1:8000/api/tools/audit
+```
 
 ## Tool Permission Enforcement
 

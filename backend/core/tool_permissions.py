@@ -3,6 +3,7 @@ from typing import Any, Callable, Dict, List
 
 from core.activity import log_activity
 from core.plugin_registry import get_plugin, list_plugins
+from core.tool_audit import record_tool_audit_event
 
 
 TOOL_PLUGIN_MAP: Dict[str, str] = {
@@ -92,6 +93,13 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "start_backend_sidecar": "backend_sidecar",
     "stop_backend_sidecar": "backend_sidecar",
     "restart_backend_sidecar": "backend_sidecar",
+    "get_tool_permission_report": "tool_permission_enforcement",
+    "check_tool_permission": "tool_permission_enforcement",
+    "get_tool_permission_metrics": "tool_permission_enforcement",
+    "list_tool_permission_matrix": "tool_permission_enforcement",
+    "get_tool_audit_report": "tool_audit_center",
+    "list_tool_audit_events": "tool_audit_center",
+    "get_tool_audit_metrics": "tool_audit_center",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
@@ -99,6 +107,8 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "plugin_registry",
     "user_settings",
     "dashboard_intelligence",
+    "tool_permission_enforcement",
+    "tool_audit_center",
 }
 
 
@@ -113,21 +123,30 @@ def is_tool_allowed(tool_name: str) -> Dict[str, Any]:
             "allowed": True,
             "tool_name": tool_name,
             "plugin_key": "",
+            "plugin_name": "Unmapped",
+            "risk_level": "unknown",
+            "category": "unknown",
             "reason": "Tool is not mapped to a plugin. Allowed by default.",
         }
+    plugin = get_plugin(plugin_key)
     if plugin_key in ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS:
         return {
             "allowed": True,
             "tool_name": tool_name,
             "plugin_key": plugin_key,
+            "plugin_name": plugin["name"] if plugin else plugin_key,
+            "risk_level": plugin.get("risk_level", "unknown") if plugin else "unknown",
+            "category": plugin.get("category", "unknown") if plugin else "unknown",
             "reason": "Plugin is protected and always allowed.",
         }
-    plugin = get_plugin(plugin_key)
     if not plugin:
         return {
             "allowed": False,
             "tool_name": tool_name,
             "plugin_key": plugin_key,
+            "plugin_name": "Missing plugin",
+            "risk_level": "unknown",
+            "category": "unknown",
             "reason": f"Plugin registry entry missing for {plugin_key}.",
         }
     if not plugin.get("enabled", False):
@@ -135,15 +154,20 @@ def is_tool_allowed(tool_name: str) -> Dict[str, Any]:
             "allowed": False,
             "tool_name": tool_name,
             "plugin_key": plugin_key,
+            "plugin_name": plugin.get("name", plugin_key),
+            "risk_level": plugin.get("risk_level", "unknown"),
+            "category": plugin.get("category", "unknown"),
             "reason": f"Plugin {plugin_key} is disabled.",
         }
     return {
         "allowed": True,
         "tool_name": tool_name,
         "plugin_key": plugin_key,
+        "plugin_name": plugin.get("name", plugin_key),
+        "risk_level": plugin.get("risk_level", "unknown"),
+        "category": plugin.get("category", "unknown"),
         "reason": f"Plugin {plugin_key} is enabled.",
     }
-
 
 def enforce_tool_permission(tool_name: str) -> Callable:
     """
@@ -154,6 +178,15 @@ def enforce_tool_permission(tool_name: str) -> Callable:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             decision = is_tool_allowed(tool_name)
+            record_tool_audit_event(
+                tool_name=tool_name,
+                plugin_key=decision.get("plugin_key", ""),
+                decision="allowed" if decision["allowed"] else "blocked",
+                reason=decision.get("reason", ""),
+                risk_level=decision.get("risk_level", "unknown"),
+                category=decision.get("category", "unknown"),
+                source="Tool Permission Enforcement",
+            )
             if not decision["allowed"]:
                 message = (
                     "Tool blocked by Plugin Permission Enforcement.\n\n"
@@ -168,6 +201,11 @@ def enforce_tool_permission(tool_name: str) -> Callable:
                     "O.R.I.O.N.",
                 )
                 return message
+            log_activity(
+                "TOOL_PERMISSION_ALLOWED",
+                f"{tool_name} allowed. {decision['reason']}",
+                "O.R.I.O.N.",
+            )
             return func(*args, **kwargs)
 
         return wrapper

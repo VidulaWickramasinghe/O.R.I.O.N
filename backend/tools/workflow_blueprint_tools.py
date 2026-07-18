@@ -3,6 +3,7 @@ from typing import Optional
 from agents import function_tool
 
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 from core.workflow_blueprints import (
     create_mission_from_blueprint,
     list_blueprints,
@@ -12,6 +13,7 @@ from core.workflow_blueprints import (
 
 @function_tool
 @instrument_tool("list_workflow_blueprints")
+@enforce_tool_permission("list_workflow_blueprints")
 def list_workflow_blueprints() -> str:
     """
     List available O.R.I.O.N. workflow blueprints.
@@ -30,6 +32,7 @@ def list_workflow_blueprints() -> str:
 
 @function_tool
 @instrument_tool("read_workflow_blueprint")
+@enforce_tool_permission("read_workflow_blueprint")
 def read_workflow_blueprint(blueprint_key: str) -> str:
     """
     Read a workflow blueprint by key.
@@ -39,6 +42,7 @@ def read_workflow_blueprint(blueprint_key: str) -> str:
 
 @function_tool
 @instrument_tool("create_mission_from_workflow_blueprint")
+@enforce_tool_permission("create_mission_from_workflow_blueprint")
 def create_mission_from_workflow_blueprint(
     blueprint_key: str,
     mission_title: str = "",

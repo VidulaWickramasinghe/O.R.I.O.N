@@ -1,3 +1,25 @@
+## v3.8 — Tool Permission Enforcement Expansion + Audit Center
+
+### Added
+
+- Tool Audit Center core
+- Local tool audit SQLite database
+- Allowed and blocked tool event storage
+- Tool audit metrics
+- Tool audit report generator
+- Tool Audit tools
+- Tool Audit API endpoint
+- Aurora OS Tool Audit Center panel
+- Dashboard Intelligence audit metrics
+- Expanded enforcement to workspace, workflow, GitHub release, notification, and system doctor tools
+
+### Safety
+
+- Protected tool decisions are locally logged
+- Blocked attempts are visible in Aurora OS
+- Plugin enable/disable state now has stronger operational visibility
+- Approval gates remain active
+
 ## v3.7 — Tool Permission Enforcement Layer
 
 ### Added

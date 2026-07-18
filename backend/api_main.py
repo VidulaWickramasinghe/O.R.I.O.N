@@ -192,6 +192,13 @@ from core.tool_permissions import (
     render_tool_permission_report,
 )
 
+from core.tool_audit import (
+    get_tool_audit_metrics,
+    init_tool_audit_db,
+    list_tool_audit_events,
+    render_tool_audit_report,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -313,11 +320,17 @@ from tools.tool_permission_tools import (
     list_tool_permission_matrix,
 )
 
+from tools.tool_audit_tools import (
+    get_tool_audit_report,
+    list_tool_audit_events_tool,
+    get_tool_audit_metrics_tool,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="3.7.0",
+    version="3.8.0",
 )
 
 app.add_middleware(
@@ -407,10 +420,13 @@ orion = Agent(
         check_tool_permission,
         get_tool_permission_metrics_tool,
         list_tool_permission_matrix,
+        get_tool_audit_report,
+        list_tool_audit_events_tool,
+        get_tool_audit_metrics_tool,
     ],
 )
 
-session = SQLiteSession("orion_core_v37_tool_permissions")
+session = SQLiteSession("orion_core_v38_tool_audit_center")
 
 
 class ChatRequest(BaseModel):
@@ -735,6 +751,24 @@ class ToolPermissionCheckResponse(BaseModel):
     reason: str
 
 
+class ToolAuditEventItem(BaseModel):
+    id: int
+    tool_name: str
+    plugin_key: str
+    decision: str
+    reason: str
+    risk_level: str
+    category: str
+    source: str
+    created_at: str
+
+
+class ToolAuditResponse(BaseModel):
+    metrics: Dict[str, Any]
+    events: List[ToolAuditEventItem]
+    report: str
+
+
 class DemoStatusResponse(BaseModel):
     demo_mode: bool
     release_version: str
@@ -1032,6 +1066,7 @@ class DashboardIntelligenceResponse(BaseModel):
     user_settings: Dict[str, str]
     plugin_metrics: Dict[str, Any]
     tool_permission_metrics: Dict[str, Any]
+    tool_audit_metrics: Dict[str, Any]
     recommendations: List[str]
     report: str
 
@@ -1049,10 +1084,11 @@ def startup_event():
     init_notification_db()
     init_user_settings_db()
     init_plugin_registry_db()
+    init_tool_audit_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v3.7.0 started with Tool Permission Enforcement Layer enabled.",
+        "O.R.I.O.N. API v3.8.0 started with Tool Permission Enforcement Expansion + Audit Center enabled.",
         "API",
     )
 
@@ -1061,7 +1097,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "3.7.0",
+        "version": "3.8.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -1122,7 +1158,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="3.7",
+        version="3.8",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -1162,6 +1198,7 @@ def status():
             "Packaged Desktop App Shell",
             "Backend Sidecar + One-Click Desktop Launch",
             "Tool Permission Enforcement Layer",
+            "Tool Permission Enforcement Expansion + Audit Center",
         ],
     )
 
@@ -1171,7 +1208,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "3.7.0",
+        "version": "3.8.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -1183,7 +1220,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v3.7 Tool Permission Enforcement Layer",
+        "release": "v3.8 Tool Permission Enforcement Expansion + Audit Center",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -1265,6 +1302,11 @@ def mission():
             "Blocked tool logging",
             "Tool-to-plugin permission matrix",
             "High-risk tool visibility",
+            "Tool Audit Center",
+            "Allowed/blocked tool event history",
+            "Security decision reports",
+            "Expanded plugin enforcement coverage",
+            "Audit-aware Dashboard Intelligence",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -2648,6 +2690,7 @@ def dashboard_intelligence():
         user_settings=data["user_settings"],
         plugin_metrics=data["plugin_metrics"],
         tool_permission_metrics=data["tool_permission_metrics"],
+        tool_audit_metrics=data["tool_audit_metrics"],
         recommendations=data["recommendations"],
         report=report,
     )
@@ -2790,6 +2833,20 @@ def tool_permission_check(tool_name: str):
     )
 
 
+@app.get("/api/tools/audit", response_model=ToolAuditResponse)
+def tool_audit():
+    log_activity(
+        "TOOL_AUDIT_VIEW",
+        "Aurora OS requested Tool Audit Center.",
+        "Aurora OS",
+    )
+    return ToolAuditResponse(
+        metrics=get_tool_audit_metrics(),
+        events=list_tool_audit_events(limit=120),
+        report=render_tool_audit_report(),
+    )
+
+
 def _sidecar_response(status_data: Dict[str, Any]) -> BackendSidecarStatusResponse:
     return BackendSidecarStatusResponse(
         managed_by=status_data.get("managed_by", "O.R.I.O.N. Backend Sidecar"),
@@ -2876,7 +2933,7 @@ def desktop_shell_status():
     return DesktopShellStatusResponse(
         status="online",
         app_name="O.R.I.O.N. Aurora OS",
-        shell_version="3.7.0",
+        shell_version="3.8.0",
         backend_url="http://127.0.0.1:8000",
         frontend_mode="tauri_static_shell",
         message="Desktop shell connected to O.R.I.O.N. backend with sidecar support.",

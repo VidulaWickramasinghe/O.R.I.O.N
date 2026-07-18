@@ -8,10 +8,12 @@ from core.notification_engine import (
     update_reminder_status,
 )
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 
 
 @function_tool
 @instrument_tool("create_local_reminder")
+@enforce_tool_permission("create_local_reminder")
 def create_local_reminder(
     title: str,
     description: str,
@@ -45,6 +47,7 @@ Status: {reminder['status']}
 
 @function_tool
 @instrument_tool("list_local_reminders")
+@enforce_tool_permission("list_local_reminders")
 def list_local_reminders(status: str = "", limit: int = 20) -> str:
     """
     List local O.R.I.O.N. reminders.
@@ -63,6 +66,7 @@ def list_local_reminders(status: str = "", limit: int = 20) -> str:
 
 @function_tool
 @instrument_tool("complete_local_reminder")
+@enforce_tool_permission("complete_local_reminder")
 def complete_local_reminder(reminder_id: int) -> str:
     """
     Mark a local reminder as completed.
@@ -78,6 +82,7 @@ def complete_local_reminder(reminder_id: int) -> str:
 
 @function_tool
 @instrument_tool("refresh_due_reminders")
+@enforce_tool_permission("refresh_due_reminders")
 def refresh_due_reminders_tool() -> str:
     """
     Refresh reminders and mark due reminders.
@@ -93,6 +98,7 @@ def refresh_due_reminders_tool() -> str:
 
 @function_tool
 @instrument_tool("generate_startup_briefing")
+@enforce_tool_permission("generate_startup_briefing")
 def generate_startup_briefing_tool() -> str:
     """
     Generate a local O.R.I.O.N. startup briefing from reminders and notifications.
