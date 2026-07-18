@@ -1,5 +1,3 @@
-https://chatgpt.com/share/6a5bc061-dcc0-83ec-8238-2856475892b0
-
 # O.R.I.O.N. — Operational Response and Intelligent Orchestration Network
 
 **O.R.I.O.N.** is a personal AI desktop agent designed to help users think, plan, act, and learn through a safe agentic execution system.
