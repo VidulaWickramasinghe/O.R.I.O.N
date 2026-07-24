@@ -1,3 +1,7 @@
+## v6.0 — Stable Public Release + Version Lock
+
+- Added local stable-release lock, checklist, reports, changelog, workflow, and package preparation.
+
 ## v5.9 — Production Readiness Snapshot + Final Release Candidate v2
 
 - Added combined local production readiness verification and Final Release Candidate v2 generation.
