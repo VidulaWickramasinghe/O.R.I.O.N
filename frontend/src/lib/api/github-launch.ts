@@ -1,0 +1,1 @@
+import {apiGet,apiPost} from '@/lib/api/client'; import type {GitHubLaunchResult} from '@/types/orion'; export const getGitHubLaunchStatus=()=>apiGet<GitHubLaunchResult>('/api/github-launch/status'); export const saveGitHubLaunchArtifacts=(writeTemplates=true)=>apiPost<GitHubLaunchResult>('/api/github-launch/artifacts/save',{write_templates:writeTemplates});
