@@ -24,6 +24,7 @@ import { getVectorItems, rebuildVectorIndex, searchVector } from "@/lib/api/vect
 import { getWorkspaces } from "@/lib/api/workspaces";
 import { createWorkflowMission, getWorkflowBlueprint, getWorkflowBlueprints } from "@/lib/api/workflows";
 import { FrontendRefactorPanel } from "@/components/aurora/panels/FrontendRefactorPanel";
+import { DashboardLayoutPanel } from "@/components/aurora/panels/DashboardLayoutPanel";
 import { BackendSidecarPanel } from "@/components/aurora/panels/BackendSidecarPanel";
 import { DesktopShellPanel } from "@/components/aurora/panels/DesktopShellPanel";
 import { NotificationEnginePanel } from "@/components/aurora/panels/NotificationEnginePanel";
@@ -183,6 +184,7 @@ export function DashboardWorkspace() {
     "Workflow Blueprints",
     "Developer Mode",
     "Dashboard Intelligence",
+    "Dashboard Layout",
     "Notification Engine",
     "User Settings",
     "Plugin System",
@@ -237,6 +239,7 @@ export function DashboardWorkspace() {
     runFrontendRefactorScanFromStore, saveFrontendRefactorReportFromStore,
     runBackendSidecarActionFromStore, createReminderFromStore,
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
+    panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout,
   } = useAuroraStore();
   const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
@@ -246,6 +249,8 @@ export function DashboardWorkspace() {
   const [securityPolicyMessage, setSecurityPolicyMessage] = useState("");
   const [releaseCandidateMessage, setReleaseCandidateMessage] = useState("");
   const [stabilizationMessage, setStabilizationMessage] = useState("");
+
+  const panelVisible = (id: string) => panelLayout.length === 0 || panelLayout.some((item) => item.id === id && item.visible);
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -290,6 +295,7 @@ export function DashboardWorkspace() {
   useEffect(() => {
     void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
     void loadWorkspaces(); void loadDeveloperReports();
+    void useAuroraStore.getState().loadPanelLayout();
     void useAuroraStore.getState().refreshAll();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
@@ -318,7 +324,7 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.5
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.6
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
@@ -416,7 +422,18 @@ export function DashboardWorkspace() {
         </div>
 
         <div className="space-y-4">
-          {widgets.includes("Release Candidate") && (
+          {widgets.includes("Dashboard Layout") && (
+            <DashboardLayoutPanel
+              panelLayout={panelLayout}
+              onToggleVisible={togglePanelVisibility}
+              onTogglePinned={togglePanelPinned}
+              onMoveUp={movePanelUp}
+              onMoveDown={movePanelDown}
+              onReset={resetPanelLayout}
+            />
+          )}
+
+          {widgets.includes("Release Candidate") && panelVisible("release-candidate") && (
             <ReleaseCandidatePanel
               status={releaseCandidateStatus}
               latestPackage={releaseCandidatePackage}
@@ -426,7 +443,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Stabilization Manager") && (
+          {widgets.includes("Stabilization Manager") && panelVisible("stabilization") && (
             <StabilizationPanel
               result={stabilizationResult}
               loading={stabilizationLoading}
@@ -435,7 +452,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Frontend Refactor") && (
+          {widgets.includes("Frontend Refactor") && panelVisible("frontend-refactor") && (
             <FrontendRefactorPanel
               result={frontendRefactorResult}
               loading={frontendRefactorLoading}
@@ -444,7 +461,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Dashboard Intelligence") && (
+          {widgets.includes("Dashboard Intelligence") && panelVisible("dashboard-intelligence") && (
             <DashboardIntelligencePanel
               intelligence={dashboardIntelligence}
               loading={dashboardIntelligenceLoading}
@@ -453,7 +470,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Desktop Shell") && (
+          {widgets.includes("Desktop Shell") && panelVisible("desktop-shell") && (
             <DesktopShellPanel
               status={desktopShellStatus}
               loading={desktopShellLoading}
@@ -461,7 +478,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Backend Sidecar") && (
+          {widgets.includes("Backend Sidecar") && panelVisible("backend-sidecar") && (
             <BackendSidecarPanel
               status={backendSidecarStatus}
               loading={backendSidecarLoading}
@@ -471,7 +488,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Tool Permission Enforcement") && (
+          {widgets.includes("Tool Permission Enforcement") && panelVisible("tool-permission") && (
             <ToolPermissionPanel
               matrix={toolPermissionMatrix}
               metrics={toolPermissionMetrics}
@@ -480,7 +497,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Tool Audit Center") && (
+          {widgets.includes("Tool Audit Center") && panelVisible("tool-audit") && (
             <ToolAuditPanel
               events={toolAuditEvents}
               metrics={toolAuditMetrics}
@@ -489,7 +506,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Notification Engine") && (
+          {widgets.includes("Notification Engine") && panelVisible("notification-engine") && (
             <NotificationEnginePanel
               reminders={reminders}
               events={notificationEvents}
@@ -506,7 +523,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("User Settings") && (
+          {widgets.includes("User Settings") && panelVisible("user-settings") && (
             <UserSettingsPanel
               profile={userSettingsProfile}
               loadingKey={settingsLoadingKey}
@@ -517,7 +534,7 @@ export function DashboardWorkspace() {
             />
           )}
 
-          {widgets.includes("Plugin System") && (
+          {widgets.includes("Plugin System") && panelVisible("plugin-system") && (
             <PluginSystemPanel
               plugins={plugins}
               metrics={pluginMetrics}
@@ -531,7 +548,7 @@ export function DashboardWorkspace() {
 
 
 
-          {widgets.includes("Security Policy") && (
+          {widgets.includes("Security Policy") && panelVisible("security-policy") && (
             <SecurityPolicyPanel
               activePolicy={securityPolicyActive}
               profiles={securityProfiles}
@@ -659,7 +676,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.5
+          v4.6
         </span>
       </div>
 

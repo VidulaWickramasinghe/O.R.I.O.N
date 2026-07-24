@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v4.5 — Global Dashboard Store**
+**v4.6 — Panel Registry + Customizable Dashboard Layout**
 
 ## Core Capabilities
 
@@ -284,3 +284,11 @@ frontend/src-tauri/target/release/bundle/
 - Centralized frontend state management
 - Store-backed panel refresh actions
 - Cleaner dashboard orchestration
+
+## v4.6 Capabilities
+
+- Panel Registry
+- Customizable Aurora OS dashboard layout
+- Local panel visibility preferences
+- Pinned panel ordering
+- Dashboard Layout controls

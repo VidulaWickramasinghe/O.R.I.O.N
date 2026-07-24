@@ -1,3 +1,22 @@
+## v4.6 — Panel Registry + Customizable Dashboard Layout
+
+### Added
+
+- Aurora Panel Registry and layout types
+- Local panel layout storage
+- Dashboard Layout panel
+- Panel visibility, pinning, and up/down ordering controls
+- Frontend refactor scanner panel-registry checks
+
+### Changed
+
+- Aurora OS dashboard panels respect local registry layout preferences
+
+### Safety
+
+- Panel visibility is local UI state only
+- Backend tool permissions and approval gates are unchanged
+
 ## v4.5 — Global Dashboard Store
 
 ### Added
