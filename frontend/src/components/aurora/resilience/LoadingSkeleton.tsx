@@ -1,0 +1,1 @@
+export function LoadingSkeleton({title="Loading module",rows=4}:{title?:string;rows?:number}){return <div className="rounded-2xl border border-white/10 bg-black/30 p-4"><p className="text-xs uppercase text-cyan-300">{title}</p><div className="mt-4 space-y-3">{Array.from({length:rows}).map((_,i)=><div key={i} className="h-4 animate-pulse rounded-full bg-white/10"/>)}</div></div>}
