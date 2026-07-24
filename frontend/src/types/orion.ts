@@ -137,3 +137,5 @@ export type ActivityEvent = {
   timestamp?: string;
   created_at?: string;
 };
+
+export type QualityGateResult = { status: string; generated_at: string; backend_check: Record<string, unknown>; frontend_check: Record<string, unknown>; verification: Record<string, unknown>; report: string; path: string; };

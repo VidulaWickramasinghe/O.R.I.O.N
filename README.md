@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v4.8 — Frontend Resilience, Error Boundaries + Offline States**
+**v4.9 — Quality Gate, Test Runner + Release Verification**
 
 ## Core Capabilities
 

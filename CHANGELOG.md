@@ -1,3 +1,8 @@
+## v4.9 — Quality Gate, Test Runner + Release Verification
+
+- Added verification scripts, release verification core, Quality Gate API endpoints, and reports.
+- Safety: verification only; no publishing, pushing, deletion, or approval bypass.
+
 ## v4.8 — Frontend Resilience, Error Boundaries + Offline States
 
 - Added panel error boundaries, offline banner, loading skeletons, fallback UI, and backend health checks.
