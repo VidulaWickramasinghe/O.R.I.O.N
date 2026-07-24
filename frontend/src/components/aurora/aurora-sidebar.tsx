@@ -11,7 +11,6 @@ import {
   MessageSquare,
   Mic,
   MonitorCog,
-  Settings,
   Terminal,
   Wrench,
 } from "lucide-react";
@@ -138,7 +137,7 @@ export function AuroraSidebar({
             {collapsed ? (apiOnline ? "●" : "●") : apiOnline ? "Online" : "Offline"}
           </p>
 
-          {!collapsed && <p className="mt-2 text-xs text-slate-500">Aurora v2.6.3-D</p>}
+          {!collapsed && <p className="mt-2 text-xs text-slate-500">Aurora v4.5</p>}
         </div>
       </div>
     </aside>
