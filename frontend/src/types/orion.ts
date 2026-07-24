@@ -146,3 +146,7 @@ export type GitHubPolishCheck = { name: string; ok: boolean; details: string; };
 export type GitHubPolishResult = { status: string; generated_at: string; passed: number; failed: number; checks: GitHubPolishCheck[]; github_description: string; github_topics: string[]; report: string; artifacts: Record<string, string>; };
 
 export type PortfolioShowcaseResult = { status: string; generated_at: string; expected_count: number; existing_count: number; missing_count: number; screenshots: Record<string, unknown>[]; existing: string[]; missing: Record<string, unknown>[]; report: string; path: string; };
+
+export type FinalLaunchCheck = { name: string; ok: boolean; details: string; };
+export type FinalLaunchStatus = { status: string; generated_at: string; passed: number; failed: number; checks: FinalLaunchCheck[]; final_freeze: Record<string, unknown>; report: string; path: string; };
+export type FinalLaunchPackage = { status: string; generated_at: string; release_version: string; release_name: string; passed: number; failed: number; report_path: string; summary_path: string; safety: Record<string, unknown>; };

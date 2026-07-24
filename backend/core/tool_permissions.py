@@ -122,6 +122,8 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "save_github_polish_artifacts": "github_polish",
     "get_portfolio_showcase_report": "portfolio_showcase",
     "save_portfolio_showcase_report": "portfolio_showcase",
+    # Final launch
+    "get_final_launch_report": "final_launch", "save_final_launch_report": "final_launch", "freeze_final_launch": "final_launch", "unfreeze_final_launch": "final_launch", "generate_final_launch_package": "final_launch",
     # Demo recording
     "get_demo_recording_report": "demo_recording",
     "save_demo_recording_report": "demo_recording",
@@ -134,6 +136,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "portfolio_showcase",
     "demo_walkthrough",
     "demo_recording",
+    "final_launch",
     "github_polish",
     "approval_system",
     "plugin_registry",

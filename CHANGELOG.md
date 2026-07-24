@@ -1,3 +1,8 @@
+## v5.5 — Final Public Launch Checklist + Repository Freeze
+
+- Added final launch checks, repository freeze state, reports, package generation, API, and Aurora panel.
+- Safety: no push, publishing, deletion, secret exposure, or approval bypass.
+
 ## v5.4 — Demo Recording Mode + Presenter Controls
 
 ### Added
