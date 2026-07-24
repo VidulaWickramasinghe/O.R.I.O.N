@@ -81,7 +81,7 @@ def render_frontend_refactor_report() -> str:
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v4.9 Quality Gate Frontend Report
+    return f"""# O.R.I.O.N. v5.0 Public Portfolio Release Frontend Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}
@@ -145,6 +145,6 @@ Component Count: {scan['component_count']}
 
 def save_frontend_refactor_report() -> Dict[str, Any]:
     report = render_frontend_refactor_report()
-    path = REPORT_DIR / f"orion_v4_9_quality_gate_report_{datetime.now():%Y%m%d_%H%M%S}.md"
+    path = REPORT_DIR / f"orion_v5_0_public_release_report_{datetime.now():%Y%m%d_%H%M%S}.md"
     path.write_text(report, encoding="utf-8")
     return {"status": "saved", "path": str(path), "report": report, "generated_at": _now()}

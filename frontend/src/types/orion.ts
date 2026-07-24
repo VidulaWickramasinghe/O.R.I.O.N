@@ -139,3 +139,5 @@ export type ActivityEvent = {
 };
 
 export type QualityGateResult = { status: string; generated_at: string; backend_check: Record<string, unknown>; frontend_check: Record<string, unknown>; verification: Record<string, unknown>; report: string; path: string; };
+
+export type PublicReleasePackage = { status: string; version: string; name: string; generated_at: string; artifact_count: number; artifacts: Record<string,string>; summary_path: string; safety: Record<string,unknown>; report: string; };

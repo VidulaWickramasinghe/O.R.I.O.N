@@ -1,3 +1,8 @@
+## v5.0 — Public Portfolio Release + Demo Package
+
+- Added local public portfolio asset generation and public-release API endpoints.
+- Safety: no GitHub push, publishing, deletion, secret exposure, or approval bypass.
+
 ## v4.9 — Quality Gate, Test Runner + Release Verification
 
 - Added verification scripts, release verification core, Quality Gate API endpoints, and reports.
