@@ -274,6 +274,7 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {"key": "portfolio_showcase", "name": "Portfolio Showcase", "description": "Presentation-only screenshot gallery and portfolio readiness.", "category": "release", "risk_level": "low", "permissions": ["portfolio_showcase", "screenshot_gallery", "case_study"], "default_enabled": True},
+    {"key":"ui_polish","name":"UI Polish","description":"Mobile responsive showcase and public landing presentation readiness.","category":"frontend","risk_level":"low","permissions":["ui_scan"],"default_enabled":True},
     {"key":"public_landing","name":"Public Landing Page","description":"Public demo website and static export readiness.","category":"release","risk_level":"low","permissions":["landing_page"],"default_enabled":True},
     {"key":"github_launch","name":"GitHub Launch Assistant","description":"Prepares release draft, badges, templates, and safe push checklist.","category":"release","risk_level":"low","permissions":["release_draft","github_templates","safe_push_checklist"],"default_enabled":True},
     {"key": "final_launch", "name": "Final Public Launch", "description": "Final launch checklist, repository freeze, release verification, and public portfolio readiness.", "category": "release", "risk_level": "low", "permissions": ["final_launch_checklist", "repository_freeze", "launch_package"], "default_enabled": True},

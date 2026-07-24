@@ -57,6 +57,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "final_launch",
             "github_launch",
             "public_landing",
+            "ui_polish",
         },
         "disabled_plugins": {
             "developer_tools",
@@ -111,6 +112,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "final_launch",
             "github_launch",
             "public_landing",
+            "ui_polish",
         },
         "disabled_plugins": set(),
     },
@@ -155,6 +157,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "final_launch",
             "github_launch",
             "public_landing",
+            "ui_polish",
         },
         "disabled_plugins": set(),
     },

@@ -1,3 +1,7 @@
+## v5.8 — Final UI Polish + Mobile Responsive Showcase
+
+- Added responsive public-demo components and UI polish readiness reporting.
+
 ## v5.7 — Public Demo Website + Landing Page Export
 
 - Added public demo route, landing readiness core, and static-export checks.
