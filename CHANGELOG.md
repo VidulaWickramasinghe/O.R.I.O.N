@@ -1,3 +1,14 @@
+## v6.2 — Patch Release Manager + Hotfix Workflow
+
+### Added
+
+- Local patch workflow state, patch candidate classifier, hotfix checklist, patch notes, reports, and package artifacts.
+- Patch Release plugin and permission-aware agent tools.
+
+### Safety
+
+- Local planning and artifact generation only: no GitHub issue edits, pushes, publishing, deletions, or approval bypasses.
+
 ## v6.1 — Post-Release Maintenance + Issue Triage Mode
 
 - Added local issue triage, known issues, patch planning, and maintenance reporting.

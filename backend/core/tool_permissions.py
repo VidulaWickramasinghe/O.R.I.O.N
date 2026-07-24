@@ -124,6 +124,8 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "save_portfolio_showcase_report": "portfolio_showcase",
     # Post-release maintenance
     "get_post_release_maintenance_report": "post_release_maintenance", "save_post_release_maintenance_report": "post_release_maintenance", "add_known_issue": "post_release_maintenance", "get_patch_plan": "post_release_maintenance",
+    # Patch release
+    "get_patch_release_report": "patch_release", "save_patch_release_report": "patch_release", "start_patch_release": "patch_release", "complete_patch_release": "patch_release", "generate_patch_release_package": "patch_release",
     # Stable release
     "get_stable_release_report": "stable_release", "save_stable_release_report": "stable_release", "lock_stable_release": "stable_release", "unlock_stable_release": "stable_release", "generate_stable_release_package": "stable_release",
     # Production readiness
@@ -155,6 +157,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "production_readiness",
     "stable_release",
     "post_release_maintenance",
+    "patch_release",
     "github_polish",
     "approval_system",
     "plugin_registry",

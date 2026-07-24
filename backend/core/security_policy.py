@@ -61,6 +61,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "production_readiness",
             "stable_release",
             "post_release_maintenance",
+            "patch_release",
         },
         "disabled_plugins": {
             "developer_tools",
@@ -119,6 +120,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "production_readiness",
             "stable_release",
             "post_release_maintenance",
+            "patch_release",
         },
         "disabled_plugins": set(),
     },
@@ -167,6 +169,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "production_readiness",
             "stable_release",
             "post_release_maintenance",
+            "patch_release",
         },
         "disabled_plugins": set(),
     },
