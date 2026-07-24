@@ -5,6 +5,7 @@ from pathlib import Path
 from agents import function_tool
 
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 from core.approvals import create_approval_request, get_approval_request
 
 
@@ -145,6 +146,7 @@ def execute_approved_dev_action(approval_id: int) -> str:
 
 @function_tool
 @instrument_tool("get_system_status")
+@enforce_tool_permission("get_system_status")
 def get_system_status() -> str:
     """
     Get basic local development system status.
@@ -160,6 +162,7 @@ Safe base path: {SAFE_BASE}
 
 @function_tool
 @instrument_tool("list_directory")
+@enforce_tool_permission("list_directory")
 def list_directory(path: str = ".") -> str:
     """
     Safely list files and folders inside the O.R.I.O.N. project directory.
@@ -191,6 +194,7 @@ def list_directory(path: str = ".") -> str:
 
 @function_tool
 @instrument_tool("read_project_file")
+@enforce_tool_permission("read_project_file")
 def read_project_file(path: str) -> str:
     """
     Safely read a text file inside the O.R.I.O.N. project directory.
@@ -217,6 +221,7 @@ def read_project_file(path: str) -> str:
 
 @function_tool
 @instrument_tool("write_project_file")
+@enforce_tool_permission("write_project_file")
 def write_project_file(path: str, content: str) -> str:
     """
     Request approval before creating or updating a generated text file.
@@ -242,6 +247,7 @@ def write_project_file(path: str, content: str) -> str:
 
 @function_tool
 @instrument_tool("run_safe_command")
+@enforce_tool_permission("run_safe_command")
 def run_safe_command(command: str) -> str:
     """
     Request approval before running an approved non-destructive developer command.
