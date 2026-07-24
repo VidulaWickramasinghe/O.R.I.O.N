@@ -266,8 +266,43 @@ type DashboardIntelligence = {
   tool_permission_metrics?: Record<string, unknown>;
   tool_audit_metrics?: Record<string, unknown>;
   security_policy?: Record<string, string>;
+  release_candidate?: Record<string, unknown>;
   recommendations: string[];
   report: string;
+};
+
+type ReleaseFreezeState = {
+  frozen: boolean;
+  release_version: string;
+  release_name: string;
+  freeze_reason: string;
+  frozen_at: string;
+  unfrozen_at: string;
+  updated_at: string;
+};
+
+type ReleaseChecklistItem = { item: string; ok: boolean; details: string };
+
+type ReleaseCandidateStatus = {
+  freeze_state: ReleaseFreezeState;
+  checklist: { passed: number; failed: number; items: ReleaseChecklistItem[] };
+  events: Array<{
+    id: number;
+    event_type: string;
+    title: string;
+    message: string;
+    artifact_path: string;
+    created_at: string;
+  }>;
+  report: string;
+};
+
+type ReleaseCandidatePackage = {
+  status: string;
+  generated_at: string;
+  summary_path: string;
+  artifacts: Record<string, string>;
+  checklist: Record<string, unknown>;
 };
 
 export function DashboardWorkspace() {
@@ -286,6 +321,7 @@ export function DashboardWorkspace() {
     "User Settings",
     "Plugin System",
     "Security Policy",
+    "Release Candidate",
     "Desktop Shell",
     "Backend Sidecar",
     "Tool Permission Enforcement",
@@ -351,6 +387,12 @@ export function DashboardWorkspace() {
   const [securityPolicyReport, setSecurityPolicyReport] = useState("");
   const [securityPolicyLoadingKey, setSecurityPolicyLoadingKey] = useState<string | null>(null);
   const [securityPolicyMessage, setSecurityPolicyMessage] = useState("");
+  const [releaseCandidateStatus, setReleaseCandidateStatus] =
+    useState<ReleaseCandidateStatus | null>(null);
+  const [releaseCandidatePackage, setReleaseCandidatePackage] =
+    useState<ReleaseCandidatePackage | null>(null);
+  const [releaseCandidateLoading, setReleaseCandidateLoading] = useState(false);
+  const [releaseCandidateMessage, setReleaseCandidateMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -1024,6 +1066,51 @@ export function DashboardWorkspace() {
     }
   }
 
+  async function loadReleaseCandidateStatus() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/release-candidate/status");
+      if (!response.ok) throw new Error("Release candidate status request failed.");
+      const data: ReleaseCandidateStatus = await response.json();
+      setReleaseCandidateStatus(data);
+    } catch {
+      setReleaseCandidateStatus(null);
+    }
+  }
+
+  async function runReleaseCandidateAction(action: "freeze" | "unfreeze" | "package") {
+    setReleaseCandidateLoading(true);
+    setReleaseCandidateMessage("");
+    try {
+      const options = action === "package"
+        ? { method: "POST" }
+        : {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              reason: action === "freeze"
+                ? "Preparing O.R.I.O.N. v4.0 release candidate."
+                : "Release candidate freeze lifted by user.",
+            }),
+          };
+      const response = await fetch(`http://127.0.0.1:8000/api/release-candidate/${action}`, options);
+      if (!response.ok) throw new Error(`Release candidate ${action} request failed.`);
+      const data = await response.json();
+      if (action === "package") {
+        setReleaseCandidatePackage(data as ReleaseCandidatePackage);
+        setReleaseCandidateMessage(`Release package generated: ${data.summary_path}`);
+      } else {
+        setReleaseCandidateMessage(
+          action === "freeze" ? "System Freeze enabled." : "System Freeze disabled."
+        );
+      }
+      await Promise.all([loadReleaseCandidateStatus(), loadDashboardIntelligence(), loadPlugins()]);
+    } catch {
+      setReleaseCandidateMessage(`Release candidate ${action} failed. Confirm the backend is running.`);
+    } finally {
+      setReleaseCandidateLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
@@ -1041,6 +1128,7 @@ export function DashboardWorkspace() {
     void loadToolPermissions();
     void loadToolAudit();
     void loadSecurityPolicy();
+    void loadReleaseCandidateStatus();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
@@ -1057,6 +1145,7 @@ export function DashboardWorkspace() {
       void loadToolPermissions();
       void loadToolAudit();
       void loadSecurityPolicy();
+      void loadReleaseCandidateStatus();
     }, 5000);
 
     return () => window.clearInterval(timer);
@@ -1088,7 +1177,7 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.9
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.0
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
@@ -1186,6 +1275,16 @@ export function DashboardWorkspace() {
         </div>
 
         <div className="space-y-4">
+          {widgets.includes("Release Candidate") && (
+            <ReleaseCandidatePanel
+              status={releaseCandidateStatus}
+              latestPackage={releaseCandidatePackage}
+              loading={releaseCandidateLoading}
+              message={releaseCandidateMessage}
+              runAction={runReleaseCandidateAction}
+            />
+          )}
+
           {widgets.includes("Dashboard Intelligence") && (
             <DashboardIntelligencePanel
               intelligence={dashboardIntelligence}
@@ -1389,7 +1488,7 @@ function DesktopShellPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 
@@ -1460,7 +1559,7 @@ function BackendSidecarPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 
@@ -1572,7 +1671,7 @@ function PluginSystemPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 
@@ -1674,6 +1773,83 @@ function PluginSystemPanel({
 }
 
 
+function ReleaseCandidatePanel({
+  status,
+  latestPackage,
+  loading,
+  message,
+  runAction,
+}: {
+  status: ReleaseCandidateStatus | null;
+  latestPackage: ReleaseCandidatePackage | null;
+  loading: boolean;
+  message: string;
+  runAction: (action: "freeze" | "unfreeze" | "package") => void;
+}) {
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Release Candidate</h2>
+          <p className="text-sm text-slate-400">
+            v4.0 system freeze, release checklist, diagnostics export, and demo package
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.0</span>
+      </div>
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        {!status ? (
+          <p className="text-sm text-slate-500">Release Candidate status has not loaded yet.</p>
+        ) : (
+          <>
+            <div className={`rounded-2xl border p-4 ${status.freeze_state.frozen ? "border-cyan-400/30 bg-cyan-500/10 text-cyan-200" : "border-yellow-400/30 bg-yellow-500/10 text-yellow-200"}`}>
+              <p className="text-xs uppercase tracking-[0.25em]">System Freeze</p>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <span className="text-3xl font-black">{status.freeze_state.frozen ? "FROZEN" : "OPEN"}</span>
+                <span className="text-xs uppercase tracking-[0.2em]">{status.freeze_state.release_version}</span>
+              </div>
+              <p className="mt-3 text-xs leading-5">{status.freeze_state.freeze_reason || "No freeze reason recorded."}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <IntelMetric label="Checklist Passed" value={String(status.checklist.passed)} />
+              <IntelMetric label="Checklist Failed" value={String(status.checklist.failed)} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              <button onClick={() => runAction("freeze")} disabled={loading} className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60">Freeze</button>
+              <button onClick={() => runAction("unfreeze")} disabled={loading} className="rounded-2xl border border-yellow-400/30 px-4 py-3 text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/10 disabled:opacity-60">Unfreeze</button>
+              <button onClick={() => runAction("package")} disabled={loading} className="rounded-2xl border border-violet-400/30 px-4 py-3 text-sm font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:opacity-60">Package</button>
+            </div>
+            <div className="max-h-72 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
+              <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">Release Checklist</p>
+              {status.checklist.items.map((item) => (
+                <div key={item.item} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-100">{item.item}</p>
+                    <span className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${item.ok ? "border-emerald-400/30 text-emerald-200" : "border-red-400/30 text-red-200"}`}>{item.ok ? "pass" : "fail"}</span>
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500">{item.details}</p>
+                </div>
+              ))}
+            </div>
+            {latestPackage && (
+              <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-3">
+                <p className="text-xs uppercase tracking-[0.25em] text-violet-200">Latest Package</p>
+                <p className="mt-2 break-all text-xs leading-5 text-slate-300">{latestPackage.summary_path}</p>
+              </div>
+            )}
+            <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-cyan-200">Release Candidate Report</summary>
+              <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">{status.report}</pre>
+            </details>
+          </>
+        )}
+        {message && <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">{message}</p>}
+        <p className="text-xs leading-5 text-slate-500">Safety: System Freeze is local release-readiness mode. It does not publish, push, delete, or bypass approvals.</p>
+      </div>
+    </GlassPanel>
+  );
+}
+
 function SecurityPolicyPanel({
   activePolicy,
   profiles,
@@ -1701,7 +1877,7 @@ function SecurityPolicyPanel({
             Strict, Balanced, and Developer Lab risk modes for plugin control
           </p>
         </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v3.9</span>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.0</span>
       </div>
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
         <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
@@ -1801,7 +1977,7 @@ function ToolPermissionPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 
@@ -1914,7 +2090,7 @@ function ToolAuditPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 
@@ -2010,7 +2186,7 @@ function UserSettingsPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 
@@ -2132,7 +2308,7 @@ function NotificationEnginePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 
@@ -2283,7 +2459,7 @@ function DashboardIntelligencePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 
@@ -2412,7 +2588,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.9
+          v4.0
         </span>
       </div>
 

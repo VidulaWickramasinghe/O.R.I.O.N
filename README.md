@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.9 — Security Policy Profiles + Risk Modes**
+**v4.0 — Autonomous Release Candidate + System Freeze**
 
 ## Core Capabilities
 
@@ -131,6 +131,20 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Policy-controlled plugin states
 - Security policy event history
 - Risk-aware Dashboard Intelligence
+- Release Candidate Manager and System Freeze
+- v4.0 release checklist and local diagnostics exports
+- Portfolio/demo release package generation
+
+## Release Candidate Manager
+
+O.R.I.O.N. v4.0 adds a local release-readiness workflow with system freeze,
+checklist status, and diagnostics package generation. System Freeze does not
+push, publish, delete, or bypass approval gates.
+
+```bash
+curl http://127.0.0.1:8000/api/release-candidate/status
+curl -X POST http://127.0.0.1:8000/api/release-candidate/package
+```
 
 ## Security Policy Profiles
 

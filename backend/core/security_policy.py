@@ -47,6 +47,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "tool_permission_enforcement",
             "tool_audit_center",
             "security_policy_profiles",
+            "release_candidate",
         },
         "disabled_plugins": {
             "developer_tools",
@@ -91,6 +92,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "tool_permission_enforcement",
             "tool_audit_center",
             "security_policy_profiles",
+            "release_candidate",
         },
         "disabled_plugins": set(),
     },
@@ -125,6 +127,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "tool_permission_enforcement",
             "tool_audit_center",
             "security_policy_profiles",
+            "release_candidate",
         },
         "disabled_plugins": set(),
     },

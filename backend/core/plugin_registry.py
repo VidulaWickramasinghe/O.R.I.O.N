@@ -237,6 +237,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "permissions": ["settings_read", "settings_write"],
         "default_enabled": True,
     },
+    {
+        "key": "release_candidate",
+        "name": "Release Candidate Manager",
+        "description": "System freeze, release checklist, diagnostics export, and v4.0 package generation.",
+        "category": "release",
+        "risk_level": "medium",
+        "permissions": ["system_freeze", "release_package", "diagnostic_export"],
+        "default_enabled": True,
+    },
 ]
 
 

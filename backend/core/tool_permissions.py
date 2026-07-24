@@ -104,6 +104,12 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "get_active_security_policy": "security_policy_profiles",
     "apply_security_profile": "security_policy_profiles",
     "get_security_policy_report": "security_policy_profiles",
+    # Release candidate
+    "get_release_candidate_status": "release_candidate",
+    "freeze_release_candidate": "release_candidate",
+    "unfreeze_release_candidate": "release_candidate",
+    "generate_release_candidate_package": "release_candidate",
+    "get_release_candidate_report": "release_candidate",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
@@ -114,6 +120,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "tool_permission_enforcement",
     "tool_audit_center",
     "security_policy_profiles",
+    "release_candidate",
 }
 
 

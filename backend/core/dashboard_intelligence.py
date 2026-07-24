@@ -9,6 +9,7 @@ from core.mission_run_history import list_mission_runs
 from core.notification_engine import list_reminders, refresh_due_reminders
 from core.plugin_registry import get_plugin_metrics
 from core.security_policy import get_active_security_policy
+from core.release_candidate import generate_release_checklist, get_freeze_state
 from core.tool_permissions import get_tool_permission_metrics
 from core.tool_audit import get_tool_audit_metrics
 from core.persistent_memory import list_recent_memory
@@ -239,6 +240,8 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
     tool_permission_metrics = get_tool_permission_metrics()
     tool_audit_metrics = get_tool_audit_metrics()
     security_policy = get_active_security_policy()
+    release_freeze_state = get_freeze_state()
+    release_checklist = generate_release_checklist(include_dashboard=False)
     intelligence_score = calculate_system_intelligence_score(
         mission_metrics=mission_metrics,
         workspace_metrics=workspace_metrics,
@@ -297,6 +300,13 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
             "profile_name": security_policy["profile"]["name"],
             "safety_level": security_policy["profile"]["safety_level"],
             "applied_at": security_policy["applied_at"],
+        },
+        "release_candidate": {
+            "frozen": release_freeze_state["frozen"],
+            "release_version": release_freeze_state["release_version"],
+            "release_name": release_freeze_state["release_name"],
+            "checklist_passed": release_checklist["passed"],
+            "checklist_failed": release_checklist["failed"],
         },
         "user_settings": {
             "display_name": user_settings.get("display_name", "O.R.I.O.N. User"),
@@ -399,6 +409,14 @@ def render_dashboard_intelligence_report() -> str:
 - Profile Name: {data['security_policy']['profile_name']}
 - Safety Level: {data['security_policy']['safety_level']}
 - Applied At: {data['security_policy']['applied_at']}
+
+## Release Candidate
+
+- Frozen: {data['release_candidate']['frozen']}
+- Release Version: {data['release_candidate']['release_version']}
+- Release Name: {data['release_candidate']['release_name']}
+- Checklist Passed: {data['release_candidate']['checklist_passed']}
+- Checklist Failed: {data['release_candidate']['checklist_failed']}
 
 ## Recommendations
 

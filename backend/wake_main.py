@@ -178,6 +178,14 @@ from tools.security_policy_tools import (
     get_security_policy_report,
 )
 
+from tools.release_candidate_tools import (
+    get_release_candidate_status,
+    freeze_release_candidate,
+    unfreeze_release_candidate,
+    generate_release_candidate_package_tool,
+    get_release_candidate_report,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -253,6 +261,15 @@ orion = Agent(
         get_tool_audit_report,
         list_tool_audit_events_tool,
         get_tool_audit_metrics_tool,
+        list_security_profiles_tool,
+        get_active_security_policy_tool,
+        apply_security_profile_tool,
+        get_security_policy_report,
+        get_release_candidate_status,
+        freeze_release_candidate,
+        unfreeze_release_candidate,
+        generate_release_candidate_package_tool,
+        get_release_candidate_report,
     ],
 )
 

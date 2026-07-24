@@ -1,3 +1,22 @@
+## v4.0 — Autonomous Release Candidate + System Freeze
+
+### Added
+
+- Release Candidate Manager and local System Freeze state
+- Release Candidate SQLite database, event history, and checklist generator
+- Local diagnostics package with Dashboard Intelligence, Plugin Registry, Tool
+  Permission, Tool Audit, Security Policy, System Doctor, and briefing reports
+- Release Candidate tools, API endpoints, Dashboard Intelligence awareness,
+  and Aurora OS panel
+- v4.0 release-candidate documentation
+
+### Safety
+
+- System Freeze is local-only and does not push, publish, delete, or modify
+  external services
+- Approval gates remain active
+- Release packages are generated only in local data directories
+
 ## v3.9 — Security Policy Profiles + Risk Modes
 
 ### Added
