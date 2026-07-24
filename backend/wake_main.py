@@ -203,6 +203,11 @@ from tools.demo_walkthrough_tools import (
     save_demo_walkthrough_report,
 )
 
+from tools.demo_recording_tools import (
+    get_demo_recording_report,
+    save_demo_recording_report,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -297,6 +302,8 @@ orion = Agent(
         save_frontend_refactor_report,
         get_demo_walkthrough_report,
         save_demo_walkthrough_report,
+        get_demo_recording_report,
+        save_demo_recording_report,
     ],
 )
 

@@ -232,6 +232,12 @@ from core.demo_walkthrough import (
     render_demo_walkthrough_report,
     save_demo_walkthrough_report as save_demo_walkthrough_report_core,
 )
+
+from core.demo_recording import (
+    inspect_demo_recording_readiness,
+    render_demo_recording_report,
+    save_demo_recording_report as save_demo_recording_report_core,
+)
 from core.github_polish import generate_github_polish_checklist, render_github_polish_report, save_github_polish_artifacts
 from core.public_release import generate_public_release_package, render_public_release_report
 from core.release_verification import run_quality_gate_snapshot, render_release_verification_report, save_release_verification_report
@@ -400,6 +406,11 @@ from tools.demo_walkthrough_tools import (
     save_demo_walkthrough_report,
 )
 
+from tools.demo_recording_tools import (
+    get_demo_recording_report,
+    save_demo_recording_report,
+)
+
 
 class QualityGateRequest(BaseModel):
     run_builds: bool = False
@@ -462,10 +473,23 @@ class DemoWalkthroughResponse(BaseModel):
     path: str = ""
 
 
+class DemoRecordingResponse(BaseModel):
+    status: str
+    generated_at: str
+    scene_count: int
+    scenes: List[str]
+    passed: int
+    failed: int
+    checks: List[Dict[str, Any]]
+    safety: Dict[str, Any]
+    report: str
+    path: str = ""
+
+
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="5.3.0",
+    version="5.4.0",
 )
 
 app.add_middleware(
@@ -575,6 +599,8 @@ orion = Agent(
         save_frontend_refactor_report_tool,
         get_demo_walkthrough_report,
         save_demo_walkthrough_report,
+        get_demo_recording_report,
+        save_demo_recording_report,
     ],
 )
 
@@ -1439,7 +1465,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="5.3",
+        version="5.4",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -1456,6 +1482,7 @@ def status():
             "Project Launcher Panel",
             "Mission Control Release",
             "Demo Data Mode + Guided Portfolio Walkthrough",
+            "Demo Recording Mode + Presenter Controls",
             "UI Polish + Screenshot Showcase",
             "Persistent Memory Upgrade",
             "Command Approval System",
@@ -16036,6 +16063,20 @@ def demo_walkthrough_report_save():
     scan = inspect_demo_walkthrough()
     log_activity("DEMO_WALKTHROUGH_REPORT", f"Demo walkthrough report saved: {saved['path']}", "O.R.I.O.N.")
     return DemoWalkthroughResponse(**scan, report=saved["report"], path=saved["path"])
+
+
+@app.get("/api/demo-recording/status", response_model=DemoRecordingResponse)
+def demo_recording_status():
+    scan = inspect_demo_recording_readiness()
+    return DemoRecordingResponse(**scan, report=render_demo_recording_report())
+
+
+@app.post("/api/demo-recording/report/save", response_model=DemoRecordingResponse)
+def demo_recording_report_save():
+    saved = save_demo_recording_report_core()
+    scan = inspect_demo_recording_readiness()
+    log_activity("DEMO_RECORDING_REPORT", f"Demo recording report saved: {saved['path']}", "O.R.I.O.N.")
+    return DemoRecordingResponse(**scan, report=saved["report"], path=saved["path"])
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):

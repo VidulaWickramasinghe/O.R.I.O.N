@@ -194,6 +194,11 @@ from tools.demo_walkthrough_tools import (
     get_demo_walkthrough_report,
     save_demo_walkthrough_report,
 )
+
+from tools.demo_recording_tools import (
+    get_demo_recording_report,
+    save_demo_recording_report,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -283,6 +288,8 @@ orion = Agent(
         save_frontend_refactor_report,
         get_demo_walkthrough_report,
         save_demo_walkthrough_report,
+        get_demo_recording_report,
+        save_demo_recording_report,
     ],
 )
 

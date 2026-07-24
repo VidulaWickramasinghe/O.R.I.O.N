@@ -1,3 +1,12 @@
+## v5.4 — Demo Recording Mode + Presenter Controls
+
+### Added
+- Recording mode state, scene presets, presenter controls, overlay, timer, checklist, and clean layout controls
+- Recording readiness core, API, tools, plugin integration, and scanner checks
+
+### Safety
+- Presentation-only; no automatic screen recording, publishing, tool execution, or approval bypass
+
 ## v5.3 — Demo Data Mode + Guided Portfolio Walkthrough
 
 ### Added

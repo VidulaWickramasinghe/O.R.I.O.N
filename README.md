@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v5.3 — Demo Data Mode + Guided Portfolio Walkthrough**
+**v5.4 — Demo Recording Mode + Presenter Controls**
 
 ## Core Capabilities
 
