@@ -122,6 +122,8 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "save_github_polish_artifacts": "github_polish",
     "get_portfolio_showcase_report": "portfolio_showcase",
     "save_portfolio_showcase_report": "portfolio_showcase",
+    # Production readiness
+    "get_production_readiness_report": "production_readiness", "save_production_readiness_report": "production_readiness", "generate_final_release_candidate_v2": "production_readiness",
     # UI polish
     "get_ui_polish_report": "ui_polish", "save_ui_polish_report": "ui_polish",
     # Public landing
@@ -146,6 +148,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "github_launch",
     "public_landing",
     "ui_polish",
+    "production_readiness",
     "github_polish",
     "approval_system",
     "plugin_registry",

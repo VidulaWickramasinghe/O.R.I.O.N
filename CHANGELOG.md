@@ -1,3 +1,7 @@
+## v5.9 — Production Readiness Snapshot + Final Release Candidate v2
+
+- Added combined local production readiness verification and Final Release Candidate v2 generation.
+
 ## v5.8 — Final UI Polish + Mobile Responsive Showcase
 
 - Added responsive public-demo components and UI polish readiness reporting.
