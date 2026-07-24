@@ -267,6 +267,7 @@ type DashboardIntelligence = {
   tool_audit_metrics?: Record<string, unknown>;
   security_policy?: Record<string, string>;
   release_candidate?: Record<string, unknown>;
+  stabilization?: Record<string, unknown>;
   recommendations: string[];
   report: string;
 };
@@ -305,6 +306,14 @@ type ReleaseCandidatePackage = {
   checklist: Record<string, unknown>;
 };
 
+type StabilizationResult = {
+  status: string;
+  generated_at: string;
+  scan: Record<string, unknown>;
+  report: string;
+  path: string;
+};
+
 export function DashboardWorkspace() {
   const [widgets, setWidgets] = useState([
     "Hero",
@@ -322,6 +331,7 @@ export function DashboardWorkspace() {
     "Plugin System",
     "Security Policy",
     "Release Candidate",
+    "Stabilization Manager",
     "Desktop Shell",
     "Backend Sidecar",
     "Tool Permission Enforcement",
@@ -393,6 +403,9 @@ export function DashboardWorkspace() {
     useState<ReleaseCandidatePackage | null>(null);
   const [releaseCandidateLoading, setReleaseCandidateLoading] = useState(false);
   const [releaseCandidateMessage, setReleaseCandidateMessage] = useState("");
+  const [stabilizationResult, setStabilizationResult] = useState<StabilizationResult | null>(null);
+  const [stabilizationLoading, setStabilizationLoading] = useState(false);
+  const [stabilizationMessage, setStabilizationMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -1088,7 +1101,7 @@ export function DashboardWorkspace() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               reason: action === "freeze"
-                ? "Preparing O.R.I.O.N. v4.0 release candidate."
+                ? "Preparing O.R.I.O.N. v4.1 release candidate."
                 : "Release candidate freeze lifted by user.",
             }),
           };
@@ -1108,6 +1121,30 @@ export function DashboardWorkspace() {
       setReleaseCandidateMessage(`Release candidate ${action} failed. Confirm the backend is running.`);
     } finally {
       setReleaseCandidateLoading(false);
+    }
+  }
+
+  async function runStabilizationAction(action: "scan" | "save", runBuild = false) {
+    setStabilizationLoading(true);
+    setStabilizationMessage("");
+    try {
+      const endpoint = action === "scan" ? "scan" : "report/save";
+      const response = await fetch(`http://127.0.0.1:8000/api/stabilization/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ run_build: runBuild }),
+      });
+      if (!response.ok) throw new Error("Stabilization request failed.");
+      const data: StabilizationResult = await response.json();
+      setStabilizationResult(data);
+      setStabilizationMessage(
+        action === "save" ? `Stabilization report saved: ${data.path}` : `Stabilization scan completed: ${data.status}`
+      );
+      await Promise.all([loadDashboardIntelligence(), loadReleaseCandidateStatus()]);
+    } catch {
+      setStabilizationMessage("Stabilization action failed. Confirm the backend is running.");
+    } finally {
+      setStabilizationLoading(false);
     }
   }
 
@@ -1177,7 +1214,7 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.0
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.1
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
@@ -1282,6 +1319,15 @@ export function DashboardWorkspace() {
               loading={releaseCandidateLoading}
               message={releaseCandidateMessage}
               runAction={runReleaseCandidateAction}
+            />
+          )}
+
+          {widgets.includes("Stabilization Manager") && (
+            <StabilizationPanel
+              result={stabilizationResult}
+              loading={stabilizationLoading}
+              message={stabilizationMessage}
+              runAction={runStabilizationAction}
             />
           )}
 
@@ -1488,7 +1534,7 @@ function DesktopShellPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 
@@ -1559,7 +1605,7 @@ function BackendSidecarPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 
@@ -1671,7 +1717,7 @@ function PluginSystemPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 
@@ -1773,6 +1819,62 @@ function PluginSystemPanel({
 }
 
 
+function StabilizationPanel({
+  result,
+  loading,
+  message,
+  runAction,
+}: {
+  result: StabilizationResult | null;
+  loading: boolean;
+  message: string;
+  runAction: (action: "scan" | "save", runBuild?: boolean) => void;
+}) {
+  const statusClass = result?.status === "stable"
+    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
+    : result?.status === "needs_attention"
+      ? "border-red-400/30 bg-red-500/10 text-red-200"
+      : "border-yellow-400/30 bg-yellow-500/10 text-yellow-200";
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Stabilization Manager</h2>
+          <p className="text-sm text-slate-400">v4.1 codebase cleanup, import checks, compile scan, and release hardening</p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.1</span>
+      </div>
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <div className="grid grid-cols-3 gap-2">
+          <button onClick={() => runAction("scan")} disabled={loading} className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60">Scan</button>
+          <button onClick={() => runAction("scan", true)} disabled={loading} className="rounded-2xl border border-violet-400/30 px-4 py-3 text-sm font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:opacity-60">Scan + Build</button>
+          <button onClick={() => runAction("save")} disabled={loading} className="rounded-2xl border border-emerald-400/30 px-4 py-3 text-sm font-bold text-emerald-200 transition hover:bg-emerald-500/10 disabled:opacity-60">Save Report</button>
+        </div>
+        {!result ? (
+          <p className="text-sm text-slate-500">Run a stabilization scan to inspect the codebase.</p>
+        ) : (
+          <>
+            <div className={`rounded-2xl border p-4 ${statusClass}`}>
+              <p className="text-xs uppercase tracking-[0.25em]">Stabilization Status</p>
+              <div className="mt-3 flex items-end justify-between gap-3">
+                <span className="text-3xl font-black">{result.status}</span>
+                <span className="text-xs uppercase tracking-[0.2em]">{result.generated_at}</span>
+              </div>
+              {result.path && <p className="mt-3 break-all text-xs leading-5">Saved: {result.path}</p>}
+            </div>
+            <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <summary className="cursor-pointer text-sm font-semibold text-cyan-200">Stabilization Report</summary>
+              <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">{result.report}</pre>
+            </details>
+          </>
+        )}
+        {message && <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">{message}</p>}
+        <p className="text-xs leading-5 text-slate-500">Safety: v4.1 only scans and reports. It does not delete, rewrite, or auto-clean files.</p>
+      </div>
+    </GlassPanel>
+  );
+}
+
 function ReleaseCandidatePanel({
   status,
   latestPackage,
@@ -1792,10 +1894,10 @@ function ReleaseCandidatePanel({
         <div>
           <h2 className="text-xl font-bold text-white">Release Candidate</h2>
           <p className="text-sm text-slate-400">
-            v4.0 system freeze, release checklist, diagnostics export, and demo package
+            v4.1 system freeze, release checklist, diagnostics export, and demo package
           </p>
         </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.0</span>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.1</span>
       </div>
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
         {!status ? (
@@ -1877,7 +1979,7 @@ function SecurityPolicyPanel({
             Strict, Balanced, and Developer Lab risk modes for plugin control
           </p>
         </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.0</span>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.1</span>
       </div>
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
         <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
@@ -1977,7 +2079,7 @@ function ToolPermissionPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 
@@ -2090,7 +2192,7 @@ function ToolAuditPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 
@@ -2186,7 +2288,7 @@ function UserSettingsPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 
@@ -2308,7 +2410,7 @@ function NotificationEnginePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 
@@ -2459,7 +2561,7 @@ function DashboardIntelligencePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 
@@ -2588,7 +2690,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.0
+          v4.1
         </span>
       </div>
 

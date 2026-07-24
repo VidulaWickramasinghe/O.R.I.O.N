@@ -10,6 +10,7 @@ from core.notification_engine import list_reminders, refresh_due_reminders
 from core.plugin_registry import get_plugin_metrics
 from core.security_policy import get_active_security_policy
 from core.release_candidate import generate_release_checklist, get_freeze_state
+from core.stabilization_manager import run_stabilization_scan
 from core.tool_permissions import get_tool_permission_metrics
 from core.tool_audit import get_tool_audit_metrics
 from core.persistent_memory import list_recent_memory
@@ -242,6 +243,7 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
     security_policy = get_active_security_policy()
     release_freeze_state = get_freeze_state()
     release_checklist = generate_release_checklist(include_dashboard=False)
+    stabilization_scan = run_stabilization_scan(run_build=False)
     intelligence_score = calculate_system_intelligence_score(
         mission_metrics=mission_metrics,
         workspace_metrics=workspace_metrics,
@@ -307,6 +309,13 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
             "release_name": release_freeze_state["release_name"],
             "checklist_passed": release_checklist["passed"],
             "checklist_failed": release_checklist["failed"],
+        },
+        "stabilization": {
+            "status": stabilization_scan["status"],
+            "missing_files": stabilization_scan["required_files"]["missing_count"],
+            "import_risks": stabilization_scan["import_risks"]["risk_count"],
+            "code_findings": stabilization_scan["code_risks"]["finding_count"],
+            "backend_compile_ok": stabilization_scan["backend_compile"]["ok"],
         },
         "user_settings": {
             "display_name": user_settings.get("display_name", "O.R.I.O.N. User"),
@@ -417,6 +426,14 @@ def render_dashboard_intelligence_report() -> str:
 - Release Name: {data['release_candidate']['release_name']}
 - Checklist Passed: {data['release_candidate']['checklist_passed']}
 - Checklist Failed: {data['release_candidate']['checklist_failed']}
+
+## Stabilization
+
+- Status: {data['stabilization']['status']}
+- Missing Files: {data['stabilization']['missing_files']}
+- Import Risks: {data['stabilization']['import_risks']}
+- Code Findings: {data['stabilization']['code_findings']}
+- Backend Compile OK: {data['stabilization']['backend_compile_ok']}
 
 ## Recommendations
 

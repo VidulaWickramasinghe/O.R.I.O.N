@@ -176,6 +176,12 @@ from tools.release_candidate_tools import (
     get_release_candidate_report,
 )
 
+from tools.stabilization_tools import (
+    run_stabilization_scan_tool,
+    get_stabilization_report,
+    save_stabilization_report,
+)
+
 
 load_dotenv(dotenv_path="backend/.env")
 
@@ -255,6 +261,10 @@ orion = Agent(
         unfreeze_release_candidate,
         generate_release_candidate_package_tool,
         get_release_candidate_report,
+
+        run_stabilization_scan_tool,
+        get_stabilization_report,
+        save_stabilization_report,
     ],
 )
 

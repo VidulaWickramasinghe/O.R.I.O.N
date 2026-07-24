@@ -1,3 +1,19 @@
+## v4.1 — Stabilization, Bug Fixing + Codebase Cleanup
+
+### Added
+
+- Stabilization Manager core and local report artifacts
+- Required file, import/path, duplicate-risk, and code-pattern scans
+- Backend compile check and optional frontend build check
+- Stabilization tools, API endpoints, Dashboard Intelligence metrics, and
+  Release Candidate checklist awareness
+- Aurora OS Stabilization Manager panel and documentation
+
+### Safety
+
+- Scan/report only; no automatic deletion or rewrite
+- Real cleanup remains approval-gated
+
 ## v4.0 — Autonomous Release Candidate + System Freeze
 
 ### Added

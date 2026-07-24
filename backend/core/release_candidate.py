@@ -15,6 +15,7 @@ from core.notification_engine import generate_startup_briefing
 from core.plugin_registry import get_plugin_metrics, render_plugin_registry_report
 from core.portfolio_demo import generate_release_pack
 from core.security_policy import get_active_security_policy, render_security_policy_report
+from core.stabilization_manager import run_stabilization_scan
 from core.system_doctor import render_system_doctor_report
 from core.tool_audit import get_tool_audit_metrics, render_tool_audit_report
 from core.tool_permissions import get_tool_permission_metrics, render_tool_permission_report
@@ -186,6 +187,7 @@ def generate_release_checklist(include_dashboard: bool = True) -> Dict[str, Any]
     audit_metrics = get_tool_audit_metrics()
     security_policy = get_active_security_policy()
     settings = get_user_settings_map()
+    stabilization = run_stabilization_scan(run_build=False)
     checklist = [
         {"item": "Dashboard Intelligence score is available", "ok": dashboard.get("intelligence_score", 0) > 0, "details": f"Score: {dashboard.get('intelligence_score', 0)}"},
         {"item": "At least one workspace registered", "ok": dashboard.get("workspace_metrics", {}).get("total_workspaces", 0) > 0, "details": f"Workspaces: {dashboard.get('workspace_metrics', {}).get('total_workspaces', 0)}"},
@@ -195,6 +197,7 @@ def generate_release_checklist(include_dashboard: bool = True) -> Dict[str, Any]
         {"item": "Security Policy active", "ok": bool(security_policy.get("active_profile")), "details": f"Active profile: {security_policy.get('active_profile', 'unknown')}"},
         {"item": "Safety level configured", "ok": settings.get("safety_level", "") in {"strict", "balanced", "experimental"}, "details": f"Safety level: {settings.get('safety_level', 'unknown')}"},
         {"item": "Approval gates remain protected", "ok": True, "details": "Approval system is protected by policy profile logic."},
+        {"item": "v4.1 Stabilization scan completed", "ok": stabilization.get("status") in {"stable", "review_recommended", "cleanup_recommended"}, "details": f"Status: {stabilization.get('status', 'unknown')}"},
     ]
     passed = sum(1 for item in checklist if item["ok"])
     return {"passed": passed, "failed": len(checklist) - passed, "items": checklist}

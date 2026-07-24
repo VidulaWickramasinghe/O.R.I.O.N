@@ -177,6 +177,12 @@ from tools.release_candidate_tools import (
     generate_release_candidate_package_tool,
     get_release_candidate_report,
 )
+
+from tools.stabilization_tools import (
+    run_stabilization_scan_tool,
+    get_stabilization_report,
+    save_stabilization_report,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -256,6 +262,10 @@ orion = Agent(
         unfreeze_release_candidate,
         generate_release_candidate_package_tool,
         get_release_candidate_report,
+
+        run_stabilization_scan_tool,
+        get_stabilization_report,
+        save_stabilization_report,
     ],
 )
 

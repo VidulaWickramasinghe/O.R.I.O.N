@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v4.0 — Autonomous Release Candidate + System Freeze**
+**v4.1 — Stabilization, Bug Fixing + Codebase Cleanup**
 
 ## Core Capabilities
 
@@ -134,6 +134,20 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Release Candidate Manager and System Freeze
 - v4.0 release checklist and local diagnostics exports
 - Portfolio/demo release package generation
+- Stabilization Manager
+- Import/path and duplicate-risk detection
+- Compile/build diagnostics and release-hardening reports
+
+## Stabilization Manager
+
+O.R.I.O.N. v4.1 adds a read-only codebase hardening workflow. It scans and
+reports cleanup priorities without deleting or rewriting files.
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/stabilization/scan \
+  -H "Content-Type: application/json" \
+  -d '{"run_build":false}'
+```
 
 ## Release Candidate Manager
 

@@ -110,6 +110,10 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "unfreeze_release_candidate": "release_candidate",
     "generate_release_candidate_package": "release_candidate",
     "get_release_candidate_report": "release_candidate",
+    # Stabilization manager
+    "run_stabilization_scan": "stabilization_manager",
+    "get_stabilization_report": "stabilization_manager",
+    "save_stabilization_report": "stabilization_manager",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
@@ -121,6 +125,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "tool_audit_center",
     "security_policy_profiles",
     "release_candidate",
+    "stabilization_manager",
 }
 
 

@@ -246,6 +246,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "permissions": ["system_freeze", "release_package", "diagnostic_export"],
         "default_enabled": True,
     },
+    {
+        "key": "stabilization_manager",
+        "name": "Stabilization Manager",
+        "description": "Scans the codebase for missing files, import risks, compile issues, and cleanup priorities.",
+        "category": "diagnostics",
+        "risk_level": "low",
+        "permissions": ["code_scan", "diagnostic_report", "cleanup_plan"],
+        "default_enabled": True,
+    },
 ]
 
 
