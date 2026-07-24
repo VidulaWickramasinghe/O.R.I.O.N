@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v5.6 — GitHub Launch Assistant + Release Draft Prep**
+**v5.7 — Public Demo Website + Landing Page Export**
 
 ## Core Capabilities
 

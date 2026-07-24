@@ -122,6 +122,8 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "save_github_polish_artifacts": "github_polish",
     "get_portfolio_showcase_report": "portfolio_showcase",
     "save_portfolio_showcase_report": "portfolio_showcase",
+    # Public landing
+    "get_public_landing_report": "public_landing", "save_public_landing_report": "public_landing",
     # GitHub launch
     "get_github_launch_report": "github_launch", "save_github_launch_artifacts": "github_launch",
     # Final launch
@@ -140,6 +142,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "demo_recording",
     "final_launch",
     "github_launch",
+    "public_landing",
     "github_polish",
     "approval_system",
     "plugin_registry",

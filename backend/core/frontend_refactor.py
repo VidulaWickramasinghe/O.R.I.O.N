@@ -40,6 +40,7 @@ EXPECTED_FILES = [
     "src/components/aurora/panels/ScreenshotGalleryPanel.tsx", "src/components/aurora/panels/PortfolioCaseStudyPanel.tsx", "src/components/aurora/panels/PortfolioDemoPanel.tsx", "src/components/aurora/panels/PortfolioShowcaseStatusPanel.tsx",
     "src/components/aurora/panels/GitHubPolishPanel.tsx",
     "src/types/workspaceViews.ts", "src/lib/workspaceViewStorage.ts",
+    "src/app/public-demo/page.tsx", "src/lib/publicLandingRegistry.ts",
     "src/lib/api/github-launch.ts", "src/components/aurora/panels/GitHubLaunchPanel.tsx",
     "src/lib/api/final-launch.ts", "src/components/aurora/panels/FinalLaunchPanel.tsx",
     "src/types/recording.ts", "src/lib/recordingRegistry.ts", "src/lib/recordingModeStorage.ts", "src/components/aurora/panels/PresenterControlsPanel.tsx", "src/components/aurora/resilience/RecordingModeOverlay.tsx",

@@ -1,3 +1,8 @@
+## v5.7 — Public Demo Website + Landing Page Export
+
+- Added public demo route, landing readiness core, and static-export checks.
+- Safety: no publishing, GitHub push, secret exposure, or approval bypass.
+
 ## v5.6 — GitHub Launch Assistant + Release Draft Prep
 
 - Added local release drafts, badges, templates, safe-push checklist, and launch artifacts.
