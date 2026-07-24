@@ -1,0 +1,2 @@
+export type MemoryCategory = "All Memory" | "Projects" | "Preferences" | "Skills" | "Conversations" | "Files" | "Tools" | "System";
+export type MemoryItem = { id: string; title: string; content: string; category: MemoryCategory; source: string; project: string; confidence: number; lastUpdated: string; pinned: boolean; tags: string[]; tone: "primary" | "secondary" | "success" | "warning" | "danger" | "muted" };

@@ -1,0 +1,12 @@
+[package]
+name = "orion-aurora-os"
+version = "3.5.0"
+description = "O.R.I.O.N. Aurora OS desktop shell"
+authors = ["O.R.I.O.N."]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }

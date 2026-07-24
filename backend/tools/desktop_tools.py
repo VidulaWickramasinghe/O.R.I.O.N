@@ -1,6 +1,7 @@
 from agents import function_tool
 
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 from core.desktop_control import (
     request_open_workspace_in_vscode,
     request_open_workspace_folder,
@@ -11,6 +12,7 @@ from core.desktop_control import (
 
 @function_tool
 @instrument_tool("open_workspace_in_vscode")
+@enforce_tool_permission("open_workspace_in_vscode")
 def open_workspace_in_vscode(workspace_id: int) -> str:
     """
     Request approval to open a registered workspace in VS Code.
@@ -27,6 +29,7 @@ def open_workspace_in_vscode(workspace_id: int) -> str:
 
 @function_tool
 @instrument_tool("open_workspace_folder")
+@enforce_tool_permission("open_workspace_folder")
 def open_workspace_folder(workspace_id: int) -> str:
     """
     Request approval to open a registered workspace folder.
@@ -43,6 +46,7 @@ def open_workspace_folder(workspace_id: int) -> str:
 
 @function_tool
 @instrument_tool("open_url_in_browser")
+@enforce_tool_permission("open_url_in_browser")
 def open_url_in_browser(url: str) -> str:
     """
     Request approval to open a URL in the default browser.
@@ -59,6 +63,7 @@ def open_url_in_browser(url: str) -> str:
 
 @function_tool
 @instrument_tool("start_workspace_dev_server")
+@enforce_tool_permission("start_workspace_dev_server")
 def start_workspace_dev_server(workspace_id: int) -> str:
     """
     Request approval to start a workspace development server using npm run dev.

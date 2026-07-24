@@ -1,6 +1,7 @@
 from agents import function_tool
 
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 from core.github_release_assistant import (
     inspect_release_readiness,
     generate_github_release_notes,
@@ -11,6 +12,7 @@ from core.github_release_assistant import (
 
 @function_tool
 @instrument_tool("inspect_github_release_readiness")
+@enforce_tool_permission("inspect_github_release_readiness")
 def inspect_github_release_readiness(workspace_id: int) -> str:
     """
     Inspect a registered workspace and generate a GitHub release readiness report.
@@ -20,6 +22,7 @@ def inspect_github_release_readiness(workspace_id: int) -> str:
 
 @function_tool
 @instrument_tool("generate_github_release_notes")
+@enforce_tool_permission("generate_github_release_notes_tool")
 def generate_github_release_notes_tool(
     workspace_id: int,
     release_version: str,
@@ -45,6 +48,7 @@ Content:
 
 @function_tool
 @instrument_tool("generate_github_release_checklist")
+@enforce_tool_permission("generate_github_release_checklist")
 def generate_github_release_checklist(
     workspace_id: int,
     release_version: str,
@@ -70,6 +74,7 @@ Content:
 
 @function_tool
 @instrument_tool("suggest_release_commit_message")
+@enforce_tool_permission("suggest_release_commit_message")
 def suggest_release_commit_message(
     release_version: str,
     change_summary: str,

@@ -1,6 +1,7 @@
 from agents import function_tool
 
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 from core.workspace_manager import (
     register_workspace_record,
     list_workspace_records,
@@ -26,6 +27,7 @@ def _format_workspaces(workspaces):
 
 @function_tool
 @instrument_tool("register_workspace")
+@enforce_tool_permission("register_workspace")
 def register_workspace(
     name: str,
     path: str,
@@ -49,6 +51,7 @@ def register_workspace(
 
 @function_tool
 @instrument_tool("list_workspaces")
+@enforce_tool_permission("list_workspaces")
 def list_workspaces(limit: int = 20) -> str:
     """
     List registered project workspaces.
@@ -59,6 +62,7 @@ def list_workspaces(limit: int = 20) -> str:
 
 @function_tool
 @instrument_tool("read_workspace")
+@enforce_tool_permission("read_workspace")
 def read_workspace(workspace_id: int) -> str:
     """
     Read workspace metadata.
@@ -87,6 +91,7 @@ Updated:
 
 @function_tool
 @instrument_tool("inspect_workspace")
+@enforce_tool_permission("inspect_workspace")
 def inspect_workspace(workspace_id: int, max_depth: int = 2) -> str:
     """
     Inspect workspace folder structure safely.
@@ -96,6 +101,7 @@ def inspect_workspace(workspace_id: int, max_depth: int = 2) -> str:
 
 @function_tool
 @instrument_tool("read_workspace_key_file")
+@enforce_tool_permission("read_workspace_key_file")
 def read_workspace_key_file(workspace_id: int, relative_path: str) -> str:
     """
     Read a safe text file inside a registered workspace.
@@ -105,6 +111,7 @@ def read_workspace_key_file(workspace_id: int, relative_path: str) -> str:
 
 @function_tool
 @instrument_tool("detect_workspace_tech_stack")
+@enforce_tool_permission("detect_workspace_tech_stack")
 def detect_workspace_tech_stack(workspace_id: int) -> str:
     """
     Detect project technology stack from key files.
@@ -128,6 +135,7 @@ Key Files:
 
 @function_tool
 @instrument_tool("summarize_workspace")
+@enforce_tool_permission("summarize_workspace")
 def summarize_workspace(workspace_id: int) -> str:
     """
     Generate a workspace summary using project structure and key files.
