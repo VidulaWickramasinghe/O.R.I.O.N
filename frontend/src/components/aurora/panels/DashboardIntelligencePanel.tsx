@@ -7,7 +7,7 @@ export function DashboardIntelligencePanel({ intelligence, loading, message, onR
   intelligence: DashboardIntelligence | null; loading: boolean; message: string; onRefresh: () => void;
 }) {
   return <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
-    <div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-bold text-white">Dashboard Intelligence</h2><p className="text-sm text-slate-400">System scores, mission analytics, risk state, and readiness signals</p></div><span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.2</span></div>
+    <div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-bold text-white">Dashboard Intelligence</h2><p className="text-sm text-slate-400">System scores, mission analytics, risk state, and readiness signals</p></div><span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.3</span></div>
     <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
       <button onClick={onRefresh} disabled={loading} className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60">{loading ? "Analyzing..." : "Refresh Intelligence"}</button>
       {message && <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">{message}</p>}

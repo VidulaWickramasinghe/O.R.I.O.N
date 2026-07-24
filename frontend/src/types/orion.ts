@@ -86,3 +86,38 @@ export type SecurityPolicyEventItem = {
   id: number; profile_key: string; profile_name: string; summary: string;
   enabled_count: number; disabled_count: number; source: string; created_at: string;
 };
+
+export type DesktopShellStatus = {
+  status: string; app_name: string; shell_version: string; backend_url: string;
+  frontend_mode: string; message: string;
+};
+
+export type BackendSidecarStatus = {
+  managed_by: string; status: string; pid?: number | null; host: string; port: number;
+  backend_url: string; started_at: string; updated_at: string; last_error: string;
+  pid_running: boolean; port_open: boolean; log_file: string; state_file: string; report: string;
+};
+
+export type ReminderItem = {
+  id: number; title: string; description: string; due_at: string; status: string;
+  priority: string; source: string; created_at: string; updated_at: string;
+};
+
+export type NotificationEventItem = {
+  id: number; event_type: string; title: string; message: string; source: string; created_at: string;
+};
+
+export type StartupBriefing = { status: string; briefing: string };
+
+export type UserSettingItem = {
+  key: string; value: string; description: string; updated_at: string; options: string[];
+};
+
+export type UserSettingsProfile = {
+  settings: UserSettingItem[]; settings_map: Record<string, string>; profile_summary: string;
+};
+
+export type WorkspaceItem = {
+  id: number; name: string; path: string; description: string; status: string;
+  created_at: string; updated_at: string;
+};

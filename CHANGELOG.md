@@ -1,3 +1,29 @@
+## v4.3 — Frontend Component Extraction Phase 2
+
+### Added
+
+- PluginSystemPanel
+- ToolPermissionPanel
+- ToolAuditPanel
+- SecurityPolicyPanel
+- DesktopShellPanel
+- BackendSidecarPanel
+- NotificationEnginePanel
+- UserSettingsPanel
+- Updated frontend refactor scanner expectations
+- v4.3 frontend component extraction documentation
+
+### Changed
+
+- Reduced Aurora dashboard orchestration complexity
+- Continued Aurora OS component architecture migration
+
+### Safety
+
+- UI behavior preserved
+- No backend behavior changed
+- No automatic destructive actions
+
 ## v4.2 — Frontend Refactor + Component Architecture Cleanup
 
 ### Added

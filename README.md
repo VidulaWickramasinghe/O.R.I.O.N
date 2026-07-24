@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v4.2 — Frontend Refactor + Component Architecture Cleanup**
+**v4.3 — Frontend Component Extraction Phase 2**
 
 ## Core Capabilities
 
@@ -263,3 +263,10 @@ Desktop bundle output:
 ```text
 frontend/src-tauri/target/release/bundle/
 ```
+
+## v4.3 Capabilities
+
+- Frontend Component Extraction Phase 2
+- Modular Aurora OS panel system
+- Reduced dashboard orchestration complexity
+- Better UI maintainability

@@ -20,6 +20,14 @@ EXPECTED_FILES = [
     "src/components/aurora/ui/StatusPill.tsx", "src/components/aurora/panels/DashboardIntelligencePanel.tsx",
     "src/components/aurora/panels/ReleaseCandidatePanel.tsx", "src/components/aurora/panels/StabilizationPanel.tsx",
     "src/components/aurora/panels/FrontendRefactorPanel.tsx",
+    "src/components/aurora/panels/PluginSystemPanel.tsx",
+    "src/components/aurora/panels/ToolPermissionPanel.tsx",
+    "src/components/aurora/panels/ToolAuditPanel.tsx",
+    "src/components/aurora/panels/SecurityPolicyPanel.tsx",
+    "src/components/aurora/panels/DesktopShellPanel.tsx",
+    "src/components/aurora/panels/BackendSidecarPanel.tsx",
+    "src/components/aurora/panels/NotificationEnginePanel.tsx",
+    "src/components/aurora/panels/UserSettingsPanel.tsx",
 ]
 
 
@@ -53,7 +61,7 @@ def render_frontend_refactor_report() -> str:
     directories = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["directories"])
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v4.2 Frontend Refactor Report
+    return f"""# O.R.I.O.N. v4.3 Frontend Component Extraction Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}
@@ -81,7 +89,7 @@ Component Count: {scan['component_count']}
 
 ## Refactor Guidance
 
-- Keep page.tsx as the orchestration layer only.
+- Keep page.tsx and the dashboard workspace as orchestration layers only.
 - Move large panels into src/components/aurora/panels.
 - Move repeated cards and buttons into src/components/aurora/ui.
 - Move shared types into src/types/orion.ts and API helpers into src/lib/api.
@@ -91,6 +99,6 @@ Component Count: {scan['component_count']}
 
 def save_frontend_refactor_report() -> Dict[str, Any]:
     report = render_frontend_refactor_report()
-    path = REPORT_DIR / f"orion_v4_2_frontend_refactor_report_{datetime.now():%Y%m%d_%H%M%S}.md"
+    path = REPORT_DIR / f"orion_v4_3_frontend_component_extraction_report_{datetime.now():%Y%m%d_%H%M%S}.md"
     path.write_text(report, encoding="utf-8")
     return {"status": "saved", "path": str(path), "report": report, "generated_at": _now()}
