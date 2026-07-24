@@ -1,3 +1,8 @@
+## v5.6 — GitHub Launch Assistant + Release Draft Prep
+
+- Added local release drafts, badges, templates, safe-push checklist, and launch artifacts.
+- Safety: no push, publishing, deletion, secret exposure, or approval bypass.
+
 ## v5.5 — Final Public Launch Checklist + Repository Freeze
 
 - Added final launch checks, repository freeze state, reports, package generation, API, and Aurora panel.
