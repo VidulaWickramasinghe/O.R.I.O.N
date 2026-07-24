@@ -26,6 +26,8 @@ import { createWorkflowMission, getWorkflowBlueprint, getWorkflowBlueprints } fr
 import { FrontendRefactorPanel } from "@/components/aurora/panels/FrontendRefactorPanel";
 import { DashboardLayoutPanel } from "@/components/aurora/panels/DashboardLayoutPanel";
 import { DashboardViewSelectorPanel } from "@/components/aurora/panels/DashboardViewSelectorPanel";
+import { OfflineBanner } from "@/components/aurora/resilience/OfflineBanner";
+import { PanelErrorBoundary } from "@/components/aurora/resilience/PanelErrorBoundary";
 import { BackendSidecarPanel } from "@/components/aurora/panels/BackendSidecarPanel";
 import { DesktopShellPanel } from "@/components/aurora/panels/DesktopShellPanel";
 import { NotificationEnginePanel } from "@/components/aurora/panels/NotificationEnginePanel";
@@ -241,7 +243,7 @@ export function DashboardWorkspace() {
     runFrontendRefactorScanFromStore, saveFrontendRefactorReportFromStore,
     runBackendSidecarActionFromStore, createReminderFromStore,
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
-    panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset,
+    panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
   } = useAuroraStore();
   const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
@@ -348,6 +350,8 @@ export function DashboardWorkspace() {
           ))}
         </div>
       </GlassPanel>
+
+      <OfflineBanner online={backendOnline} lastCheckedAt={backendLastCheckedAt} lastError={backendLastError} onRetry={checkBackendHealth} />
 
       {widgets.includes("Metrics") && (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-14">

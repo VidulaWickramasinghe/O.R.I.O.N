@@ -1,3 +1,8 @@
+## v4.8 — Frontend Resilience, Error Boundaries + Offline States
+
+- Added panel error boundaries, offline banner, loading skeletons, fallback UI, and backend health checks.
+- Backend behavior and approval gates remain unchanged.
+
 ## v4.7 — Panel Groups, Layout Presets + Workspace Views
 
 ### Added

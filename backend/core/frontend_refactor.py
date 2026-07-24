@@ -32,6 +32,8 @@ EXPECTED_FILES = [
     "src/types/panels.ts", "src/lib/panelRegistry.ts", "src/lib/panelLayoutStorage.ts",
     "src/components/aurora/panels/DashboardLayoutPanel.tsx",
     "src/components/aurora/panels/DashboardViewSelectorPanel.tsx",
+    "src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx",
+    "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx",
     "src/types/workspaceViews.ts", "src/lib/workspaceViewStorage.ts",
 ]
 
@@ -66,7 +68,7 @@ def inspect_frontend_architecture() -> Dict[str, Any]:
     dashboard_lines = len(dashboard_text.splitlines())
     orchestrator_lines = max(page_lines, dashboard_lines)
     status = "needs_refactor" if missing_dirs or missing_files or missing_service_files else "page_too_large" if orchestrator_lines > 1600 else "improving" if orchestrator_lines > 900 else "healthy"
-    return {"status": status, "generated_at": _now(), "directories": directories, "files": files, "store_exists": (FRONTEND_DIR / "src/store/auroraStore.ts").is_file(), "panel_registry_exists": (FRONTEND_DIR / "src/lib/panelRegistry.ts").is_file(), "panel_storage_exists": (FRONTEND_DIR / "src/lib/panelLayoutStorage.ts").is_file(), "panel_types_exists": (FRONTEND_DIR / "src/types/panels.ts").is_file(), "dashboard_view_selector_exists": (FRONTEND_DIR / "src/components/aurora/panels/DashboardViewSelectorPanel.tsx").is_file(), "workspace_view_storage_exists": (FRONTEND_DIR / "src/lib/workspaceViewStorage.ts").is_file(),
+    return {"status": status, "generated_at": _now(), "directories": directories, "files": files, "store_exists": (FRONTEND_DIR / "src/store/auroraStore.ts").is_file(), "panel_registry_exists": (FRONTEND_DIR / "src/lib/panelRegistry.ts").is_file(), "panel_storage_exists": (FRONTEND_DIR / "src/lib/panelLayoutStorage.ts").is_file(), "panel_types_exists": (FRONTEND_DIR / "src/types/panels.ts").is_file(), "dashboard_view_selector_exists": (FRONTEND_DIR / "src/components/aurora/panels/DashboardViewSelectorPanel.tsx").is_file(), "workspace_view_storage_exists": (FRONTEND_DIR / "src/lib/workspaceViewStorage.ts").is_file(), "resilience_file_count": sum((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]), "resilience_ready": all((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]),
             "missing_directories": missing_dirs, "missing_files": missing_files, "service_files": service_files, "missing_service_files": missing_service_files, "service_file_count": sum(item["exists"] for item in service_files), "page_lines": page_lines,
             "page_size": len(page_text), "dashboard_workspace_lines": dashboard_lines,
             "dashboard_workspace_size": len(dashboard_text), "component_count": len(components), "components": components}
@@ -78,7 +80,7 @@ def render_frontend_refactor_report() -> str:
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v4.7 Panel Groups + Workspace Views Report
+    return f"""# O.R.I.O.N. v4.8 Frontend Resilience Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}
@@ -97,6 +99,11 @@ Status: {scan['status']}
 ## Expected Files
 
 {files}
+
+## Frontend Resilience
+
+- Resilience Files: {scan['resilience_file_count']}
+- Resilience Ready: {scan['resilience_ready']}
 
 ## Dashboard Views
 
@@ -137,6 +144,6 @@ Component Count: {scan['component_count']}
 
 def save_frontend_refactor_report() -> Dict[str, Any]:
     report = render_frontend_refactor_report()
-    path = REPORT_DIR / f"orion_v4_7_panel_groups_workspace_views_report_{datetime.now():%Y%m%d_%H%M%S}.md"
+    path = REPORT_DIR / f"orion_v4_8_frontend_resilience_report_{datetime.now():%Y%m%d_%H%M%S}.md"
     path.write_text(report, encoding="utf-8")
     return {"status": "saved", "path": str(path), "report": report, "generated_at": _now()}
