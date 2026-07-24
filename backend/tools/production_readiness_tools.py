@@ -1,0 +1,16 @@
+from agents import function_tool
+from core.production_readiness import render_production_readiness_report,save_production_readiness_report,generate_final_release_candidate_v2
+from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
+@function_tool
+@instrument_tool('get_production_readiness_report')
+@enforce_tool_permission('get_production_readiness_report')
+def get_production_readiness_report():return render_production_readiness_report()
+@function_tool
+@instrument_tool('save_production_readiness_report')
+@enforce_tool_permission('save_production_readiness_report')
+def save_production_readiness_report_tool():return str(save_production_readiness_report())
+@function_tool
+@instrument_tool('generate_final_release_candidate_v2')
+@enforce_tool_permission('generate_final_release_candidate_v2')
+def generate_final_release_candidate_v2_tool():return str(generate_final_release_candidate_v2())
