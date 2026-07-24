@@ -192,6 +192,12 @@ from tools.stabilization_tools import (
     save_stabilization_report,
 )
 
+from tools.frontend_refactor_tools import (
+    inspect_frontend_architecture_tool,
+    get_frontend_refactor_report,
+    save_frontend_refactor_report,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -280,6 +286,10 @@ orion = Agent(
         run_stabilization_scan_tool,
         get_stabilization_report,
         save_stabilization_report,
+
+        inspect_frontend_architecture_tool,
+        get_frontend_refactor_report,
+        save_frontend_refactor_report,
     ],
 )
 

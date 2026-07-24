@@ -6,8 +6,21 @@ import { dashboardModels, dashboardTimeline } from "@/lib/aurora-data";
 import { agents } from "@/lib/agent-data";
 import { memoryItems } from "@/lib/memory-data";
 import { projects } from "@/lib/project-data";
+import { apiGet, apiPost } from "@/lib/api/client";
+import { FrontendRefactorPanel } from "@/components/aurora/panels/FrontendRefactorPanel";
 import { GlassPanel } from "./glass-panel";
 import { StatusChip } from "./status-chip";
+
+import type {
+  DashboardIntelligence,
+  ReleaseCandidatePackage,
+  ReleaseCandidateStatus,
+  StabilizationResult,
+  FrontendRefactorResult,
+} from "@/types/orion";
+import { DashboardIntelligencePanel } from "@/components/aurora/panels/DashboardIntelligencePanel";
+import { ReleaseCandidatePanel } from "@/components/aurora/panels/ReleaseCandidatePanel";
+import { StabilizationPanel } from "@/components/aurora/panels/StabilizationPanel";
 
 type KnowledgeDocumentItem = {
   id: number;
@@ -251,68 +264,6 @@ type SecurityPolicyResponse = {
   report: string;
 };
 
-type DashboardIntelligence = {
-  intelligence_score: number;
-  readiness_label: string;
-  mission_metrics: Record<string, unknown>;
-  workspace_metrics: Record<string, unknown>;
-  memory_metrics: Record<string, unknown>;
-  risk_metrics: Record<string, unknown>;
-  activity_metrics: Record<string, unknown>;
-  developer_metrics: Record<string, unknown>;
-  notification_metrics: Record<string, unknown>;
-  user_settings?: Record<string, string>;
-  plugin_metrics?: Record<string, unknown>;
-  tool_permission_metrics?: Record<string, unknown>;
-  tool_audit_metrics?: Record<string, unknown>;
-  security_policy?: Record<string, string>;
-  release_candidate?: Record<string, unknown>;
-  stabilization?: Record<string, unknown>;
-  recommendations: string[];
-  report: string;
-};
-
-type ReleaseFreezeState = {
-  frozen: boolean;
-  release_version: string;
-  release_name: string;
-  freeze_reason: string;
-  frozen_at: string;
-  unfrozen_at: string;
-  updated_at: string;
-};
-
-type ReleaseChecklistItem = { item: string; ok: boolean; details: string };
-
-type ReleaseCandidateStatus = {
-  freeze_state: ReleaseFreezeState;
-  checklist: { passed: number; failed: number; items: ReleaseChecklistItem[] };
-  events: Array<{
-    id: number;
-    event_type: string;
-    title: string;
-    message: string;
-    artifact_path: string;
-    created_at: string;
-  }>;
-  report: string;
-};
-
-type ReleaseCandidatePackage = {
-  status: string;
-  generated_at: string;
-  summary_path: string;
-  artifacts: Record<string, string>;
-  checklist: Record<string, unknown>;
-};
-
-type StabilizationResult = {
-  status: string;
-  generated_at: string;
-  scan: Record<string, unknown>;
-  report: string;
-  path: string;
-};
 
 export function DashboardWorkspace() {
   const [widgets, setWidgets] = useState([
@@ -332,6 +283,7 @@ export function DashboardWorkspace() {
     "Security Policy",
     "Release Candidate",
     "Stabilization Manager",
+    "Frontend Refactor",
     "Desktop Shell",
     "Backend Sidecar",
     "Tool Permission Enforcement",
@@ -406,6 +358,8 @@ export function DashboardWorkspace() {
   const [stabilizationResult, setStabilizationResult] = useState<StabilizationResult | null>(null);
   const [stabilizationLoading, setStabilizationLoading] = useState(false);
   const [stabilizationMessage, setStabilizationMessage] = useState("");
+  const [frontendRefactorResult, setFrontendRefactorResult] = useState<FrontendRefactorResult | null>(null);
+  const [frontendRefactorLoading, setFrontendRefactorLoading] = useState(false);
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -1101,7 +1055,7 @@ export function DashboardWorkspace() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               reason: action === "freeze"
-                ? "Preparing O.R.I.O.N. v4.1 release candidate."
+                ? "Preparing O.R.I.O.N. v4.0 release candidate."
                 : "Release candidate freeze lifted by user.",
             }),
           };
@@ -1148,6 +1102,36 @@ export function DashboardWorkspace() {
     }
   }
 
+  async function loadFrontendRefactorStatus() {
+    try {
+      setFrontendRefactorResult(await apiGet<FrontendRefactorResult>("/api/frontend/refactor"));
+    } catch {
+      setFrontendRefactorResult(null);
+    }
+  }
+
+  async function runFrontendRefactorScanFromUI() {
+    setFrontendRefactorLoading(true);
+    try {
+      await loadFrontendRefactorStatus();
+    } finally {
+      setFrontendRefactorLoading(false);
+    }
+  }
+
+  async function saveFrontendRefactorReportFromUI() {
+    setFrontendRefactorLoading(true);
+    try {
+      setFrontendRefactorResult(
+        await apiPost<FrontendRefactorResult>("/api/frontend/refactor/report/save")
+      );
+    } catch {
+      setFrontendRefactorResult(null);
+    } finally {
+      setFrontendRefactorLoading(false);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
@@ -1166,6 +1150,7 @@ export function DashboardWorkspace() {
     void loadToolAudit();
     void loadSecurityPolicy();
     void loadReleaseCandidateStatus();
+    void loadFrontendRefactorStatus();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
@@ -1183,6 +1168,7 @@ export function DashboardWorkspace() {
       void loadToolAudit();
       void loadSecurityPolicy();
       void loadReleaseCandidateStatus();
+      void loadFrontendRefactorStatus();
     }, 5000);
 
     return () => window.clearInterval(timer);
@@ -1198,13 +1184,6 @@ export function DashboardWorkspace() {
     return String(value);
   }
 
-  function scoreTone(score: number) {
-    if (score >= 85) return "text-emerald-200 border-emerald-400/30 bg-emerald-500/10";
-    if (score >= 70) return "text-cyan-200 border-cyan-400/30 bg-cyan-500/10";
-    if (score >= 50) return "text-yellow-200 border-yellow-400/30 bg-yellow-500/10";
-    return "text-red-200 border-red-400/30 bg-red-500/10";
-  }
-
   return (
     <div className="space-y-4">
       <GlassPanel className="p-4">
@@ -1214,7 +1193,7 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.1
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.2
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
@@ -1331,14 +1310,21 @@ export function DashboardWorkspace() {
             />
           )}
 
+          {widgets.includes("Frontend Refactor") && (
+            <FrontendRefactorPanel
+              result={frontendRefactorResult}
+              loading={frontendRefactorLoading}
+              onScan={runFrontendRefactorScanFromUI}
+              onSaveReport={saveFrontendRefactorReportFromUI}
+            />
+          )}
+
           {widgets.includes("Dashboard Intelligence") && (
             <DashboardIntelligencePanel
               intelligence={dashboardIntelligence}
               loading={dashboardIntelligenceLoading}
               message={dashboardIntelligenceMessage}
-              metricValue={metricValue}
-              scoreTone={scoreTone}
-              refreshIntelligence={() => loadDashboardIntelligence(true)}
+              onRefresh={() => loadDashboardIntelligence(true)}
             />
           )}
 
@@ -1534,7 +1520,7 @@ function DesktopShellPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
+          v4.2
         </span>
       </div>
 
@@ -1605,7 +1591,7 @@ function BackendSidecarPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
+          v4.2
         </span>
       </div>
 
@@ -1717,7 +1703,7 @@ function PluginSystemPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
+          v4.2
         </span>
       </div>
 
@@ -1819,139 +1805,6 @@ function PluginSystemPanel({
 }
 
 
-function StabilizationPanel({
-  result,
-  loading,
-  message,
-  runAction,
-}: {
-  result: StabilizationResult | null;
-  loading: boolean;
-  message: string;
-  runAction: (action: "scan" | "save", runBuild?: boolean) => void;
-}) {
-  const statusClass = result?.status === "stable"
-    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-200"
-    : result?.status === "needs_attention"
-      ? "border-red-400/30 bg-red-500/10 text-red-200"
-      : "border-yellow-400/30 bg-yellow-500/10 text-yellow-200";
-  return (
-    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">Stabilization Manager</h2>
-          <p className="text-sm text-slate-400">v4.1 codebase cleanup, import checks, compile scan, and release hardening</p>
-        </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.1</span>
-      </div>
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
-        <div className="grid grid-cols-3 gap-2">
-          <button onClick={() => runAction("scan")} disabled={loading} className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60">Scan</button>
-          <button onClick={() => runAction("scan", true)} disabled={loading} className="rounded-2xl border border-violet-400/30 px-4 py-3 text-sm font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:opacity-60">Scan + Build</button>
-          <button onClick={() => runAction("save")} disabled={loading} className="rounded-2xl border border-emerald-400/30 px-4 py-3 text-sm font-bold text-emerald-200 transition hover:bg-emerald-500/10 disabled:opacity-60">Save Report</button>
-        </div>
-        {!result ? (
-          <p className="text-sm text-slate-500">Run a stabilization scan to inspect the codebase.</p>
-        ) : (
-          <>
-            <div className={`rounded-2xl border p-4 ${statusClass}`}>
-              <p className="text-xs uppercase tracking-[0.25em]">Stabilization Status</p>
-              <div className="mt-3 flex items-end justify-between gap-3">
-                <span className="text-3xl font-black">{result.status}</span>
-                <span className="text-xs uppercase tracking-[0.2em]">{result.generated_at}</span>
-              </div>
-              {result.path && <p className="mt-3 break-all text-xs leading-5">Saved: {result.path}</p>}
-            </div>
-            <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-cyan-200">Stabilization Report</summary>
-              <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">{result.report}</pre>
-            </details>
-          </>
-        )}
-        {message && <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">{message}</p>}
-        <p className="text-xs leading-5 text-slate-500">Safety: v4.1 only scans and reports. It does not delete, rewrite, or auto-clean files.</p>
-      </div>
-    </GlassPanel>
-  );
-}
-
-function ReleaseCandidatePanel({
-  status,
-  latestPackage,
-  loading,
-  message,
-  runAction,
-}: {
-  status: ReleaseCandidateStatus | null;
-  latestPackage: ReleaseCandidatePackage | null;
-  loading: boolean;
-  message: string;
-  runAction: (action: "freeze" | "unfreeze" | "package") => void;
-}) {
-  return (
-    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">Release Candidate</h2>
-          <p className="text-sm text-slate-400">
-            v4.1 system freeze, release checklist, diagnostics export, and demo package
-          </p>
-        </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.1</span>
-      </div>
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
-        {!status ? (
-          <p className="text-sm text-slate-500">Release Candidate status has not loaded yet.</p>
-        ) : (
-          <>
-            <div className={`rounded-2xl border p-4 ${status.freeze_state.frozen ? "border-cyan-400/30 bg-cyan-500/10 text-cyan-200" : "border-yellow-400/30 bg-yellow-500/10 text-yellow-200"}`}>
-              <p className="text-xs uppercase tracking-[0.25em]">System Freeze</p>
-              <div className="mt-3 flex items-end justify-between gap-3">
-                <span className="text-3xl font-black">{status.freeze_state.frozen ? "FROZEN" : "OPEN"}</span>
-                <span className="text-xs uppercase tracking-[0.2em]">{status.freeze_state.release_version}</span>
-              </div>
-              <p className="mt-3 text-xs leading-5">{status.freeze_state.freeze_reason || "No freeze reason recorded."}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <IntelMetric label="Checklist Passed" value={String(status.checklist.passed)} />
-              <IntelMetric label="Checklist Failed" value={String(status.checklist.failed)} />
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              <button onClick={() => runAction("freeze")} disabled={loading} className="rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60">Freeze</button>
-              <button onClick={() => runAction("unfreeze")} disabled={loading} className="rounded-2xl border border-yellow-400/30 px-4 py-3 text-sm font-bold text-yellow-200 transition hover:bg-yellow-500/10 disabled:opacity-60">Unfreeze</button>
-              <button onClick={() => runAction("package")} disabled={loading} className="rounded-2xl border border-violet-400/30 px-4 py-3 text-sm font-bold text-violet-200 transition hover:bg-violet-500/10 disabled:opacity-60">Package</button>
-            </div>
-            <div className="max-h-72 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
-              <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">Release Checklist</p>
-              {status.checklist.items.map((item) => (
-                <div key={item.item} className="rounded-xl border border-white/10 bg-black/30 p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm font-semibold text-slate-100">{item.item}</p>
-                    <span className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-[0.2em] ${item.ok ? "border-emerald-400/30 text-emerald-200" : "border-red-400/30 text-red-200"}`}>{item.ok ? "pass" : "fail"}</span>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">{item.details}</p>
-                </div>
-              ))}
-            </div>
-            {latestPackage && (
-              <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-3">
-                <p className="text-xs uppercase tracking-[0.25em] text-violet-200">Latest Package</p>
-                <p className="mt-2 break-all text-xs leading-5 text-slate-300">{latestPackage.summary_path}</p>
-              </div>
-            )}
-            <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-cyan-200">Release Candidate Report</summary>
-              <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">{status.report}</pre>
-            </details>
-          </>
-        )}
-        {message && <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">{message}</p>}
-        <p className="text-xs leading-5 text-slate-500">Safety: System Freeze is local release-readiness mode. It does not publish, push, delete, or bypass approvals.</p>
-      </div>
-    </GlassPanel>
-  );
-}
-
 function SecurityPolicyPanel({
   activePolicy,
   profiles,
@@ -1979,7 +1832,7 @@ function SecurityPolicyPanel({
             Strict, Balanced, and Developer Lab risk modes for plugin control
           </p>
         </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.1</span>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.2</span>
       </div>
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
         <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
@@ -2079,7 +1932,7 @@ function ToolPermissionPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
+          v4.2
         </span>
       </div>
 
@@ -2192,7 +2045,7 @@ function ToolAuditPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
+          v4.2
         </span>
       </div>
 
@@ -2288,7 +2141,7 @@ function UserSettingsPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
+          v4.2
         </span>
       </div>
 
@@ -2410,7 +2263,7 @@ function NotificationEnginePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
+          v4.2
         </span>
       </div>
 
@@ -2536,118 +2389,6 @@ function NotificationEnginePanel({
   );
 }
 
-function DashboardIntelligencePanel({
-  intelligence,
-  loading,
-  message,
-  metricValue,
-  scoreTone,
-  refreshIntelligence,
-}: {
-  intelligence: DashboardIntelligence | null;
-  loading: boolean;
-  message: string;
-  metricValue: (source: Record<string, unknown> | undefined, key: string, fallback?: string) => string;
-  scoreTone: (score: number) => string;
-  refreshIntelligence: () => void;
-}) {
-  return (
-    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-white">Dashboard Intelligence</h2>
-          <p className="text-sm text-slate-400">
-            System scores, mission analytics, risk state, and readiness signals
-          </p>
-        </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
-        </span>
-      </div>
-
-      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
-        <button
-          onClick={refreshIntelligence}
-          disabled={loading}
-          className="w-full rounded-2xl bg-cyan-300 px-4 py-3 text-sm font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
-        >
-          {loading ? "Analyzing..." : "Refresh Intelligence"}
-        </button>
-
-        {message && (
-          <p className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
-            {message}
-          </p>
-        )}
-
-        {!intelligence ? (
-          <p className="text-sm text-slate-500">Dashboard intelligence has not loaded yet.</p>
-        ) : (
-          <>
-            <div className={`rounded-2xl border p-4 ${scoreTone(intelligence.intelligence_score)}`}>
-              <p className="text-xs uppercase tracking-[0.25em]">Intelligence Score</p>
-              <div className="mt-3 flex items-end justify-between gap-3">
-                <span className="text-5xl font-black">{intelligence.intelligence_score}</span>
-                <span className="text-sm uppercase tracking-[0.25em]">
-                  {intelligence.readiness_label}
-                </span>
-              </div>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-black/30">
-                <div
-                  className="h-full rounded-full bg-current"
-                  style={{ width: `${intelligence.intelligence_score}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <IntelMetric label="Missions" value={metricValue(intelligence.mission_metrics, "total_missions")} />
-              <IntelMetric label="Mission Runs" value={metricValue(intelligence.mission_metrics, "mission_runs")} />
-              <IntelMetric label="Workspaces" value={metricValue(intelligence.workspace_metrics, "total_workspaces")} />
-              <IntelMetric label="Knowledge Docs" value={metricValue(intelligence.memory_metrics, "knowledge_documents")} />
-              <IntelMetric label="Vectors" value={metricValue(intelligence.memory_metrics, "vector_items")} />
-              <IntelMetric label="Pending Approvals" value={metricValue(intelligence.risk_metrics, "pending_approvals")} />
-              <IntelMetric label="Total Reminders" value={metricValue(intelligence.notification_metrics, "total_reminders")} />
-              <IntelMetric label="Due Reminders" value={metricValue(intelligence.notification_metrics, "due_reminders")} />
-              <IntelMetric label="Safety Level" value={intelligence.user_settings?.safety_level || "strict"} />
-              <IntelMetric label="Voice Mode" value={intelligence.user_settings?.voice_mode || "text_first"} />
-              <IntelMetric label="Plugins" value={metricValue(intelligence.plugin_metrics, "total_plugins")} />
-              <IntelMetric label="Enabled Plugins" value={metricValue(intelligence.plugin_metrics, "enabled_plugins")} />
-              <IntelMetric label="Mapped Tools" value={metricValue(intelligence.tool_permission_metrics, "total_mapped_tools")} />
-              <IntelMetric label="Allowed Tools" value={metricValue(intelligence.tool_permission_metrics, "allowed_tools")} />
-              <IntelMetric label="Audit Events" value={metricValue(intelligence.tool_audit_metrics, "total_audit_events")} />
-              <IntelMetric label="Blocked Audits" value={metricValue(intelligence.tool_audit_metrics, "blocked_events")} />
-            </div>
-
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">Recommendations</p>
-              <div className="mt-3 space-y-2">
-                {intelligence.recommendations.map((item) => (
-                  <p
-                    key={item}
-                    className="rounded-xl border border-white/10 bg-black/30 p-2 text-xs leading-5 text-slate-300"
-                  >
-                    {item}
-                  </p>
-                ))}
-              </div>
-            </div>
-
-            <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <summary className="cursor-pointer text-sm font-semibold text-cyan-200">
-                Full Intelligence Report
-              </summary>
-              <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">
-                {intelligence.report}
-              </pre>
-            </details>
-          </>
-        )}
-      </div>
-    </GlassPanel>
-  );
-}
-
 function IntelMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -2690,7 +2431,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.1
+          v4.2
         </span>
       </div>
 

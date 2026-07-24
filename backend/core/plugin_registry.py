@@ -255,6 +255,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "permissions": ["code_scan", "diagnostic_report", "cleanup_plan"],
         "default_enabled": True,
     },
+    {
+        "key": "frontend_refactor",
+        "name": "Frontend Refactor Manager",
+        "description": "Inspects Aurora OS frontend component architecture and page cleanup progress.",
+        "category": "frontend",
+        "risk_level": "low",
+        "permissions": ["frontend_scan", "component_inventory", "refactor_report"],
+        "default_enabled": True,
+    },
 ]
 
 

@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v4.1 — Stabilization, Bug Fixing + Codebase Cleanup**
+**v4.2 — Frontend Refactor + Component Architecture Cleanup**
 
 ## Core Capabilities
 
@@ -137,6 +137,18 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Stabilization Manager
 - Import/path and duplicate-risk detection
 - Compile/build diagnostics and release-hardening reports
+- Frontend component architecture and reusable Aurora OS panels
+- Shared frontend types and API client
+- Frontend refactor health scan and report export
+
+## Frontend Refactor
+
+O.R.I.O.N. v4.2 structurally extracts Aurora OS panels while preserving the
+existing look and behavior.
+
+```bash
+curl http://127.0.0.1:8000/api/frontend/refactor
+```
 
 ## Stabilization Manager
 

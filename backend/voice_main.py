@@ -183,6 +183,12 @@ from tools.stabilization_tools import (
     get_stabilization_report,
     save_stabilization_report,
 )
+
+from tools.frontend_refactor_tools import (
+    inspect_frontend_architecture_tool,
+    get_frontend_refactor_report,
+    save_frontend_refactor_report,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -266,6 +272,10 @@ orion = Agent(
         run_stabilization_scan_tool,
         get_stabilization_report,
         save_stabilization_report,
+
+        inspect_frontend_architecture_tool,
+        get_frontend_refactor_report,
+        save_frontend_refactor_report,
     ],
 )
 

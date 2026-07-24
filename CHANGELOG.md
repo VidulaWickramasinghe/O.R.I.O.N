@@ -1,3 +1,19 @@
+## v4.2 — Frontend Refactor + Component Architecture Cleanup
+
+### Added
+
+- Aurora OS component folders, shared API client, and shared type module
+- Reusable GlassPanel, MetricCard, and StatusPill primitives
+- Extracted Dashboard Intelligence, Release Candidate, and Stabilization panels
+- Frontend Refactor Manager, architecture report generator, tools, and APIs
+- Aurora OS Frontend Refactor health panel and documentation
+
+### Safety
+
+- UI appearance is preserved
+- Refactor is structural, not destructive
+- Dashboard orchestration remains separate from extracted presentation panels
+
 ## v4.1 — Stabilization, Bug Fixing + Codebase Cleanup
 
 ### Added

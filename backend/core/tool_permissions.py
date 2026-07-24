@@ -114,6 +114,10 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "run_stabilization_scan": "stabilization_manager",
     "get_stabilization_report": "stabilization_manager",
     "save_stabilization_report": "stabilization_manager",
+    # Frontend refactor
+    "inspect_frontend_architecture": "frontend_refactor",
+    "get_frontend_refactor_report": "frontend_refactor",
+    "save_frontend_refactor_report": "frontend_refactor",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
@@ -126,6 +130,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "security_policy_profiles",
     "release_candidate",
     "stabilization_manager",
+    "frontend_refactor",
 }
 
 
