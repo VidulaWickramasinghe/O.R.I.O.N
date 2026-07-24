@@ -40,6 +40,11 @@ EXPECTED_FILES = [
     "src/components/aurora/panels/ScreenshotGalleryPanel.tsx", "src/components/aurora/panels/PortfolioCaseStudyPanel.tsx", "src/components/aurora/panels/PortfolioDemoPanel.tsx", "src/components/aurora/panels/PortfolioShowcaseStatusPanel.tsx",
     "src/components/aurora/panels/GitHubPolishPanel.tsx",
     "src/types/workspaceViews.ts", "src/lib/workspaceViewStorage.ts",
+    "src/lib/api/github-launch.ts", "src/components/aurora/panels/GitHubLaunchPanel.tsx",
+    "src/lib/api/final-launch.ts", "src/components/aurora/panels/FinalLaunchPanel.tsx",
+    "src/types/recording.ts", "src/lib/recordingRegistry.ts", "src/lib/recordingModeStorage.ts", "src/components/aurora/panels/PresenterControlsPanel.tsx", "src/components/aurora/resilience/RecordingModeOverlay.tsx",
+    "src/types/demo.ts", "src/lib/demoWalkthroughRegistry.ts", "src/lib/demoWalkthroughStorage.ts", "src/lib/demoData.ts",
+    "src/components/aurora/panels/GuidedWalkthroughPanel.tsx", "src/components/aurora/resilience/DemoCalloutOverlay.tsx",
 ]
 
 EXPECTED_SERVICE_FILES = [
@@ -69,6 +74,20 @@ def inspect_frontend_architecture() -> Dict[str, Any]:
     missing_dirs = [item for item in directories if not item["exists"]]
     missing_files = [item for item in files if not item["exists"]]
     missing_service_files = [item for item in service_files if not item["exists"]]
+    github_launch_panel_exists = (FRONTEND_DIR / "src/components/aurora/panels/GitHubLaunchPanel.tsx").exists()
+    github_launch_service_exists = (FRONTEND_DIR / "src/lib/api/github-launch.ts").exists()
+    final_launch_panel_exists = (FRONTEND_DIR / "src/components/aurora/panels/FinalLaunchPanel.tsx").exists()
+    final_launch_service_exists = (FRONTEND_DIR / "src/lib/api/final-launch.ts").exists()
+    recording_types_exists = (FRONTEND_DIR / "src/types/recording.ts").exists()
+    recording_registry_exists = (FRONTEND_DIR / "src/lib/recordingRegistry.ts").exists()
+    recording_storage_exists = (FRONTEND_DIR / "src/lib/recordingModeStorage.ts").exists()
+    presenter_controls_panel_exists = (FRONTEND_DIR / "src/components/aurora/panels/PresenterControlsPanel.tsx").exists()
+    recording_overlay_exists = (FRONTEND_DIR / "src/components/aurora/resilience/RecordingModeOverlay.tsx").exists()
+    demo_types_exists = (FRONTEND_DIR / "src/types/demo.ts").exists()
+    demo_registry_exists = (FRONTEND_DIR / "src/lib/demoWalkthroughRegistry.ts").exists()
+    demo_storage_exists = (FRONTEND_DIR / "src/lib/demoWalkthroughStorage.ts").exists()
+    guided_walkthrough_panel_exists = (FRONTEND_DIR / "src/components/aurora/panels/GuidedWalkthroughPanel.tsx").exists()
+    demo_callout_overlay_exists = (FRONTEND_DIR / "src/components/aurora/resilience/DemoCalloutOverlay.tsx").exists()
     page_lines = len(page_text.splitlines())
     dashboard_lines = len(dashboard_text.splitlines())
     orchestrator_lines = max(page_lines, dashboard_lines)
@@ -76,7 +95,7 @@ def inspect_frontend_architecture() -> Dict[str, Any]:
     return {"status": status, "generated_at": _now(), "directories": directories, "files": files, "store_exists": (FRONTEND_DIR / "src/store/auroraStore.ts").is_file(), "panel_registry_exists": (FRONTEND_DIR / "src/lib/panelRegistry.ts").is_file(), "panel_storage_exists": (FRONTEND_DIR / "src/lib/panelLayoutStorage.ts").is_file(), "panel_types_exists": (FRONTEND_DIR / "src/types/panels.ts").is_file(), "dashboard_view_selector_exists": (FRONTEND_DIR / "src/components/aurora/panels/DashboardViewSelectorPanel.tsx").is_file(), "github_polish_panel_exists": (FRONTEND_DIR / "src/components/aurora/panels/GitHubPolishPanel.tsx").is_file(), "github_polish_service_exists": (FRONTEND_DIR / "src/lib/api/github-polish.ts").is_file(), "workspace_view_storage_exists": (FRONTEND_DIR / "src/lib/workspaceViewStorage.ts").is_file(), "resilience_file_count": sum((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]), "resilience_ready": all((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]),
             "missing_directories": missing_dirs, "missing_files": missing_files, "service_files": service_files, "missing_service_files": missing_service_files, "service_file_count": sum(item["exists"] for item in service_files), "page_lines": page_lines,
             "page_size": len(page_text), "dashboard_workspace_lines": dashboard_lines,
-            "dashboard_workspace_size": len(dashboard_text), "component_count": len(components), "components": components}
+            "dashboard_workspace_size": len(dashboard_text), "component_count": len(components), "components": components, "github_launch_panel_exists": github_launch_panel_exists, "github_launch_service_exists": github_launch_service_exists, "final_launch_panel_exists": final_launch_panel_exists, "final_launch_service_exists": final_launch_service_exists, "recording_types_exists": recording_types_exists, "recording_registry_exists": recording_registry_exists, "recording_storage_exists": recording_storage_exists, "presenter_controls_panel_exists": presenter_controls_panel_exists, "recording_overlay_exists": recording_overlay_exists, "demo_types_exists": demo_types_exists, "demo_registry_exists": demo_registry_exists, "demo_storage_exists": demo_storage_exists, "guided_walkthrough_panel_exists": guided_walkthrough_panel_exists, "demo_callout_overlay_exists": demo_callout_overlay_exists}
 
 
 def render_frontend_refactor_report() -> str:
@@ -85,7 +104,7 @@ def render_frontend_refactor_report() -> str:
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v5.2 Screenshot Gallery + Portfolio Case Study Frontend Report
+    return f"""# O.R.I.O.N. v5.6 GitHub Launch Assistant Frontend Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}
@@ -114,6 +133,27 @@ Status: {scan['status']}
 
 - GitHub Polish Panel Exists: {scan['github_polish_panel_exists']}
 - GitHub Polish Service Exists: {scan['github_polish_service_exists']}
+
+## Final Launch
+
+- Final Launch Panel Exists: {scan['final_launch_panel_exists']}
+- Final Launch Service Exists: {scan['final_launch_service_exists']}
+
+## Demo Recording Mode
+
+- Recording Types Exists: {scan['recording_types_exists']}
+- Recording Registry Exists: {scan['recording_registry_exists']}
+- Recording Storage Exists: {scan['recording_storage_exists']}
+- Presenter Controls Panel Exists: {scan['presenter_controls_panel_exists']}
+- Recording Overlay Exists: {scan['recording_overlay_exists']}
+
+## Demo Walkthrough
+
+- Demo Types Exists: {scan['demo_types_exists']}
+- Demo Registry Exists: {scan['demo_registry_exists']}
+- Demo Storage Exists: {scan['demo_storage_exists']}
+- Guided Walkthrough Panel Exists: {scan['guided_walkthrough_panel_exists']}
+- Demo Callout Overlay Exists: {scan['demo_callout_overlay_exists']}
 
 ## Dashboard Views
 
