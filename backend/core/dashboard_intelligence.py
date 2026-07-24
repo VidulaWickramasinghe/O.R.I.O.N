@@ -8,6 +8,7 @@ from core.mission_planner import list_mission_records
 from core.mission_run_history import list_mission_runs
 from core.notification_engine import list_reminders, refresh_due_reminders
 from core.plugin_registry import get_plugin_metrics
+from core.security_policy import get_active_security_policy
 from core.tool_permissions import get_tool_permission_metrics
 from core.tool_audit import get_tool_audit_metrics
 from core.persistent_memory import list_recent_memory
@@ -237,6 +238,7 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
     plugin_metrics = get_plugin_metrics()
     tool_permission_metrics = get_tool_permission_metrics()
     tool_audit_metrics = get_tool_audit_metrics()
+    security_policy = get_active_security_policy()
     intelligence_score = calculate_system_intelligence_score(
         mission_metrics=mission_metrics,
         workspace_metrics=workspace_metrics,
@@ -290,6 +292,12 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
         "plugin_metrics": plugin_metrics,
         "tool_permission_metrics": tool_permission_metrics,
         "tool_audit_metrics": tool_audit_metrics,
+        "security_policy": {
+            "active_profile": security_policy["active_profile"],
+            "profile_name": security_policy["profile"]["name"],
+            "safety_level": security_policy["profile"]["safety_level"],
+            "applied_at": security_policy["applied_at"],
+        },
         "user_settings": {
             "display_name": user_settings.get("display_name", "O.R.I.O.N. User"),
             "default_workspace_id": user_settings.get("default_workspace_id", ""),
@@ -384,6 +392,13 @@ def render_dashboard_intelligence_report() -> str:
 - Total Audit Events: {data['tool_audit_metrics']['total_audit_events']}
 - Allowed Events: {data['tool_audit_metrics']['allowed_events']}
 - Blocked Events: {data['tool_audit_metrics']['blocked_events']}
+
+## Security Policy
+
+- Active Profile: {data['security_policy']['active_profile']}
+- Profile Name: {data['security_policy']['profile_name']}
+- Safety Level: {data['security_policy']['safety_level']}
+- Applied At: {data['security_policy']['applied_at']}
 
 ## Recommendations
 

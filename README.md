@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v3.8 — Tool Permission Enforcement Expansion + Audit Center**
+**v3.9 — Security Policy Profiles + Risk Modes**
 
 ## Core Capabilities
 
@@ -126,6 +126,27 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 - Security decision reports
 - Expanded plugin enforcement coverage
 - Audit-aware Dashboard Intelligence
+- Security Policy Profiles
+- Strict, Balanced, and Developer Lab risk modes
+- Policy-controlled plugin states
+- Security policy event history
+- Risk-aware Dashboard Intelligence
+
+## Security Policy Profiles
+
+O.R.I.O.N. v3.9 applies Strict, Balanced, and Developer Lab risk modes across Plugin Registry state while preserving approval gates and audit logging.
+
+Review and apply profiles through:
+
+```bash
+curl http://127.0.0.1:8000/api/security/policy
+```
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/security/policy/apply \
+  -H "Content-Type: application/json" \
+  -d '{"profile_key":"strict"}'
+```
 
 ## Tool Audit Center
 

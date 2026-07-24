@@ -171,6 +171,13 @@ from tools.tool_audit_tools import (
     get_tool_audit_metrics_tool,
 )
 
+from tools.security_policy_tools import (
+    list_security_profiles_tool,
+    get_active_security_policy_tool,
+    apply_security_profile_tool,
+    get_security_policy_report,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,

@@ -100,6 +100,10 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "get_tool_audit_report": "tool_audit_center",
     "list_tool_audit_events": "tool_audit_center",
     "get_tool_audit_metrics": "tool_audit_center",
+    "list_security_profiles": "security_policy_profiles",
+    "get_active_security_policy": "security_policy_profiles",
+    "apply_security_profile": "security_policy_profiles",
+    "get_security_policy_report": "security_policy_profiles",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
@@ -109,6 +113,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "dashboard_intelligence",
     "tool_permission_enforcement",
     "tool_audit_center",
+    "security_policy_profiles",
 }
 
 

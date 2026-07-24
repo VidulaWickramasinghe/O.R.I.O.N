@@ -224,6 +224,33 @@ type ToolAuditResponse = {
   report: string;
 };
 
+type SecurityProfileItem = {
+  key: string;
+  name: string;
+  description: string;
+  safety_level: string;
+  enabled_plugin_count: number;
+  disabled_plugin_count: number;
+};
+
+type SecurityPolicyEventItem = {
+  id: number;
+  profile_key: string;
+  profile_name: string;
+  summary: string;
+  enabled_count: number;
+  disabled_count: number;
+  source: string;
+  created_at: string;
+};
+
+type SecurityPolicyResponse = {
+  active_policy: Record<string, unknown>;
+  profiles: SecurityProfileItem[];
+  events: SecurityPolicyEventItem[];
+  report: string;
+};
+
 type DashboardIntelligence = {
   intelligence_score: number;
   readiness_label: string;
@@ -238,6 +265,7 @@ type DashboardIntelligence = {
   plugin_metrics?: Record<string, unknown>;
   tool_permission_metrics?: Record<string, unknown>;
   tool_audit_metrics?: Record<string, unknown>;
+  security_policy?: Record<string, string>;
   recommendations: string[];
   report: string;
 };
@@ -257,6 +285,7 @@ export function DashboardWorkspace() {
     "Notification Engine",
     "User Settings",
     "Plugin System",
+    "Security Policy",
     "Desktop Shell",
     "Backend Sidecar",
     "Tool Permission Enforcement",
@@ -316,6 +345,12 @@ export function DashboardWorkspace() {
   const [toolAuditEvents, setToolAuditEvents] = useState<ToolAuditEventItem[]>([]);
   const [toolAuditMetrics, setToolAuditMetrics] = useState<Record<string, unknown>>({});
   const [toolAuditReport, setToolAuditReport] = useState("");
+  const [securityProfiles, setSecurityProfiles] = useState<SecurityProfileItem[]>([]);
+  const [securityPolicyEvents, setSecurityPolicyEvents] = useState<SecurityPolicyEventItem[]>([]);
+  const [securityPolicyActive, setSecurityPolicyActive] = useState<Record<string, unknown>>({});
+  const [securityPolicyReport, setSecurityPolicyReport] = useState("");
+  const [securityPolicyLoadingKey, setSecurityPolicyLoadingKey] = useState<string | null>(null);
+  const [securityPolicyMessage, setSecurityPolicyMessage] = useState("");
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -947,6 +982,48 @@ export function DashboardWorkspace() {
     }
   }
 
+
+  async function loadSecurityPolicy() {
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/security/policy");
+      const data: SecurityPolicyResponse = await response.json();
+      setSecurityProfiles(data.profiles || []);
+      setSecurityPolicyEvents(data.events || []);
+      setSecurityPolicyActive(data.active_policy || {});
+      setSecurityPolicyReport(data.report || "");
+    } catch {
+      setSecurityProfiles([]);
+      setSecurityPolicyEvents([]);
+      setSecurityPolicyActive({});
+      setSecurityPolicyReport("");
+    }
+  }
+
+  async function applySecurityProfileFromUI(profileKey: string) {
+    setSecurityPolicyLoadingKey(profileKey);
+    try {
+      const response = await fetch("http://127.0.0.1:8000/api/security/policy/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile_key: profileKey }),
+      });
+      const data = await response.json();
+      setSecurityPolicyMessage(
+        `Security policy applied. Profile: ${data.profile_name}. Enabled: ${data.enabled_count}. Disabled: ${data.disabled_count}. ${data.summary}`
+      );
+      await loadSecurityPolicy();
+      await loadPlugins();
+      await loadToolPermissions();
+      await loadToolAudit();
+      await loadDashboardIntelligence();
+      await loadUserSettingsProfile();
+    } catch {
+      setSecurityPolicyMessage(`Security policy apply failed for ${profileKey}.`);
+    } finally {
+      setSecurityPolicyLoadingKey(null);
+    }
+  }
+
   useEffect(() => {
     void loadKnowledgeDocuments();
     void loadVectorItems();
@@ -963,6 +1040,7 @@ export function DashboardWorkspace() {
     void loadBackendSidecarStatus();
     void loadToolPermissions();
     void loadToolAudit();
+    void loadSecurityPolicy();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments();
       void loadVectorItems();
@@ -978,6 +1056,7 @@ export function DashboardWorkspace() {
       void loadBackendSidecarStatus();
       void loadToolPermissions();
       void loadToolAudit();
+      void loadSecurityPolicy();
     }, 5000);
 
     return () => window.clearInterval(timer);
@@ -1009,13 +1088,13 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.8
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v3.9
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System", "Desktop Shell", "Backend Sidecar", "Tool Permission Enforcement", "Tool Audit Center"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System", "Security Policy", "Desktop Shell", "Backend Sidecar", "Tool Permission Enforcement", "Tool Audit Center"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -1194,6 +1273,20 @@ export function DashboardWorkspace() {
             />
           )}
 
+
+
+          {widgets.includes("Security Policy") && (
+            <SecurityPolicyPanel
+              activePolicy={securityPolicyActive}
+              profiles={securityProfiles}
+              events={securityPolicyEvents}
+              report={securityPolicyReport}
+              loadingKey={securityPolicyLoadingKey}
+              message={securityPolicyMessage}
+              applyProfile={applySecurityProfileFromUI}
+            />
+          )}
+
           {widgets.includes("Knowledge Base") && (
             <KnowledgeBasePanel
               documents={knowledgeDocuments}
@@ -1296,7 +1389,7 @@ function DesktopShellPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 
@@ -1367,7 +1460,7 @@ function BackendSidecarPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 
@@ -1479,7 +1572,7 @@ function PluginSystemPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 
@@ -1580,6 +1673,113 @@ function PluginSystemPanel({
   );
 }
 
+
+function SecurityPolicyPanel({
+  activePolicy,
+  profiles,
+  events,
+  report,
+  loadingKey,
+  message,
+  applyProfile,
+}: {
+  activePolicy: Record<string, unknown>;
+  profiles: SecurityProfileItem[];
+  events: SecurityPolicyEventItem[];
+  report: string;
+  loadingKey: string | null;
+  message: string;
+  applyProfile: (profileKey: string) => void;
+}) {
+  const activeProfile = activePolicy.profile as { name?: string; safety_level?: string } | undefined;
+  return (
+    <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-white">Security Policy</h2>
+          <p className="text-sm text-slate-400">
+            Strict, Balanced, and Developer Lab risk modes for plugin control
+          </p>
+        </div>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v3.9</span>
+      </div>
+      <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
+          <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">Active Policy</p>
+          <p className="mt-3 text-2xl font-black text-slate-100">
+            {String(activeProfile?.name || activePolicy.active_profile || "Not loaded")}
+          </p>
+          <p className="mt-2 text-xs leading-5 text-slate-400">
+            Safety Level: {String(activeProfile?.safety_level || "unknown")}
+          </p>
+        </div>
+        {message && (
+          <p className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-3 text-sm text-cyan-100">
+            {message}
+          </p>
+        )}
+        <div className="grid gap-3">
+          {profiles.length === 0 ? (
+            <p className="text-sm text-slate-500">Security profiles have not loaded yet.</p>
+          ) : (
+            profiles.map((profile) => (
+              <div key={profile.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-100">{profile.name}</h3>
+                    <p className="mt-1 text-xs text-cyan-300">{profile.key} | {profile.safety_level}</p>
+                  </div>
+                  <button
+                    onClick={() => applyProfile(profile.key)}
+                    disabled={loadingKey === profile.key}
+                    className="rounded-xl bg-cyan-300 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-200 disabled:opacity-60"
+                  >
+                    {loadingKey === profile.key ? "Applying" : "Apply"}
+                  </button>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-slate-400">{profile.description}</p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-2">
+                    <p className="text-xs text-emerald-200">Enables {profile.enabled_plugin_count}</p>
+                  </div>
+                  <div className="rounded-xl border border-red-400/20 bg-red-500/10 p-2">
+                    <p className="text-xs text-red-200">Disables {profile.disabled_plugin_count}</p>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-cyan-200">Recent Policy Events</summary>
+          <div className="mt-3 max-h-64 space-y-2 overflow-y-auto">
+            {events.length === 0 ? (
+              <p className="text-sm text-slate-500">No policy events yet.</p>
+            ) : (
+              events.map((event) => (
+                <div key={event.id} className="rounded-xl border border-white/10 bg-black/30 p-3">
+                  <p className="text-sm font-semibold text-slate-100">{event.profile_name}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">{event.summary}</p>
+                  <p className="mt-1 text-xs text-slate-500">{event.created_at} | {event.source}</p>
+                </div>
+              ))
+            )}
+          </div>
+        </details>
+        <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-cyan-200">Security Policy Report</summary>
+          <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">
+            {report || "No security policy report loaded yet."}
+          </pre>
+        </details>
+        <p className="text-xs leading-5 text-slate-500">
+          Safety: policy profiles control plugin states only. They do not bypass approval gates.
+        </p>
+      </div>
+    </GlassPanel>
+  );
+}
+
 function ToolPermissionPanel({
   matrix,
   metrics,
@@ -1601,7 +1801,7 @@ function ToolPermissionPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 
@@ -1714,7 +1914,7 @@ function ToolAuditPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 
@@ -1810,7 +2010,7 @@ function UserSettingsPanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 
@@ -1932,7 +2132,7 @@ function NotificationEnginePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 
@@ -2083,7 +2283,7 @@ function DashboardIntelligencePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 
@@ -2212,7 +2412,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v3.8
+          v3.9
         </span>
       </div>
 

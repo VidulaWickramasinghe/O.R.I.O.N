@@ -162,6 +162,13 @@ from tools.tool_audit_tools import (
     list_tool_audit_events_tool,
     get_tool_audit_metrics_tool,
 )
+
+from tools.security_policy_tools import (
+    list_security_profiles_tool,
+    get_active_security_policy_tool,
+    apply_security_profile_tool,
+    get_security_policy_report,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 

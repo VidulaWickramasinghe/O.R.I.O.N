@@ -220,6 +220,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {
+        "key": "security_policy_profiles",
+        "name": "Security Policy Profiles",
+        "description": "Applies Strict, Balanced, and Developer Lab security profiles across the plugin registry.",
+        "category": "safety",
+        "risk_level": "high",
+        "permissions": ["policy_apply", "risk_mode", "plugin_state_update"],
+        "default_enabled": True,
+    },
+    {
         "key": "user_settings",
         "name": "User Profile + Settings",
         "description": "Local profile preferences, safety level, theme, voice, and default workspace.",

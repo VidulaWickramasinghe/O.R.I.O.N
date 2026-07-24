@@ -1,3 +1,26 @@
+## v3.9 — Security Policy Profiles + Risk Modes
+
+### Added
+
+- Security Policy core
+- Strict, Balanced, and Developer Lab profiles
+- Security policy SQLite database
+- Profile application logic
+- Plugin state updates from risk modes
+- Security policy tools
+- Security policy API endpoints
+- Aurora OS Security Policy panel
+- Dashboard Intelligence security policy awareness
+- User Settings safety level integration
+- Policy event history
+
+### Safety
+
+- Policy profiles do not bypass approvals
+- Protected safety plugins remain enabled
+- Policy changes are logged
+- Strict Mode disables high-risk operational plugins
+
 ## v3.8 — Tool Permission Enforcement Expansion + Audit Center
 
 ### Added
