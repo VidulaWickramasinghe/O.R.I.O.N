@@ -3,6 +3,7 @@ from typing import List
 from agents import function_tool
 
 from core.tool_logger import instrument_tool
+from core.tool_permissions import enforce_tool_permission
 from core.browser_research import (
     inspect_web_page,
     save_web_research_report,
@@ -13,6 +14,7 @@ from core.browser_research import (
 
 @function_tool
 @instrument_tool("research_browser_page")
+@enforce_tool_permission("research_browser_page")
 def research_browser_page(url: str) -> str:
     """
     Safely research a public web page and extract readable page information.
@@ -51,6 +53,7 @@ Content Preview:
 
 @function_tool
 @instrument_tool("research_web_page")
+@enforce_tool_permission("research_web_page")
 def research_web_page(url: str) -> str:
     """
     Safely inspect a public web page and extract readable text.
@@ -74,6 +77,7 @@ Readable Text Preview:
 
 @function_tool
 @instrument_tool("compare_research_pages")
+@enforce_tool_permission("compare_research_pages")
 def compare_research_pages(urls: List[str]) -> str:
     """
     Compare up to five public web pages by extracting readable text previews.
@@ -86,6 +90,7 @@ def compare_research_pages(urls: List[str]) -> str:
 
 @function_tool
 @instrument_tool("save_web_research")
+@enforce_tool_permission("save_web_research")
 def save_web_research(
     title: str,
     url: str,

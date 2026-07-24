@@ -1,0 +1,4 @@
+"use client";
+import { Component, type ErrorInfo, type ReactNode } from "react";
+type Props={panelName:string;children:ReactNode};type State={hasError:boolean;errorMessage:string};
+export class PanelErrorBoundary extends Component<Props,State>{state:State={hasError:false,errorMessage:""};static getDerivedStateFromError(error:Error){return{hasError:true,errorMessage:error.message||"Unknown panel error."}}componentDidCatch(error:Error,info:ErrorInfo){console.error(`[Aurora OS Panel Error] ${this.props.panelName}`,error,info)}render(){return this.state.hasError?<section className="rounded-[2rem] border border-red-400/30 bg-red-500/10 p-5"><h2 className="text-xl font-bold text-red-100">Panel Error</h2><p className="mt-2 text-red-200">{this.props.panelName} failed safely.</p><pre className="mt-3 text-xs text-red-200">{this.state.errorMessage}</pre><button onClick={()=>this.setState({hasError:false,errorMessage:""})}>Retry Panel</button></section>:this.props.children}}

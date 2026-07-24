@@ -1,0 +1,1 @@
+export function PanelFallback({title,message,onRetry}:{title:string;message:string;onRetry?:()=>void}){return <div className="rounded-2xl border border-yellow-400/30 bg-yellow-500/10 p-4"><h3 className="font-bold text-yellow-100">{title}</h3><p className="mt-2 text-sm text-yellow-100/80">{message}</p>{onRetry&&<button onClick={onRetry}>Retry</button>}</div>}
