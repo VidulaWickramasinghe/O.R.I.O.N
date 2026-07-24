@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuroraStore } from "@/store/auroraStore";
 
 import { dashboardModels, dashboardTimeline } from "@/lib/aurora-data";
 import { agents } from "@/lib/agent-data";
@@ -217,54 +218,34 @@ export function DashboardWorkspace() {
   const [developerIssue, setDeveloperIssue] = useState("");
   const [developerLoadingAction, setDeveloperLoadingAction] = useState<string | null>(null);
   const [developerMessage, setDeveloperMessage] = useState("");
-  const [dashboardIntelligence, setDashboardIntelligence] =
-    useState<DashboardIntelligence | null>(null);
-  const [dashboardIntelligenceLoading, setDashboardIntelligenceLoading] = useState(false);
+  const {
+    dashboardIntelligence, dashboardIntelligenceLoading, plugins, pluginMetrics,
+    pluginRegistryReport, pluginLoadingKey, toolPermissionMatrix, toolPermissionMetrics,
+    toolPermissionReport, toolAuditEvents, toolAuditMetrics, toolAuditReport,
+    securityProfiles, securityPolicyEvents, securityPolicyActive, securityPolicyReport,
+    securityPolicyLoadingKey, releaseCandidateStatus, releaseCandidatePackage,
+    releaseCandidateLoading, stabilizationResult, stabilizationLoading,
+    frontendRefactorResult, frontendRefactorLoading, desktopShellStatus,
+    desktopShellLoading, backendSidecarStatus, backendSidecarLoading, reminders,
+    notificationEvents, startupBriefing, reminderTitle, reminderDueAt, reminderLoading,
+    userSettingsProfile, settingsLoadingKey, setReminderTitle, setReminderDueAt,
+    patchLocalSettingValue, loadDashboardIntelligence, loadDesktopShellStatus,
+    loadBackendSidecarStatus, loadStartupBriefing, updatePluginStatusFromStore,
+    applySecurityProfileFromStore, freezeReleaseCandidateFromStore,
+    unfreezeReleaseCandidateFromStore, generateReleaseCandidatePackageFromStore,
+    runStabilizationScanFromStore, saveStabilizationReportFromStore,
+    runFrontendRefactorScanFromStore, saveFrontendRefactorReportFromStore,
+    runBackendSidecarActionFromStore, createReminderFromStore,
+    updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
+  } = useAuroraStore();
   const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
-  const [reminders, setReminders] = useState<ReminderItem[]>([]);
-  const [notificationEvents, setNotificationEvents] = useState<NotificationEventItem[]>([]);
-  const [startupBriefing, setStartupBriefing] = useState<StartupBriefing | null>(null);
-  const [reminderTitle, setReminderTitle] = useState("");
-  const [reminderDueAt, setReminderDueAt] = useState("tomorrow");
-  const [reminderLoading, setReminderLoading] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
-  const [userSettingsProfile, setUserSettingsProfile] = useState<UserSettingsProfile | null>(null);
-  const [settingsLoadingKey, setSettingsLoadingKey] = useState<string | null>(null);
   const [settingsMessage, setSettingsMessage] = useState("");
-  const [plugins, setPlugins] = useState<PluginItem[]>([]);
-  const [pluginRegistryReport, setPluginRegistryReport] = useState("");
-  const [pluginMetrics, setPluginMetrics] = useState<Record<string, unknown>>({});
-  const [pluginLoadingKey, setPluginLoadingKey] = useState<string | null>(null);
   const [pluginMessage, setPluginMessage] = useState("");
-  const [desktopShellStatus, setDesktopShellStatus] = useState<DesktopShellStatus | null>(null);
-  const [desktopShellLoading, setDesktopShellLoading] = useState(false);
-  const [backendSidecarStatus, setBackendSidecarStatus] =
-    useState<BackendSidecarStatus | null>(null);
-  const [backendSidecarLoading, setBackendSidecarLoading] = useState(false);
   const [backendSidecarMessage, setBackendSidecarMessage] = useState("");
-  const [toolPermissionMatrix, setToolPermissionMatrix] = useState<ToolPermissionItem[]>([]);
-  const [toolPermissionMetrics, setToolPermissionMetrics] = useState<Record<string, unknown>>({});
-  const [toolPermissionReport, setToolPermissionReport] = useState("");
-  const [toolAuditEvents, setToolAuditEvents] = useState<ToolAuditEventItem[]>([]);
-  const [toolAuditMetrics, setToolAuditMetrics] = useState<Record<string, unknown>>({});
-  const [toolAuditReport, setToolAuditReport] = useState("");
-  const [securityProfiles, setSecurityProfiles] = useState<SecurityProfileItem[]>([]);
-  const [securityPolicyEvents, setSecurityPolicyEvents] = useState<SecurityPolicyEventItem[]>([]);
-  const [securityPolicyActive, setSecurityPolicyActive] = useState<Record<string, unknown>>({});
-  const [securityPolicyReport, setSecurityPolicyReport] = useState("");
-  const [securityPolicyLoadingKey, setSecurityPolicyLoadingKey] = useState<string | null>(null);
   const [securityPolicyMessage, setSecurityPolicyMessage] = useState("");
-  const [releaseCandidateStatus, setReleaseCandidateStatus] =
-    useState<ReleaseCandidateStatus | null>(null);
-  const [releaseCandidatePackage, setReleaseCandidatePackage] =
-    useState<ReleaseCandidatePackage | null>(null);
-  const [releaseCandidateLoading, setReleaseCandidateLoading] = useState(false);
   const [releaseCandidateMessage, setReleaseCandidateMessage] = useState("");
-  const [stabilizationResult, setStabilizationResult] = useState<StabilizationResult | null>(null);
-  const [stabilizationLoading, setStabilizationLoading] = useState(false);
   const [stabilizationMessage, setStabilizationMessage] = useState("");
-  const [frontendRefactorResult, setFrontendRefactorResult] = useState<FrontendRefactorResult | null>(null);
-  const [frontendRefactorLoading, setFrontendRefactorLoading] = useState(false);
 
   function toggle(item: string) {
     setWidgets((current) =>
@@ -304,105 +285,17 @@ export function DashboardWorkspace() {
 
   async function runDeveloperPatchPlan(workspaceId: number) { const cleanIssue = developerIssue.trim(); if (!cleanIssue) { setDeveloperMessage("Add an issue or objective before creating a patch plan."); return; } setDeveloperLoadingAction(`patch-plan-${workspaceId}`); setDeveloperMessage(""); try { setDeveloperResult((await createDeveloperPatchPlan(workspaceId, cleanIssue)) as DeveloperInspectResult); setDeveloperMessage(`Patch plan generated for workspace ${workspaceId}.`); await loadDeveloperReports(); } catch { setDeveloperMessage("Patch plan generation failed. Confirm backend is running."); } finally { setDeveloperLoadingAction(null); } }
 
-  async function loadDashboardIntelligence(showMessage = false) { setDashboardIntelligenceLoading(true); if (showMessage) setDashboardIntelligenceMessage(""); try { const data = await getDashboardIntelligence(); setDashboardIntelligence(data); if (showMessage) setDashboardIntelligenceMessage(`Dashboard Intelligence generated: ${data.intelligence_score}/100 · ${data.readiness_label}`); } catch { if (showMessage) setDashboardIntelligenceMessage("Dashboard Intelligence failed. Confirm backend is running."); } finally { setDashboardIntelligenceLoading(false); } }
 
-
-  async function loadReminders() { try { const data = await getReminders(); setReminders(data.reminders || []); } catch { setReminders([]); } }
-
-  async function loadNotificationEvents() { try { const data = await getNotificationEvents(); setNotificationEvents(data.events || []); } catch { setNotificationEvents([]); } }
-
-  async function loadStartupBriefing(showMessage = false) { try { setStartupBriefing(await getStartupBriefing()); if (showMessage) setNotificationMessage("Startup briefing generated."); } catch { if (showMessage) setNotificationMessage("Startup briefing failed. Confirm backend is running."); } }
-
-  async function createReminderFromUI() { const cleanTitle = reminderTitle.trim(); if (!cleanTitle || reminderLoading) return; setReminderLoading(true); setNotificationMessage(""); try { const data = await createReminder({ title: cleanTitle, description: "Created from Aurora OS Notification Engine.", due_at: reminderDueAt, priority: "medium" }); setNotificationMessage(`Reminder created: ${data.title} · Due ${data.due_at}`); setReminderTitle(""); await Promise.all([loadReminders(), loadNotificationEvents()]); } catch { setNotificationMessage("Reminder creation failed. Confirm backend is running."); } finally { setReminderLoading(false); } }
-
-  async function updateReminderStatusFromUI(reminderId: number, status: string) { try { await updateReminderStatus(reminderId, status); setNotificationMessage(`Reminder ${reminderId} marked ${status}.`); await Promise.all([loadReminders(), loadNotificationEvents()]); } catch { setNotificationMessage(`Could not update reminder ${reminderId}.`); } }
-
-
-  async function loadUserSettingsProfile() { try { setUserSettingsProfile(await getUserSettingsProfile()); } catch { setUserSettingsProfile(null); } }
-
-  async function updateUserSettingFromUI(key: string, value: string) { setSettingsLoadingKey(key); setSettingsMessage(""); try { const data = await updateUserSetting(key, value); setSettingsMessage(data.status === "updated" ? `Setting updated: ${key} = ${data.setting?.value ?? value}` : `Setting update failed: ${data.message}`); await Promise.all([loadUserSettingsProfile(), loadDashboardIntelligence()]); } catch { setSettingsMessage(`Setting update failed for ${key}.`); } finally { setSettingsLoadingKey(null); } }
-
-  async function resetUserSettingsFromUI() { setSettingsLoadingKey("reset"); setSettingsMessage(""); try { await resetUserSettings(); setSettingsMessage("User profile settings reset to defaults."); await Promise.all([loadUserSettingsProfile(), loadDashboardIntelligence()]); } catch { setSettingsMessage("User settings reset failed."); } finally { setSettingsLoadingKey(null); } }
-
-  async function loadPlugins() { try { const data = await getPlugins(); setPlugins(data.plugins || []); setPluginMetrics(data.metrics || {}); setPluginRegistryReport(data.report || ""); } catch { setPlugins([]); setPluginMetrics({}); setPluginRegistryReport(""); } }
-
-  async function updatePluginStatusFromUI(pluginKey: string, enabled: boolean) { setPluginLoadingKey(pluginKey); setPluginMessage(""); try { const data = await updatePluginStatus(pluginKey, enabled); setPluginMessage(data.status === "updated" ? `Plugin updated: ${pluginKey} = ${enabled ? "enabled" : "disabled"}` : `Plugin update failed: ${data.message}`); await Promise.all([loadPlugins(), loadDashboardIntelligence()]); } catch { setPluginMessage(`Plugin update failed for ${pluginKey}.`); } finally { setPluginLoadingKey(null); } }
-
-  async function loadDesktopShellStatus() { setDesktopShellLoading(true); try { setDesktopShellStatus(await getDesktopShellStatus()); } catch { setDesktopShellStatus({ status: "offline", app_name: "O.R.I.O.N. Aurora OS", shell_version: "4.4.0", backend_url: "configured API endpoint", frontend_mode: "tauri_static_shell", message: "Backend is offline. Start O.R.I.O.N. backend first." }); } finally { setDesktopShellLoading(false); } }
-
-  async function loadBackendSidecarStatus(showMessage = false) { setBackendSidecarLoading(true); try { const data = await getBackendSidecarStatus(); setBackendSidecarStatus(data); if (showMessage) setBackendSidecarMessage(`Backend sidecar status: ${data.status}. PID: ${data.pid || "N/A"}. Port open: ${data.port_open}.`); } catch { setBackendSidecarStatus({ managed_by: "O.R.I.O.N. Backend Sidecar", status: "offline", pid: null, host: "127.0.0.1", port: 8000, backend_url: "configured API endpoint", started_at: "", updated_at: "", last_error: "Backend unavailable.", pid_running: false, port_open: false, log_file: "", state_file: "", report: "Backend is offline or unreachable." }); if (showMessage) setBackendSidecarMessage("Sidecar status unavailable. If the backend is fully offline, start it with ./scripts/orion_desktop.sh."); } finally { setBackendSidecarLoading(false); } }
-
-  async function runBackendSidecarAction(action: "start" | "stop" | "restart") { setBackendSidecarLoading(true); setBackendSidecarMessage(""); try { const data = await runSidecarApiAction(action); setBackendSidecarStatus(data.sidecar); setBackendSidecarMessage(`Backend sidecar ${action} requested. Status: ${data.status}. ${data.message}`); await loadDesktopShellStatus(); } catch { setBackendSidecarMessage("Sidecar action failed. If the backend is fully offline, start it with ./scripts/orion_desktop.sh."); } finally { setBackendSidecarLoading(false); } }
-
-
-  async function loadToolPermissions() { try { const data = await getToolPermissions(); setToolPermissionMatrix(data.matrix || []); setToolPermissionMetrics(data.metrics || {}); setToolPermissionReport(data.report || ""); } catch { setToolPermissionMatrix([]); setToolPermissionMetrics({}); setToolPermissionReport(""); } }
-
-
-  async function loadToolAudit() { try { const data = await getToolAudit(); setToolAuditEvents(data.events || []); setToolAuditMetrics(data.metrics || {}); setToolAuditReport(data.report || ""); } catch { setToolAuditEvents([]); setToolAuditMetrics({}); setToolAuditReport(""); } }
-
-
-  async function loadSecurityPolicy() { try { const data = await getSecurityPolicy(); setSecurityProfiles(data.profiles || []); setSecurityPolicyEvents(data.events || []); setSecurityPolicyActive(data.active_policy || {}); setSecurityPolicyReport(data.report || ""); } catch { setSecurityProfiles([]); setSecurityPolicyEvents([]); setSecurityPolicyActive({}); setSecurityPolicyReport(""); } }
-
-  async function applySecurityProfileFromUI(profileKey: string) { setSecurityPolicyLoadingKey(profileKey); try { const data = await applySecurityProfile(profileKey); setSecurityPolicyMessage(`Security policy applied. Profile: ${data.profile_name}. Enabled: ${data.enabled_count}. Disabled: ${data.disabled_count}. ${data.summary}`); await Promise.all([loadSecurityPolicy(), loadPlugins(), loadToolPermissions(), loadToolAudit(), loadDashboardIntelligence(), loadUserSettingsProfile()]); } catch { setSecurityPolicyMessage(`Security policy apply failed for ${profileKey}.`); } finally { setSecurityPolicyLoadingKey(null); } }
-
-  async function loadReleaseCandidateStatus() { try { setReleaseCandidateStatus(await getReleaseCandidateStatus()); } catch { setReleaseCandidateStatus(null); } }
-
-  async function runReleaseCandidateAction(action: "freeze" | "unfreeze" | "package") { setReleaseCandidateLoading(true); setReleaseCandidateMessage(""); try { if (action === "package") { const data = await generateReleaseCandidatePackage(); setReleaseCandidatePackage(data); setReleaseCandidateMessage(`Release package generated: ${data.summary_path}`); } else { const reason = action === "freeze" ? "Preparing O.R.I.O.N. v4.0 release candidate." : "Release candidate freeze lifted by user."; await (action === "freeze" ? freezeReleaseCandidate(reason) : unfreezeReleaseCandidate(reason)); setReleaseCandidateMessage(action === "freeze" ? "System Freeze enabled." : "System Freeze disabled."); } await Promise.all([loadReleaseCandidateStatus(), loadDashboardIntelligence(), loadPlugins()]); } catch { setReleaseCandidateMessage(`Release candidate ${action} failed. Confirm the backend is running.`); } finally { setReleaseCandidateLoading(false); } }
-
-  async function runStabilizationAction(action: "scan" | "save", runBuild = false) { setStabilizationLoading(true); setStabilizationMessage(""); try { const data = action === "scan" ? await runStabilizationScan(runBuild) : await saveStabilizationReport(runBuild); setStabilizationResult(data); setStabilizationMessage(action === "save" ? `Stabilization report saved: ${data.path}` : `Stabilization scan completed: ${data.status}`); await Promise.all([loadDashboardIntelligence(), loadReleaseCandidateStatus()]); } catch { setStabilizationMessage("Stabilization action failed. Confirm the backend is running."); } finally { setStabilizationLoading(false); } }
-
-  async function loadFrontendRefactorStatus() { try { setFrontendRefactorResult(await getFrontendRefactorStatus()); } catch { setFrontendRefactorResult(null); } }
-
-  async function runFrontendRefactorScanFromUI() {
-    setFrontendRefactorLoading(true);
-    try {
-      await loadFrontendRefactorStatus();
-    } finally {
-      setFrontendRefactorLoading(false);
-    }
-  }
-
-  async function saveFrontendRefactorReportFromUI() { setFrontendRefactorLoading(true); try { setFrontendRefactorResult(await saveFrontendRefactorReport()); } catch { setFrontendRefactorResult(null); } finally { setFrontendRefactorLoading(false); } }
 
   useEffect(() => {
-    void loadKnowledgeDocuments();
-    void loadVectorItems();
-    void loadWorkflowBlueprints();
-    void loadWorkspaces();
-    void loadDeveloperReports();
-    void loadDashboardIntelligence();
-    void loadReminders();
-    void loadNotificationEvents();
-    void loadStartupBriefing();
-    void loadUserSettingsProfile();
-    void loadPlugins();
-    void loadDesktopShellStatus();
-    void loadBackendSidecarStatus();
-    void loadToolPermissions();
-    void loadToolAudit();
-    void loadSecurityPolicy();
-    void loadReleaseCandidateStatus();
-    void loadFrontendRefactorStatus();
+    void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
+    void loadWorkspaces(); void loadDeveloperReports();
+    void useAuroraStore.getState().refreshAll();
     const timer = window.setInterval(() => {
-      void loadKnowledgeDocuments();
-      void loadVectorItems();
-      void loadWorkflowBlueprints();
-      void loadWorkspaces();
-      void loadDeveloperReports();
-      void loadDashboardIntelligence();
-      void loadReminders();
-      void loadNotificationEvents();
-      void loadUserSettingsProfile();
-      void loadPlugins();
-      void loadDesktopShellStatus();
-      void loadBackendSidecarStatus();
-      void loadToolPermissions();
-      void loadToolAudit();
-      void loadSecurityPolicy();
-      void loadReleaseCandidateStatus();
-      void loadFrontendRefactorStatus();
+      void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
+      void loadWorkspaces(); void loadDeveloperReports();
+      void useAuroraStore.getState().refreshAll();
     }, 5000);
-
     return () => window.clearInterval(timer);
   }, []);
 
@@ -425,7 +318,7 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.4
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.5
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
@@ -529,7 +422,7 @@ export function DashboardWorkspace() {
               latestPackage={releaseCandidatePackage}
               loading={releaseCandidateLoading}
               message={releaseCandidateMessage}
-              runAction={runReleaseCandidateAction}
+              runAction={(action) => action === "freeze" ? freezeReleaseCandidateFromStore() : action === "unfreeze" ? unfreezeReleaseCandidateFromStore() : generateReleaseCandidatePackageFromStore()}
             />
           )}
 
@@ -538,7 +431,7 @@ export function DashboardWorkspace() {
               result={stabilizationResult}
               loading={stabilizationLoading}
               message={stabilizationMessage}
-              runAction={runStabilizationAction}
+              runAction={(action, runBuild) => action === "scan" ? runStabilizationScanFromStore(runBuild) : saveStabilizationReportFromStore(runBuild)}
             />
           )}
 
@@ -546,8 +439,8 @@ export function DashboardWorkspace() {
             <FrontendRefactorPanel
               result={frontendRefactorResult}
               loading={frontendRefactorLoading}
-              onScan={runFrontendRefactorScanFromUI}
-              onSaveReport={saveFrontendRefactorReportFromUI}
+              onScan={runFrontendRefactorScanFromStore}
+              onSaveReport={saveFrontendRefactorReportFromStore}
             />
           )}
 
@@ -556,7 +449,7 @@ export function DashboardWorkspace() {
               intelligence={dashboardIntelligence}
               loading={dashboardIntelligenceLoading}
               message={dashboardIntelligenceMessage}
-              onRefresh={() => loadDashboardIntelligence(true)}
+              onRefresh={loadDashboardIntelligence}
             />
           )}
 
@@ -573,8 +466,8 @@ export function DashboardWorkspace() {
               status={backendSidecarStatus}
               loading={backendSidecarLoading}
               message={backendSidecarMessage}
-              refreshStatus={() => loadBackendSidecarStatus(true)}
-              runAction={runBackendSidecarAction}
+              refreshStatus={loadBackendSidecarStatus}
+              runAction={runBackendSidecarActionFromStore}
             />
           )}
 
@@ -607,8 +500,8 @@ export function DashboardWorkspace() {
               message={notificationMessage}
               setReminderTitle={setReminderTitle}
               setReminderDueAt={setReminderDueAt}
-              createReminder={createReminderFromUI}
-              updateReminderStatus={updateReminderStatusFromUI}
+              createReminder={createReminderFromStore}
+              updateReminderStatus={updateReminderStatusFromStore}
               generateStartupBriefing={() => loadStartupBriefing(true)}
             />
           )}
@@ -618,9 +511,9 @@ export function DashboardWorkspace() {
               profile={userSettingsProfile}
               loadingKey={settingsLoadingKey}
               message={settingsMessage}
-              setProfile={setUserSettingsProfile}
-              updateSetting={updateUserSettingFromUI}
-              resetSettings={resetUserSettingsFromUI}
+              setProfile={(updater) => { const current = useAuroraStore.getState().userSettingsProfile; const next = updater(current); if (next) useAuroraStore.setState({ userSettingsProfile: next }); }}
+              updateSetting={updateUserSettingFromStore}
+              resetSettings={resetUserSettingsFromStore}
             />
           )}
 
@@ -632,7 +525,7 @@ export function DashboardWorkspace() {
               loadingKey={pluginLoadingKey}
               message={pluginMessage}
               metricValue={metricValue}
-              updatePluginStatus={updatePluginStatusFromUI}
+              updatePluginStatus={updatePluginStatusFromStore}
             />
           )}
 
@@ -646,7 +539,7 @@ export function DashboardWorkspace() {
               report={securityPolicyReport}
               loadingKey={securityPolicyLoadingKey}
               message={securityPolicyMessage}
-              applyProfile={applySecurityProfileFromUI}
+              applyProfile={applySecurityProfileFromStore}
             />
           )}
 
@@ -766,7 +659,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.4
+          v4.5
         </span>
       </div>
 

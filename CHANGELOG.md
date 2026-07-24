@@ -1,3 +1,23 @@
+## v4.5 — Global Dashboard Store
+
+### Added
+
+- Zustand-backed global Aurora OS dashboard store
+- Centralized dashboard state, loading flags, and refresh actions
+- Store actions for plugins, policy, release candidate, stabilization, refactor, sidecar, notifications, and settings
+- Frontend refactor scanner store detection
+
+### Changed
+
+- Moved major dashboard state ownership out of dashboard orchestration
+- Panels receive store-backed state and actions
+
+### Safety
+
+- Backend behavior unchanged
+- UI appearance preserved
+- Refactor is structural only
+
 ## v4.4 — Frontend Service Layer + State Management Cleanup
 
 ### Added
