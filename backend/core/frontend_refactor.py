@@ -30,6 +30,15 @@ EXPECTED_FILES = [
     "src/components/aurora/panels/UserSettingsPanel.tsx",
 ]
 
+EXPECTED_SERVICE_FILES = [
+    "src/lib/api/client.ts", "src/lib/api/status.ts", "src/lib/api/dashboard.ts",
+    "src/lib/api/plugins.ts", "src/lib/api/tools.ts", "src/lib/api/security.ts",
+    "src/lib/api/release.ts", "src/lib/api/stabilization.ts", "src/lib/api/frontend-refactor.ts",
+    "src/lib/api/desktop.ts", "src/lib/api/sidecar.ts", "src/lib/api/notifications.ts",
+    "src/lib/api/settings.ts", "src/lib/api/workspaces.ts", "src/lib/api/knowledge.ts",
+    "src/lib/api/vector.ts", "src/lib/api/workflows.ts", "src/lib/api/developer.ts",
+]
+
 
 def _now() -> str:
     return datetime.now().isoformat(timespec="seconds")
@@ -38,6 +47,7 @@ def _now() -> str:
 def inspect_frontend_architecture() -> Dict[str, Any]:
     directories = [{"path": item, "exists": (FRONTEND_DIR / item).is_dir()} for item in EXPECTED_DIRECTORIES]
     files = [{"path": item, "exists": (FRONTEND_DIR / item).is_file()} for item in EXPECTED_FILES]
+    service_files = [{"path": item, "exists": (FRONTEND_DIR / item).is_file()} for item in EXPECTED_SERVICE_FILES]
     page_path = FRONTEND_DIR / "src" / "app" / "page.tsx"
     dashboard_path = FRONTEND_DIR / "src" / "components" / "aurora" / "dashboard-workspace.tsx"
     page_text = page_path.read_text(encoding="utf-8", errors="ignore") if page_path.exists() else ""
@@ -46,12 +56,13 @@ def inspect_frontend_architecture() -> Dict[str, Any]:
     components = sorted(str(path.relative_to(FRONTEND_DIR)) for path in component_root.rglob("*.tsx")) if component_root.exists() else []
     missing_dirs = [item for item in directories if not item["exists"]]
     missing_files = [item for item in files if not item["exists"]]
+    missing_service_files = [item for item in service_files if not item["exists"]]
     page_lines = len(page_text.splitlines())
     dashboard_lines = len(dashboard_text.splitlines())
     orchestrator_lines = max(page_lines, dashboard_lines)
-    status = "needs_refactor" if missing_dirs or missing_files else "page_too_large" if orchestrator_lines > 1600 else "improving" if orchestrator_lines > 900 else "healthy"
+    status = "needs_refactor" if missing_dirs or missing_files or missing_service_files else "page_too_large" if orchestrator_lines > 1600 else "improving" if orchestrator_lines > 900 else "healthy"
     return {"status": status, "generated_at": _now(), "directories": directories, "files": files,
-            "missing_directories": missing_dirs, "missing_files": missing_files, "page_lines": page_lines,
+            "missing_directories": missing_dirs, "missing_files": missing_files, "service_files": service_files, "missing_service_files": missing_service_files, "service_file_count": sum(item["exists"] for item in service_files), "page_lines": page_lines,
             "page_size": len(page_text), "dashboard_workspace_lines": dashboard_lines,
             "dashboard_workspace_size": len(dashboard_text), "component_count": len(components), "components": components}
 
@@ -60,8 +71,9 @@ def render_frontend_refactor_report() -> str:
     scan = inspect_frontend_architecture()
     directories = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["directories"])
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
+    service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v4.3 Frontend Component Extraction Report
+    return f"""# O.R.I.O.N. v4.4 Frontend Service Layer Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}
@@ -81,6 +93,12 @@ Status: {scan['status']}
 
 {files}
 
+## API Service Layer
+
+Service Files: {scan['service_file_count']}
+
+{service_lines}
+
 ## Component Inventory
 
 Component Count: {scan['component_count']}
@@ -99,6 +117,6 @@ Component Count: {scan['component_count']}
 
 def save_frontend_refactor_report() -> Dict[str, Any]:
     report = render_frontend_refactor_report()
-    path = REPORT_DIR / f"orion_v4_3_frontend_component_extraction_report_{datetime.now():%Y%m%d_%H%M%S}.md"
+    path = REPORT_DIR / f"orion_v4_4_frontend_service_layer_report_{datetime.now():%Y%m%d_%H%M%S}.md"
     path.write_text(report, encoding="utf-8")
     return {"status": "saved", "path": str(path), "report": report, "generated_at": _now()}

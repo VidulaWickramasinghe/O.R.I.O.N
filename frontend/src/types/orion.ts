@@ -121,3 +121,19 @@ export type WorkspaceItem = {
   id: number; name: string; path: string; description: string; status: string;
   created_at: string; updated_at: string;
 };
+
+export type SystemStatus = {
+  status: string;
+  version: string;
+  active_modules?: string[];
+};
+
+export type ActivityEvent = {
+  id?: number;
+  type?: string;
+  event_type?: string;
+  message: string;
+  source: string;
+  timestamp?: string;
+  created_at?: string;
+};

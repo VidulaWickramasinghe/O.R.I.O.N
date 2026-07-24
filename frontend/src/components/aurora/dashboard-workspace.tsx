@@ -6,7 +6,22 @@ import { dashboardModels, dashboardTimeline } from "@/lib/aurora-data";
 import { agents } from "@/lib/agent-data";
 import { memoryItems } from "@/lib/memory-data";
 import { projects } from "@/lib/project-data";
-import { apiGet, apiPost } from "@/lib/api/client";
+import { getDashboardIntelligence } from "@/lib/api/dashboard";
+import { getDesktopShellStatus } from "@/lib/api/desktop";
+import { createDeveloperPatchPlan, diagnoseDeveloperWorkspace, getDeveloperReports, inspectDeveloperWorkspace } from "@/lib/api/developer";
+import { getFrontendRefactorStatus, saveFrontendRefactorReport } from "@/lib/api/frontend-refactor";
+import { getKnowledgeDocuments, indexKnowledgeFolder, searchKnowledge } from "@/lib/api/knowledge";
+import { createReminder, getNotificationEvents, getReminders, getStartupBriefing, updateReminderStatus } from "@/lib/api/notifications";
+import { getPlugins, updatePluginStatus } from "@/lib/api/plugins";
+import { generateReleaseCandidatePackage, getReleaseCandidateStatus, freezeReleaseCandidate, unfreezeReleaseCandidate } from "@/lib/api/release";
+import { applySecurityProfile, getSecurityPolicy } from "@/lib/api/security";
+import { getUserSettingsProfile, resetUserSettings, updateUserSetting } from "@/lib/api/settings";
+import { getBackendSidecarStatus, runBackendSidecarAction as runSidecarApiAction } from "@/lib/api/sidecar";
+import { runStabilizationScan, saveStabilizationReport } from "@/lib/api/stabilization";
+import { getToolAudit, getToolPermissions } from "@/lib/api/tools";
+import { getVectorItems, rebuildVectorIndex, searchVector } from "@/lib/api/vector";
+import { getWorkspaces } from "@/lib/api/workspaces";
+import { createWorkflowMission, getWorkflowBlueprint, getWorkflowBlueprints } from "@/lib/api/workflows";
 import { FrontendRefactorPanel } from "@/components/aurora/panels/FrontendRefactorPanel";
 import { BackendSidecarPanel } from "@/components/aurora/panels/BackendSidecarPanel";
 import { DesktopShellPanel } from "@/components/aurora/panels/DesktopShellPanel";
@@ -259,746 +274,84 @@ export function DashboardWorkspace() {
     );
   }
 
-  async function loadKnowledgeDocuments() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/knowledge/documents");
-      const data = await response.json();
-      setKnowledgeDocuments(data.documents || []);
-    } catch {
-      setKnowledgeDocuments([]);
-    }
-  }
-
-  async function indexKnowledgeFolderFromUI() {
-    const cleanPath = knowledgePath.trim();
-    if (!cleanPath || knowledgeLoading) return;
-
-    setKnowledgeLoading(true);
-    setKnowledgeMessage("");
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/knowledge/index-folder", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ folder_path: cleanPath }),
-      });
-      const data = await response.json();
-      setKnowledgeMessage(`Knowledge indexing status: ${data.status}. ${data.message}`);
-      await loadKnowledgeDocuments();
-    } catch {
-      setKnowledgeMessage("Knowledge folder indexing failed. Confirm backend is running.");
-    } finally {
-      setKnowledgeLoading(false);
-    }
-  }
-
-  async function searchKnowledgeFromUI() {
-    const cleanQuery = knowledgeQuery.trim();
-    if (!cleanQuery || knowledgeLoading) return;
-
-    setKnowledgeLoading(true);
-    setKnowledgeMessage("");
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/knowledge/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: cleanQuery,
-          limit: 8,
-        }),
-      });
-      const data = await response.json();
-      setKnowledgeResults(data.results || []);
-    } catch {
-      setKnowledgeResults([]);
-      setKnowledgeMessage("Knowledge search failed. Confirm backend is running.");
-    } finally {
-      setKnowledgeLoading(false);
-    }
-  }
-
-
-
-  async function loadVectorItems() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/vector/items");
-      const data = await response.json();
-      setVectorItems(data.items || []);
-    } catch {
-      setVectorItems([]);
-    }
-  }
-
-  async function rebuildVectorIndexFromUI() {
-    setVectorLoading(true);
-    setVectorMessage("");
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/vector/rebuild", {
-        method: "POST",
-      });
-      const data = await response.json();
-      setVectorMessage(`Vector index rebuild status: ${data.status}`);
-      await loadVectorItems();
-    } catch {
-      setVectorMessage(
-        "Vector index rebuild failed. Confirm backend is running and OPENAI_API_KEY is set."
-      );
-    } finally {
-      setVectorLoading(false);
-    }
-  }
-
-  async function runSemanticSearchFromUI() {
-    const cleanQuery = semanticQuery.trim();
-    if (!cleanQuery || vectorLoading) return;
-
-    setVectorLoading(true);
-    setVectorMessage("");
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/vector/search", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          query: cleanQuery,
-          limit: 8,
-        }),
-      });
-      const data = await response.json();
-      setSemanticResults(data.results || []);
-    } catch {
-      setSemanticResults([]);
-      setVectorMessage(
-        "Semantic search failed. Confirm backend is running and OPENAI_API_KEY is set."
-      );
-    } finally {
-      setVectorLoading(false);
-    }
-  }
-
-  async function loadWorkflowBlueprints() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/workflows/blueprints");
-      const data = await response.json();
-      setWorkflowBlueprints(data.blueprints || []);
-    } catch {
-      setWorkflowBlueprints([]);
-    }
-  }
-
-  async function openWorkflowBlueprint(blueprintKey: string) {
-    setWorkflowLoadingKey(blueprintKey);
-    setWorkflowMessage("");
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/workflows/blueprints/${blueprintKey}`
-      );
-      const data = await response.json();
-      setSelectedWorkflowBlueprint(data);
-    } catch {
-      setSelectedWorkflowBlueprint(null);
-      setWorkflowMessage("Workflow blueprint failed to load. Confirm backend is running.");
-    } finally {
-      setWorkflowLoadingKey(null);
-    }
-  }
-
-  async function createMissionFromBlueprintUI(blueprintKey: string) {
-    setWorkflowLoadingKey(blueprintKey);
-    setWorkflowMessage("");
-
-    try {
-      const parsedWorkspaceId = Number.parseInt(workflowWorkspaceId, 10);
-      const workspaceId = Number.isFinite(parsedWorkspaceId) && parsedWorkspaceId > 0
-        ? parsedWorkspaceId
-        : null;
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/workflows/blueprints/${blueprintKey}/create-mission`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            mission_title: "",
-            custom_goal: "",
-            workspace_id: workspaceId,
-          }),
-        }
-      );
-      const data = await response.json();
-
-      if (data.status === "created") {
-        setWorkflowMessage(
-          `Workflow mission created: Mission ${data.mission_id} · ${data.title} · ${data.step_count} steps`
-        );
-      } else {
-        setWorkflowMessage(`Workflow mission creation failed: ${data.message}`);
-      }
-    } catch {
-      setWorkflowMessage("Workflow mission creation failed. Confirm backend is running.");
-    } finally {
-      setWorkflowLoadingKey(null);
-    }
-  }
-
-  async function loadWorkspaces() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/workspaces");
-      const data = await response.json();
-      setWorkspaces(data.workspaces || []);
-    } catch {
-      setWorkspaces([]);
-    }
-  }
-
-  async function loadDeveloperReports() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/developer/reports");
-      const data = await response.json();
-      setDeveloperReports(data.reports || []);
-    } catch {
-      setDeveloperReports([]);
-    }
-  }
-
-  async function runDeveloperInspect(workspaceId: number) {
-    setDeveloperLoadingAction(`inspect-${workspaceId}`);
-    setDeveloperMessage("");
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/developer/workspaces/${workspaceId}/inspect`
-      );
-      const data = await response.json();
-      setDeveloperResult(data);
-      setDeveloperMessage(`Developer inspection generated for workspace ${workspaceId}.`);
-      await loadDeveloperReports();
-    } catch {
-      setDeveloperMessage("Developer inspection failed. Confirm backend is running.");
-    } finally {
-      setDeveloperLoadingAction(null);
-    }
-  }
-
-  async function runDeveloperDiagnosis(workspaceId: number) {
-    const cleanIssue = developerIssue.trim();
-    if (!cleanIssue) {
-      setDeveloperMessage("Add an issue description before running developer diagnosis.");
-      return;
-    }
-
-    setDeveloperLoadingAction(`diagnose-${workspaceId}`);
-    setDeveloperMessage("");
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/developer/workspaces/${workspaceId}/diagnose`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            issue_description: cleanIssue,
-            target_files: [],
-          }),
-        }
-      );
-      const data = await response.json();
-      setDeveloperResult(data);
-      setDeveloperMessage(`Developer diagnosis generated for workspace ${workspaceId}.`);
-      await loadDeveloperReports();
-    } catch {
-      setDeveloperMessage("Developer diagnosis failed. Confirm backend is running.");
-    } finally {
-      setDeveloperLoadingAction(null);
-    }
-  }
-
-  async function runDeveloperPatchPlan(workspaceId: number) {
-    const cleanIssue = developerIssue.trim();
-    if (!cleanIssue) {
-      setDeveloperMessage("Add an issue or objective before creating a patch plan.");
-      return;
-    }
-
-    setDeveloperLoadingAction(`patch-plan-${workspaceId}`);
-    setDeveloperMessage("");
-
-    try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/developer/workspaces/${workspaceId}/patch-plan`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            issue_description: cleanIssue,
-            target_files: [],
-          }),
-        }
-      );
-      const data = await response.json();
-      setDeveloperResult(data);
-      setDeveloperMessage(`Patch plan generated for workspace ${workspaceId}.`);
-      await loadDeveloperReports();
-    } catch {
-      setDeveloperMessage("Patch plan generation failed. Confirm backend is running.");
-    } finally {
-      setDeveloperLoadingAction(null);
-    }
-  }
-
-  async function loadDashboardIntelligence(showMessage = false) {
-    setDashboardIntelligenceLoading(true);
-    if (showMessage) {
-      setDashboardIntelligenceMessage("");
-    }
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/dashboard/intelligence");
-      const data = await response.json();
-      setDashboardIntelligence(data);
-      if (showMessage) {
-        setDashboardIntelligenceMessage(
-          `Dashboard Intelligence generated: ${data.intelligence_score}/100 · ${data.readiness_label}`
-        );
-      }
-    } catch {
-      if (showMessage) {
-        setDashboardIntelligenceMessage("Dashboard Intelligence failed. Confirm backend is running.");
-      }
-    } finally {
-      setDashboardIntelligenceLoading(false);
-    }
-  }
-
-
-  async function loadReminders() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/notifications/reminders");
-      const data = await response.json();
-      setReminders(data.reminders || []);
-    } catch {
-      setReminders([]);
-    }
-  }
-
-  async function loadNotificationEvents() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/notifications/events");
-      const data = await response.json();
-      setNotificationEvents(data.events || []);
-    } catch {
-      setNotificationEvents([]);
-    }
-  }
-
-  async function loadStartupBriefing(showMessage = false) {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/notifications/startup-briefing");
-      const data = await response.json();
-      setStartupBriefing(data);
-      if (showMessage) {
-        setNotificationMessage("Startup briefing generated.");
-      }
-    } catch {
-      if (showMessage) {
-        setNotificationMessage("Startup briefing failed. Confirm backend is running.");
-      }
-    }
-  }
-
-  async function createReminderFromUI() {
-    const cleanTitle = reminderTitle.trim();
-    if (!cleanTitle || reminderLoading) return;
-
-    setReminderLoading(true);
-    setNotificationMessage("");
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/notifications/reminders", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: cleanTitle,
-          description: "Created from Aurora OS Notification Engine.",
-          due_at: reminderDueAt,
-          priority: "medium",
-        }),
-      });
-      const data = await response.json();
-      setNotificationMessage(`Reminder created: ${data.title} · Due ${data.due_at}`);
-      setReminderTitle("");
-      await loadReminders();
-      await loadNotificationEvents();
-    } catch {
-      setNotificationMessage("Reminder creation failed. Confirm backend is running.");
-    } finally {
-      setReminderLoading(false);
-    }
-  }
-
-  async function updateReminderStatusFromUI(reminderId: number, status: string) {
-    try {
-      await fetch(`http://127.0.0.1:8000/api/notifications/reminders/${reminderId}/status`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status }),
-      });
-      setNotificationMessage(`Reminder ${reminderId} marked ${status}.`);
-      await loadReminders();
-      await loadNotificationEvents();
-    } catch {
-      setNotificationMessage(`Could not update reminder ${reminderId}.`);
-    }
-  }
-
-
-  async function loadUserSettingsProfile() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/settings/profile");
-      const data = await response.json();
-      setUserSettingsProfile(data);
-    } catch {
-      setUserSettingsProfile(null);
-    }
-  }
-
-  async function updateUserSettingFromUI(key: string, value: string) {
-    setSettingsLoadingKey(key);
-    setSettingsMessage("");
-
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/settings/profile/${key}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ value }),
-      });
-      const data = await response.json();
-
-      if (data.status === "updated") {
-        setSettingsMessage(`Setting updated: ${key} = ${data.setting.value}`);
-      } else {
-        setSettingsMessage(`Setting update failed: ${data.message}`);
-      }
-
-      await loadUserSettingsProfile();
-      await loadDashboardIntelligence();
-    } catch {
-      setSettingsMessage(`Setting update failed for ${key}.`);
-    } finally {
-      setSettingsLoadingKey(null);
-    }
-  }
-
-  async function resetUserSettingsFromUI() {
-    setSettingsLoadingKey("reset");
-    setSettingsMessage("");
-
-    try {
-      await fetch("http://127.0.0.1:8000/api/settings/profile/reset", {
-        method: "POST",
-      });
-      setSettingsMessage("User profile settings reset to defaults.");
-      await loadUserSettingsProfile();
-      await loadDashboardIntelligence();
-    } catch {
-      setSettingsMessage("User settings reset failed.");
-    } finally {
-      setSettingsLoadingKey(null);
-    }
-  }
-
-  async function loadPlugins() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/plugins");
-      const data: PluginsResponse = await response.json();
-      setPlugins(data.plugins || []);
-      setPluginMetrics(data.metrics || {});
-      setPluginRegistryReport(data.report || "");
-    } catch {
-      setPlugins([]);
-      setPluginMetrics({});
-      setPluginRegistryReport("");
-    }
-  }
-
-  async function updatePluginStatusFromUI(pluginKey: string, enabled: boolean) {
-    setPluginLoadingKey(pluginKey);
-    setPluginMessage("");
-
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/plugins/${pluginKey}/status`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ enabled }),
-      });
-      const data = await response.json();
-      setPluginMessage(
-        data.status === "updated"
-          ? `Plugin updated: ${pluginKey} = ${enabled ? "enabled" : "disabled"}`
-          : `Plugin update failed: ${data.message}`
-      );
-      await loadPlugins();
-      await loadDashboardIntelligence();
-    } catch {
-      setPluginMessage(`Plugin update failed for ${pluginKey}.`);
-    } finally {
-      setPluginLoadingKey(null);
-    }
-  }
-
-  async function loadDesktopShellStatus() {
-    setDesktopShellLoading(true);
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/desktop-shell/status");
-      const data: DesktopShellStatus = await response.json();
-      setDesktopShellStatus(data);
-    } catch {
-      setDesktopShellStatus({
-        status: "offline",
-        app_name: "O.R.I.O.N. Aurora OS",
-        shell_version: "3.6.0",
-        backend_url: "http://127.0.0.1:8000",
-        frontend_mode: "tauri_static_shell",
-        message: "Backend is offline. Start O.R.I.O.N. backend first.",
-      });
-    } finally {
-      setDesktopShellLoading(false);
-    }
-  }
-
-  async function loadBackendSidecarStatus(showMessage = false) {
-    setBackendSidecarLoading(true);
-
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/sidecar/status");
-      const data: BackendSidecarStatus = await response.json();
-      setBackendSidecarStatus(data);
-      if (showMessage) {
-        setBackendSidecarMessage(
-          `Backend sidecar status: ${data.status}. PID: ${data.pid || "N/A"}. Port open: ${data.port_open}.`
-        );
-      }
-    } catch {
-      setBackendSidecarStatus({
-        managed_by: "O.R.I.O.N. Backend Sidecar",
-        status: "offline",
-        pid: null,
-        host: "127.0.0.1",
-        port: 8000,
-        backend_url: "http://127.0.0.1:8000",
-        started_at: "",
-        updated_at: "",
-        last_error: "Backend unavailable.",
-        pid_running: false,
-        port_open: false,
-        log_file: "",
-        state_file: "",
-        report: "Backend is offline or unreachable.",
-      });
-      if (showMessage) {
-        setBackendSidecarMessage(
-          "Sidecar status unavailable. If the backend is fully offline, start it with ./scripts/orion_desktop.sh."
-        );
-      }
-    } finally {
-      setBackendSidecarLoading(false);
-    }
-  }
-
-  async function runBackendSidecarAction(action: "start" | "stop" | "restart") {
-    setBackendSidecarLoading(true);
-    setBackendSidecarMessage("");
-
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/api/sidecar/${action}`, {
-        method: "POST",
-      });
-      const data: BackendSidecarAction = await response.json();
-      setBackendSidecarStatus(data.sidecar);
-      setBackendSidecarMessage(
-        `Backend sidecar ${action} requested. Status: ${data.status}. ${data.message}`
-      );
-      await loadDesktopShellStatus();
-    } catch {
-      setBackendSidecarMessage(
-        "Sidecar action failed. If the backend is fully offline, start it with ./scripts/orion_desktop.sh."
-      );
-    } finally {
-      setBackendSidecarLoading(false);
-    }
-  }
-
-
-  async function loadToolPermissions() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/tools/permissions");
-      const data: ToolPermissionResponse = await response.json();
-      setToolPermissionMatrix(data.matrix || []);
-      setToolPermissionMetrics(data.metrics || {});
-      setToolPermissionReport(data.report || "");
-    } catch {
-      setToolPermissionMatrix([]);
-      setToolPermissionMetrics({});
-      setToolPermissionReport("");
-    }
-  }
-
-
-  async function loadToolAudit() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/tools/audit");
-      const data: ToolAuditResponse = await response.json();
-      setToolAuditEvents(data.events || []);
-      setToolAuditMetrics(data.metrics || {});
-      setToolAuditReport(data.report || "");
-    } catch {
-      setToolAuditEvents([]);
-      setToolAuditMetrics({});
-      setToolAuditReport("");
-    }
-  }
-
-
-  async function loadSecurityPolicy() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/security/policy");
-      const data: SecurityPolicyResponse = await response.json();
-      setSecurityProfiles(data.profiles || []);
-      setSecurityPolicyEvents(data.events || []);
-      setSecurityPolicyActive(data.active_policy || {});
-      setSecurityPolicyReport(data.report || "");
-    } catch {
-      setSecurityProfiles([]);
-      setSecurityPolicyEvents([]);
-      setSecurityPolicyActive({});
-      setSecurityPolicyReport("");
-    }
-  }
-
-  async function applySecurityProfileFromUI(profileKey: string) {
-    setSecurityPolicyLoadingKey(profileKey);
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/security/policy/apply", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile_key: profileKey }),
-      });
-      const data = await response.json();
-      setSecurityPolicyMessage(
-        `Security policy applied. Profile: ${data.profile_name}. Enabled: ${data.enabled_count}. Disabled: ${data.disabled_count}. ${data.summary}`
-      );
-      await loadSecurityPolicy();
-      await loadPlugins();
-      await loadToolPermissions();
-      await loadToolAudit();
-      await loadDashboardIntelligence();
-      await loadUserSettingsProfile();
-    } catch {
-      setSecurityPolicyMessage(`Security policy apply failed for ${profileKey}.`);
-    } finally {
-      setSecurityPolicyLoadingKey(null);
-    }
-  }
-
-  async function loadReleaseCandidateStatus() {
-    try {
-      const response = await fetch("http://127.0.0.1:8000/api/release-candidate/status");
-      if (!response.ok) throw new Error("Release candidate status request failed.");
-      const data: ReleaseCandidateStatus = await response.json();
-      setReleaseCandidateStatus(data);
-    } catch {
-      setReleaseCandidateStatus(null);
-    }
-  }
-
-  async function runReleaseCandidateAction(action: "freeze" | "unfreeze" | "package") {
-    setReleaseCandidateLoading(true);
-    setReleaseCandidateMessage("");
-    try {
-      const options = action === "package"
-        ? { method: "POST" }
-        : {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              reason: action === "freeze"
-                ? "Preparing O.R.I.O.N. v4.0 release candidate."
-                : "Release candidate freeze lifted by user.",
-            }),
-          };
-      const response = await fetch(`http://127.0.0.1:8000/api/release-candidate/${action}`, options);
-      if (!response.ok) throw new Error(`Release candidate ${action} request failed.`);
-      const data = await response.json();
-      if (action === "package") {
-        setReleaseCandidatePackage(data as ReleaseCandidatePackage);
-        setReleaseCandidateMessage(`Release package generated: ${data.summary_path}`);
-      } else {
-        setReleaseCandidateMessage(
-          action === "freeze" ? "System Freeze enabled." : "System Freeze disabled."
-        );
-      }
-      await Promise.all([loadReleaseCandidateStatus(), loadDashboardIntelligence(), loadPlugins()]);
-    } catch {
-      setReleaseCandidateMessage(`Release candidate ${action} failed. Confirm the backend is running.`);
-    } finally {
-      setReleaseCandidateLoading(false);
-    }
-  }
-
-  async function runStabilizationAction(action: "scan" | "save", runBuild = false) {
-    setStabilizationLoading(true);
-    setStabilizationMessage("");
-    try {
-      const endpoint = action === "scan" ? "scan" : "report/save";
-      const response = await fetch(`http://127.0.0.1:8000/api/stabilization/${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ run_build: runBuild }),
-      });
-      if (!response.ok) throw new Error("Stabilization request failed.");
-      const data: StabilizationResult = await response.json();
-      setStabilizationResult(data);
-      setStabilizationMessage(
-        action === "save" ? `Stabilization report saved: ${data.path}` : `Stabilization scan completed: ${data.status}`
-      );
-      await Promise.all([loadDashboardIntelligence(), loadReleaseCandidateStatus()]);
-    } catch {
-      setStabilizationMessage("Stabilization action failed. Confirm the backend is running.");
-    } finally {
-      setStabilizationLoading(false);
-    }
-  }
-
-  async function loadFrontendRefactorStatus() {
-    try {
-      setFrontendRefactorResult(await apiGet<FrontendRefactorResult>("/api/frontend/refactor"));
-    } catch {
-      setFrontendRefactorResult(null);
-    }
-  }
+  async function loadKnowledgeDocuments() { try { const data = await getKnowledgeDocuments(); setKnowledgeDocuments((data.documents || []) as KnowledgeDocumentItem[]); } catch { setKnowledgeDocuments([]); } }
+
+  async function indexKnowledgeFolderFromUI() { const cleanPath = knowledgePath.trim(); if (!cleanPath || knowledgeLoading) return; setKnowledgeLoading(true); setKnowledgeMessage(""); try { const data = await indexKnowledgeFolder(cleanPath); setKnowledgeMessage(`Knowledge indexing status: ${data.status}. ${data.message}`); await loadKnowledgeDocuments(); } catch { setKnowledgeMessage("Knowledge folder indexing failed. Confirm backend is running."); } finally { setKnowledgeLoading(false); } }
+
+  async function searchKnowledgeFromUI() { const cleanQuery = knowledgeQuery.trim(); if (!cleanQuery || knowledgeLoading) return; setKnowledgeLoading(true); setKnowledgeMessage(""); try { const data = await searchKnowledge(cleanQuery); setKnowledgeResults((data.results || []) as KnowledgeSearchItem[]); } catch { setKnowledgeResults([]); setKnowledgeMessage("Knowledge search failed. Confirm backend is running."); } finally { setKnowledgeLoading(false); } }
+
+
+
+  async function loadVectorItems() { try { const data = await getVectorItems(); setVectorItems((data.items || []) as VectorItem[]); } catch { setVectorItems([]); } }
+
+  async function rebuildVectorIndexFromUI() { setVectorLoading(true); setVectorMessage(""); try { const data = await rebuildVectorIndex(); setVectorMessage(`Vector index rebuild status: ${data.status}`); await loadVectorItems(); } catch { setVectorMessage("Vector index rebuild failed. Confirm backend is running and OPENAI_API_KEY is set."); } finally { setVectorLoading(false); } }
+
+  async function runSemanticSearchFromUI() { const cleanQuery = semanticQuery.trim(); if (!cleanQuery || vectorLoading) return; setVectorLoading(true); setVectorMessage(""); try { const data = await searchVector(cleanQuery); setSemanticResults((data.results || []) as SemanticSearchItem[]); } catch { setSemanticResults([]); setVectorMessage("Semantic search failed. Confirm backend is running and OPENAI_API_KEY is set."); } finally { setVectorLoading(false); } }
+
+  async function loadWorkflowBlueprints() { try { const data = await getWorkflowBlueprints(); setWorkflowBlueprints((data.blueprints || []) as WorkflowBlueprintItem[]); } catch { setWorkflowBlueprints([]); } }
+
+  async function openWorkflowBlueprint(blueprintKey: string) { setWorkflowLoadingKey(blueprintKey); setWorkflowMessage(""); try { setSelectedWorkflowBlueprint((await getWorkflowBlueprint(blueprintKey)) as WorkflowBlueprintDetail); } catch { setSelectedWorkflowBlueprint(null); setWorkflowMessage("Workflow blueprint failed to load. Confirm backend is running."); } finally { setWorkflowLoadingKey(null); } }
+
+  async function createMissionFromBlueprintUI(blueprintKey: string) { setWorkflowLoadingKey(blueprintKey); setWorkflowMessage(""); try { const parsed = Number.parseInt(workflowWorkspaceId, 10); const workspaceId = Number.isFinite(parsed) && parsed > 0 ? parsed : null; const data = await createWorkflowMission(blueprintKey, workspaceId); setWorkflowMessage(data.status === "created" ? `Workflow mission created: Mission ${data.mission_id} · ${data.title} · ${data.step_count} steps` : `Workflow mission creation failed: ${data.message}`); } catch { setWorkflowMessage("Workflow mission creation failed. Confirm backend is running."); } finally { setWorkflowLoadingKey(null); } }
+
+  async function loadWorkspaces() { try { const data = await getWorkspaces(); setWorkspaces(data.workspaces || []); } catch { setWorkspaces([]); } }
+
+  async function loadDeveloperReports() { try { const data = await getDeveloperReports(); setDeveloperReports((data.reports || []) as DeveloperReportItem[]); } catch { setDeveloperReports([]); } }
+
+  async function runDeveloperInspect(workspaceId: number) { setDeveloperLoadingAction(`inspect-${workspaceId}`); setDeveloperMessage(""); try { setDeveloperResult((await inspectDeveloperWorkspace(workspaceId)) as DeveloperInspectResult); setDeveloperMessage(`Developer inspection generated for workspace ${workspaceId}.`); await loadDeveloperReports(); } catch { setDeveloperMessage("Developer inspection failed. Confirm backend is running."); } finally { setDeveloperLoadingAction(null); } }
+
+  async function runDeveloperDiagnosis(workspaceId: number) { const cleanIssue = developerIssue.trim(); if (!cleanIssue) { setDeveloperMessage("Add an issue description before running developer diagnosis."); return; } setDeveloperLoadingAction(`diagnose-${workspaceId}`); setDeveloperMessage(""); try { setDeveloperResult((await diagnoseDeveloperWorkspace(workspaceId, cleanIssue)) as DeveloperInspectResult); setDeveloperMessage(`Developer diagnosis generated for workspace ${workspaceId}.`); await loadDeveloperReports(); } catch { setDeveloperMessage("Developer diagnosis failed. Confirm backend is running."); } finally { setDeveloperLoadingAction(null); } }
+
+  async function runDeveloperPatchPlan(workspaceId: number) { const cleanIssue = developerIssue.trim(); if (!cleanIssue) { setDeveloperMessage("Add an issue or objective before creating a patch plan."); return; } setDeveloperLoadingAction(`patch-plan-${workspaceId}`); setDeveloperMessage(""); try { setDeveloperResult((await createDeveloperPatchPlan(workspaceId, cleanIssue)) as DeveloperInspectResult); setDeveloperMessage(`Patch plan generated for workspace ${workspaceId}.`); await loadDeveloperReports(); } catch { setDeveloperMessage("Patch plan generation failed. Confirm backend is running."); } finally { setDeveloperLoadingAction(null); } }
+
+  async function loadDashboardIntelligence(showMessage = false) { setDashboardIntelligenceLoading(true); if (showMessage) setDashboardIntelligenceMessage(""); try { const data = await getDashboardIntelligence(); setDashboardIntelligence(data); if (showMessage) setDashboardIntelligenceMessage(`Dashboard Intelligence generated: ${data.intelligence_score}/100 · ${data.readiness_label}`); } catch { if (showMessage) setDashboardIntelligenceMessage("Dashboard Intelligence failed. Confirm backend is running."); } finally { setDashboardIntelligenceLoading(false); } }
+
+
+  async function loadReminders() { try { const data = await getReminders(); setReminders(data.reminders || []); } catch { setReminders([]); } }
+
+  async function loadNotificationEvents() { try { const data = await getNotificationEvents(); setNotificationEvents(data.events || []); } catch { setNotificationEvents([]); } }
+
+  async function loadStartupBriefing(showMessage = false) { try { setStartupBriefing(await getStartupBriefing()); if (showMessage) setNotificationMessage("Startup briefing generated."); } catch { if (showMessage) setNotificationMessage("Startup briefing failed. Confirm backend is running."); } }
+
+  async function createReminderFromUI() { const cleanTitle = reminderTitle.trim(); if (!cleanTitle || reminderLoading) return; setReminderLoading(true); setNotificationMessage(""); try { const data = await createReminder({ title: cleanTitle, description: "Created from Aurora OS Notification Engine.", due_at: reminderDueAt, priority: "medium" }); setNotificationMessage(`Reminder created: ${data.title} · Due ${data.due_at}`); setReminderTitle(""); await Promise.all([loadReminders(), loadNotificationEvents()]); } catch { setNotificationMessage("Reminder creation failed. Confirm backend is running."); } finally { setReminderLoading(false); } }
+
+  async function updateReminderStatusFromUI(reminderId: number, status: string) { try { await updateReminderStatus(reminderId, status); setNotificationMessage(`Reminder ${reminderId} marked ${status}.`); await Promise.all([loadReminders(), loadNotificationEvents()]); } catch { setNotificationMessage(`Could not update reminder ${reminderId}.`); } }
+
+
+  async function loadUserSettingsProfile() { try { setUserSettingsProfile(await getUserSettingsProfile()); } catch { setUserSettingsProfile(null); } }
+
+  async function updateUserSettingFromUI(key: string, value: string) { setSettingsLoadingKey(key); setSettingsMessage(""); try { const data = await updateUserSetting(key, value); setSettingsMessage(data.status === "updated" ? `Setting updated: ${key} = ${data.setting?.value ?? value}` : `Setting update failed: ${data.message}`); await Promise.all([loadUserSettingsProfile(), loadDashboardIntelligence()]); } catch { setSettingsMessage(`Setting update failed for ${key}.`); } finally { setSettingsLoadingKey(null); } }
+
+  async function resetUserSettingsFromUI() { setSettingsLoadingKey("reset"); setSettingsMessage(""); try { await resetUserSettings(); setSettingsMessage("User profile settings reset to defaults."); await Promise.all([loadUserSettingsProfile(), loadDashboardIntelligence()]); } catch { setSettingsMessage("User settings reset failed."); } finally { setSettingsLoadingKey(null); } }
+
+  async function loadPlugins() { try { const data = await getPlugins(); setPlugins(data.plugins || []); setPluginMetrics(data.metrics || {}); setPluginRegistryReport(data.report || ""); } catch { setPlugins([]); setPluginMetrics({}); setPluginRegistryReport(""); } }
+
+  async function updatePluginStatusFromUI(pluginKey: string, enabled: boolean) { setPluginLoadingKey(pluginKey); setPluginMessage(""); try { const data = await updatePluginStatus(pluginKey, enabled); setPluginMessage(data.status === "updated" ? `Plugin updated: ${pluginKey} = ${enabled ? "enabled" : "disabled"}` : `Plugin update failed: ${data.message}`); await Promise.all([loadPlugins(), loadDashboardIntelligence()]); } catch { setPluginMessage(`Plugin update failed for ${pluginKey}.`); } finally { setPluginLoadingKey(null); } }
+
+  async function loadDesktopShellStatus() { setDesktopShellLoading(true); try { setDesktopShellStatus(await getDesktopShellStatus()); } catch { setDesktopShellStatus({ status: "offline", app_name: "O.R.I.O.N. Aurora OS", shell_version: "4.4.0", backend_url: "configured API endpoint", frontend_mode: "tauri_static_shell", message: "Backend is offline. Start O.R.I.O.N. backend first." }); } finally { setDesktopShellLoading(false); } }
+
+  async function loadBackendSidecarStatus(showMessage = false) { setBackendSidecarLoading(true); try { const data = await getBackendSidecarStatus(); setBackendSidecarStatus(data); if (showMessage) setBackendSidecarMessage(`Backend sidecar status: ${data.status}. PID: ${data.pid || "N/A"}. Port open: ${data.port_open}.`); } catch { setBackendSidecarStatus({ managed_by: "O.R.I.O.N. Backend Sidecar", status: "offline", pid: null, host: "127.0.0.1", port: 8000, backend_url: "configured API endpoint", started_at: "", updated_at: "", last_error: "Backend unavailable.", pid_running: false, port_open: false, log_file: "", state_file: "", report: "Backend is offline or unreachable." }); if (showMessage) setBackendSidecarMessage("Sidecar status unavailable. If the backend is fully offline, start it with ./scripts/orion_desktop.sh."); } finally { setBackendSidecarLoading(false); } }
+
+  async function runBackendSidecarAction(action: "start" | "stop" | "restart") { setBackendSidecarLoading(true); setBackendSidecarMessage(""); try { const data = await runSidecarApiAction(action); setBackendSidecarStatus(data.sidecar); setBackendSidecarMessage(`Backend sidecar ${action} requested. Status: ${data.status}. ${data.message}`); await loadDesktopShellStatus(); } catch { setBackendSidecarMessage("Sidecar action failed. If the backend is fully offline, start it with ./scripts/orion_desktop.sh."); } finally { setBackendSidecarLoading(false); } }
+
+
+  async function loadToolPermissions() { try { const data = await getToolPermissions(); setToolPermissionMatrix(data.matrix || []); setToolPermissionMetrics(data.metrics || {}); setToolPermissionReport(data.report || ""); } catch { setToolPermissionMatrix([]); setToolPermissionMetrics({}); setToolPermissionReport(""); } }
+
+
+  async function loadToolAudit() { try { const data = await getToolAudit(); setToolAuditEvents(data.events || []); setToolAuditMetrics(data.metrics || {}); setToolAuditReport(data.report || ""); } catch { setToolAuditEvents([]); setToolAuditMetrics({}); setToolAuditReport(""); } }
+
+
+  async function loadSecurityPolicy() { try { const data = await getSecurityPolicy(); setSecurityProfiles(data.profiles || []); setSecurityPolicyEvents(data.events || []); setSecurityPolicyActive(data.active_policy || {}); setSecurityPolicyReport(data.report || ""); } catch { setSecurityProfiles([]); setSecurityPolicyEvents([]); setSecurityPolicyActive({}); setSecurityPolicyReport(""); } }
+
+  async function applySecurityProfileFromUI(profileKey: string) { setSecurityPolicyLoadingKey(profileKey); try { const data = await applySecurityProfile(profileKey); setSecurityPolicyMessage(`Security policy applied. Profile: ${data.profile_name}. Enabled: ${data.enabled_count}. Disabled: ${data.disabled_count}. ${data.summary}`); await Promise.all([loadSecurityPolicy(), loadPlugins(), loadToolPermissions(), loadToolAudit(), loadDashboardIntelligence(), loadUserSettingsProfile()]); } catch { setSecurityPolicyMessage(`Security policy apply failed for ${profileKey}.`); } finally { setSecurityPolicyLoadingKey(null); } }
+
+  async function loadReleaseCandidateStatus() { try { setReleaseCandidateStatus(await getReleaseCandidateStatus()); } catch { setReleaseCandidateStatus(null); } }
+
+  async function runReleaseCandidateAction(action: "freeze" | "unfreeze" | "package") { setReleaseCandidateLoading(true); setReleaseCandidateMessage(""); try { if (action === "package") { const data = await generateReleaseCandidatePackage(); setReleaseCandidatePackage(data); setReleaseCandidateMessage(`Release package generated: ${data.summary_path}`); } else { const reason = action === "freeze" ? "Preparing O.R.I.O.N. v4.0 release candidate." : "Release candidate freeze lifted by user."; await (action === "freeze" ? freezeReleaseCandidate(reason) : unfreezeReleaseCandidate(reason)); setReleaseCandidateMessage(action === "freeze" ? "System Freeze enabled." : "System Freeze disabled."); } await Promise.all([loadReleaseCandidateStatus(), loadDashboardIntelligence(), loadPlugins()]); } catch { setReleaseCandidateMessage(`Release candidate ${action} failed. Confirm the backend is running.`); } finally { setReleaseCandidateLoading(false); } }
+
+  async function runStabilizationAction(action: "scan" | "save", runBuild = false) { setStabilizationLoading(true); setStabilizationMessage(""); try { const data = action === "scan" ? await runStabilizationScan(runBuild) : await saveStabilizationReport(runBuild); setStabilizationResult(data); setStabilizationMessage(action === "save" ? `Stabilization report saved: ${data.path}` : `Stabilization scan completed: ${data.status}`); await Promise.all([loadDashboardIntelligence(), loadReleaseCandidateStatus()]); } catch { setStabilizationMessage("Stabilization action failed. Confirm the backend is running."); } finally { setStabilizationLoading(false); } }
+
+  async function loadFrontendRefactorStatus() { try { setFrontendRefactorResult(await getFrontendRefactorStatus()); } catch { setFrontendRefactorResult(null); } }
 
   async function runFrontendRefactorScanFromUI() {
     setFrontendRefactorLoading(true);
@@ -1009,18 +362,7 @@ export function DashboardWorkspace() {
     }
   }
 
-  async function saveFrontendRefactorReportFromUI() {
-    setFrontendRefactorLoading(true);
-    try {
-      setFrontendRefactorResult(
-        await apiPost<FrontendRefactorResult>("/api/frontend/refactor/report/save")
-      );
-    } catch {
-      setFrontendRefactorResult(null);
-    } finally {
-      setFrontendRefactorLoading(false);
-    }
-  }
+  async function saveFrontendRefactorReportFromUI() { setFrontendRefactorLoading(true); try { setFrontendRefactorResult(await saveFrontendRefactorReport()); } catch { setFrontendRefactorResult(null); } finally { setFrontendRefactorLoading(false); } }
 
   useEffect(() => {
     void loadKnowledgeDocuments();
@@ -1083,7 +425,7 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.3
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.4
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
@@ -1424,7 +766,7 @@ function AgenticDeveloperModePanel({
           </p>
         </div>
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.3
+          v4.4
         </span>
       </div>
 

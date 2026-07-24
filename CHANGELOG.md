@@ -1,3 +1,22 @@
+## v4.4 — Frontend Service Layer + State Management Cleanup
+
+### Added
+
+- Frontend API service layer
+- Status, dashboard, plugin, tool, security, release, stabilization, refactor, desktop, sidecar, notification, settings, and workspace services
+- Service-layer scan support
+
+### Changed
+
+- Moved raw dashboard fetch calls into API services
+- Centralized API base URL configuration
+
+### Safety
+
+- Backend behavior unchanged
+- UI behavior preserved
+- Refactor is structural only
+
 ## v4.3 — Frontend Component Extraction Phase 2
 
 ### Added
