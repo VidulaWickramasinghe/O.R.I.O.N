@@ -35,6 +35,8 @@ EXPECTED_FILES = [
     "src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx",
     "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx",
     "src/lib/api/quality-gate.ts",
+    "src/lib/api/github-polish.ts",
+    "src/components/aurora/panels/GitHubPolishPanel.tsx",
     "src/types/workspaceViews.ts", "src/lib/workspaceViewStorage.ts",
 ]
 
@@ -44,7 +46,7 @@ EXPECTED_SERVICE_FILES = [
     "src/lib/api/release.ts", "src/lib/api/stabilization.ts", "src/lib/api/frontend-refactor.ts",
     "src/lib/api/desktop.ts", "src/lib/api/sidecar.ts", "src/lib/api/notifications.ts",
     "src/lib/api/settings.ts", "src/lib/api/workspaces.ts", "src/lib/api/knowledge.ts",
-    "src/lib/api/vector.ts", "src/lib/api/workflows.ts", "src/lib/api/developer.ts",
+    "src/lib/api/vector.ts", "src/lib/api/workflows.ts", "src/lib/api/developer.ts", "src/lib/api/github-polish.ts",
 ]
 
 
@@ -69,7 +71,7 @@ def inspect_frontend_architecture() -> Dict[str, Any]:
     dashboard_lines = len(dashboard_text.splitlines())
     orchestrator_lines = max(page_lines, dashboard_lines)
     status = "needs_refactor" if missing_dirs or missing_files or missing_service_files else "page_too_large" if orchestrator_lines > 1600 else "improving" if orchestrator_lines > 900 else "healthy"
-    return {"status": status, "generated_at": _now(), "directories": directories, "files": files, "store_exists": (FRONTEND_DIR / "src/store/auroraStore.ts").is_file(), "panel_registry_exists": (FRONTEND_DIR / "src/lib/panelRegistry.ts").is_file(), "panel_storage_exists": (FRONTEND_DIR / "src/lib/panelLayoutStorage.ts").is_file(), "panel_types_exists": (FRONTEND_DIR / "src/types/panels.ts").is_file(), "dashboard_view_selector_exists": (FRONTEND_DIR / "src/components/aurora/panels/DashboardViewSelectorPanel.tsx").is_file(), "workspace_view_storage_exists": (FRONTEND_DIR / "src/lib/workspaceViewStorage.ts").is_file(), "resilience_file_count": sum((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]), "resilience_ready": all((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]),
+    return {"status": status, "generated_at": _now(), "directories": directories, "files": files, "store_exists": (FRONTEND_DIR / "src/store/auroraStore.ts").is_file(), "panel_registry_exists": (FRONTEND_DIR / "src/lib/panelRegistry.ts").is_file(), "panel_storage_exists": (FRONTEND_DIR / "src/lib/panelLayoutStorage.ts").is_file(), "panel_types_exists": (FRONTEND_DIR / "src/types/panels.ts").is_file(), "dashboard_view_selector_exists": (FRONTEND_DIR / "src/components/aurora/panels/DashboardViewSelectorPanel.tsx").is_file(), "github_polish_panel_exists": (FRONTEND_DIR / "src/components/aurora/panels/GitHubPolishPanel.tsx").is_file(), "github_polish_service_exists": (FRONTEND_DIR / "src/lib/api/github-polish.ts").is_file(), "workspace_view_storage_exists": (FRONTEND_DIR / "src/lib/workspaceViewStorage.ts").is_file(), "resilience_file_count": sum((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]), "resilience_ready": all((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]),
             "missing_directories": missing_dirs, "missing_files": missing_files, "service_files": service_files, "missing_service_files": missing_service_files, "service_file_count": sum(item["exists"] for item in service_files), "page_lines": page_lines,
             "page_size": len(page_text), "dashboard_workspace_lines": dashboard_lines,
             "dashboard_workspace_size": len(dashboard_text), "component_count": len(components), "components": components}
@@ -81,7 +83,7 @@ def render_frontend_refactor_report() -> str:
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v5.0 Public Portfolio Release Frontend Report
+    return f"""# O.R.I.O.N. v5.1 GitHub Repository Polish Frontend Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}
@@ -105,6 +107,11 @@ Status: {scan['status']}
 
 - Resilience Files: {scan['resilience_file_count']}
 - Resilience Ready: {scan['resilience_ready']}
+
+## GitHub Polish
+
+- GitHub Polish Panel Exists: {scan['github_polish_panel_exists']}
+- GitHub Polish Service Exists: {scan['github_polish_service_exists']}
 
 ## Dashboard Views
 

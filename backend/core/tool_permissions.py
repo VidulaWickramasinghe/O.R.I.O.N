@@ -118,9 +118,12 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "inspect_frontend_architecture": "frontend_refactor",
     "get_frontend_refactor_report": "frontend_refactor",
     "save_frontend_refactor_report": "frontend_refactor",
+    "get_github_polish_report": "github_polish",
+    "save_github_polish_artifacts": "github_polish",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
+    "github_polish",
     "approval_system",
     "plugin_registry",
     "user_settings",

@@ -1,0 +1,8 @@
+import type { GitHubPolishResult } from "@/types/orion";
+import { GlassPanel } from "@/components/aurora/ui/GlassPanel";
+
+type Props = { result: GitHubPolishResult | null; loading: boolean; onCheck: () => void; onSave: () => void };
+
+export function GitHubPolishPanel({ result, loading, onCheck, onSave }: Props) {
+  return <GlassPanel><div className="space-y-3 p-4"><div><p className="text-lg font-bold text-cyan-200">GitHub Polish <span className="text-xs text-slate-500">v5.1</span></p><p className="text-xs text-slate-500">Repository readiness and local launch assets</p></div><div className="grid grid-cols-2 gap-2"><button onClick={onCheck} disabled={loading} className="rounded-xl bg-cyan-300 p-3 font-bold text-slate-950 disabled:opacity-60">Check Repo Polish</button><button onClick={onSave} disabled={loading} className="rounded-xl border border-emerald-400/30 p-3 font-bold text-emerald-200 disabled:opacity-60">Save Launch Assets</button></div>{!result ? <p className="text-sm text-slate-500">Check repository readiness before a public portfolio launch.</p> : <><p className="text-xl font-bold text-cyan-200">{result.status} · {result.passed} passed / {result.failed} review</p><p className="text-xs text-slate-400">{result.github_description}</p><div className="flex flex-wrap gap-1">{result.github_topics.map(topic => <span key={topic} className="rounded-full bg-cyan-500/10 px-2 py-1 text-xs text-cyan-200">{topic}</span>)}</div><pre className="max-h-64 overflow-auto whitespace-pre-wrap text-xs text-slate-300">{result.report}</pre></>}<p className="text-xs text-slate-500">Safety: this prepares local assets only; it never pushes, publishes, deletes, or exposes secrets.</p></div></GlassPanel>;
+}

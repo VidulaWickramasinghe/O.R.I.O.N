@@ -264,6 +264,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "permissions": ["frontend_scan", "component_inventory", "refactor_report"],
         "default_enabled": True,
     },
+    {
+        "key": "github_polish",
+        "name": "GitHub Repository Polish",
+        "description": "Prepares local repository readiness and launch assets.",
+        "category": "release",
+        "risk_level": "low",
+        "permissions": ["repo_scan", "portfolio_docs", "launch_checklist"],
+        "default_enabled": True,
+    },
 ]
 
 

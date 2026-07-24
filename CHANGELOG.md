@@ -1,3 +1,18 @@
+## v5.1 — GitHub Repository Polish + Portfolio Launch Prep
+
+### Added
+
+- Local GitHub repository-polish checks and launch-prep reports
+- Screenshot readiness, `.gitignore`, and non-disclosing secret-pattern checks
+- GitHub description/topics, portfolio case study, and final commit plan assets
+- GitHub Polish API service and Aurora panel component
+
+### Safety
+
+- No GitHub push or release publishing
+- No automatic deletion or approval bypass
+- Secret values are never reported
+
 ## v5.0 — Public Portfolio Release + Demo Package
 
 - Added local public portfolio asset generation and public-release API endpoints.
