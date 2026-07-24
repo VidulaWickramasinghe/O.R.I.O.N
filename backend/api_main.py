@@ -3068,6 +3068,711 @@ def desktop_shell_status():
     )
 
 
+@app.get("/api/knowledge/documents", response_model=KnowledgeDocumentsResponse)
+def knowledge_documents():
+    log_activity(
+        "KNOWLEDGE_DOCUMENTS_VIEW",
+        "Aurora OS requested indexed knowledge documents.",
+        "Aurora OS",
+    )
+    return KnowledgeDocumentsResponse(documents=list_knowledge_documents(limit=100))
+
+
+@app.post("/api/knowledge/index", response_model=KnowledgeActionResponse)
+def knowledge_index(request: KnowledgeIndexRequest):
+    try:
+        result = index_document(
+            path=request.path,
+            summary=request.summary,
+        )
+        log_activity(
+            "KNOWLEDGE_INDEXED",
+            f"Knowledge document indexed: {result['title']}",
+            "O.R.I.O.N.",
+        )
+        return KnowledgeActionResponse(
+            status="indexed",
+            message="Knowledge document indexed successfully.",
+            data=result,
+        )
+    except Exception as error:
+        return KnowledgeActionResponse(
+            status="failed",
+            message=str(error),
+            data={},
+        )
+
+
+@app.post("/api/knowledge/index-folder", response_model=KnowledgeActionResponse)
+def knowledge_index_folder(request: KnowledgeFolderIndexRequest):
+    try:
+        result = index_knowledge_folder(request.folder_path)
+        log_activity(
+            "KNOWLEDGE_FOLDER_INDEXED",
+            f"Knowledge folder indexed: {request.folder_path}",
+            "O.R.I.O.N.",
+        )
+        return KnowledgeActionResponse(
+            status="indexed",
+            message="Knowledge folder indexed successfully.",
+            data=result,
+        )
+    except Exception as error:
+        return KnowledgeActionResponse(
+            status="failed",
+            message=str(error),
+            data={},
+        )
+
+
+@app.post("/api/knowledge/search", response_model=KnowledgeSearchResponse)
+def knowledge_search(request: KnowledgeSearchRequest):
+    results = search_knowledge(
+        query=request.query,
+        limit=request.limit,
+    )
+    log_activity(
+        "KNOWLEDGE_SEARCH",
+        f"Knowledge search completed for query: {request.query}",
+        "O.R.I.O.N.",
+    )
+    return KnowledgeSearchResponse(results=results)
+
+
+@app.get(
+    "/api/knowledge/documents/{document_id}/summary",
+    response_model=KnowledgeActionResponse,
+)
+def knowledge_document_summary(document_id: int):
+    summary = summarize_knowledge_document(document_id)
+    log_activity(
+        "KNOWLEDGE_SUMMARY",
+        f"Knowledge document summary requested: {document_id}",
+        "O.R.I.O.N.",
+    )
+    return KnowledgeActionResponse(
+        status="generated",
+        message="Knowledge document summary generated.",
+        data={
+            "document_id": document_id,
+            "summary": summary,
+        },
+    )
+
+
+@app.get("/api/vector/items", response_model=VectorItemsResponse)
+def vector_items():
+    log_activity(
+        "VECTOR_ITEMS_VIEW",
+        "Aurora OS requested vector memory items.",
+        "Aurora OS",
+    )
+    return VectorItemsResponse(items=list_vector_items(limit=100))
+
+
+@app.post("/api/vector/rebuild", response_model=VectorRebuildResponse)
+def vector_rebuild():
+    try:
+        result = rebuild_vector_index()
+        log_activity(
+            "VECTOR_INDEX_REBUILT",
+            "Vector memory index rebuilt.",
+            "O.R.I.O.N.",
+        )
+        return VectorRebuildResponse(
+            status="rebuilt",
+            data=result,
+        )
+    except Exception as error:
+        log_activity(
+            "VECTOR_INDEX_FAILED",
+            f"Vector memory rebuild failed: {error}",
+            "O.R.I.O.N.",
+        )
+        return VectorRebuildResponse(
+            status="failed",
+            data={"error": str(error)},
+        )
+
+
+@app.post("/api/vector/search", response_model=SemanticSearchResponse)
+def vector_search(request: SemanticSearchRequest):
+    try:
+        results = semantic_search(
+            query=request.query,
+            limit=request.limit,
+        )
+        log_activity(
+            "SEMANTIC_SEARCH",
+            f"Semantic search completed for query: {request.query}",
+            "O.R.I.O.N.",
+        )
+        return SemanticSearchResponse(results=results)
+    except Exception as error:
+        log_activity(
+            "SEMANTIC_SEARCH_FAILED",
+            f"Semantic search failed: {error}",
+            "O.R.I.O.N.",
+        )
+        return SemanticSearchResponse(results=[])
+
+
+@app.get("/api/workflows/blueprints", response_model=WorkflowBlueprintsResponse)
+def workflow_blueprints():
+    log_activity(
+        "WORKFLOW_BLUEPRINTS_VIEW",
+        "Aurora OS requested workflow blueprints.",
+        "Aurora OS",
+    )
+
+    return WorkflowBlueprintsResponse(blueprints=list_blueprints())
+
+
+@app.get(
+    "/api/workflows/blueprints/{blueprint_key}",
+    response_model=WorkflowBlueprintDetailResponse,
+)
+def workflow_blueprint_detail(blueprint_key: str):
+    blueprint = get_blueprint(blueprint_key)
+
+    if not blueprint:
+        return WorkflowBlueprintDetailResponse(
+            key=blueprint_key,
+            name="Blueprint not found",
+            description="No workflow blueprint found with this key.",
+            priority=0,
+            steps=[],
+            rendered="Workflow blueprint not found.",
+        )
+
+    log_activity(
+        "WORKFLOW_BLUEPRINT_OPEN",
+        f"Workflow blueprint opened: {blueprint_key}",
+        "Aurora OS",
+    )
+
+    return WorkflowBlueprintDetailResponse(
+        key=blueprint["key"],
+        name=blueprint["name"],
+        description=blueprint["description"],
+        priority=blueprint["priority"],
+        steps=blueprint["steps"],
+        rendered=render_blueprint(blueprint_key),
+    )
+
+
+@app.post(
+    "/api/workflows/blueprints/{blueprint_key}/create-mission",
+    response_model=CreateMissionFromBlueprintResponse,
+)
+def workflow_create_mission(
+    blueprint_key: str,
+    request: CreateMissionFromBlueprintRequest,
+):
+    try:
+        result = create_mission_from_blueprint(
+            blueprint_key=blueprint_key,
+            mission_title=request.mission_title,
+            custom_goal=request.custom_goal,
+            workspace_id=request.workspace_id,
+        )
+
+        log_activity(
+            "WORKFLOW_MISSION_CREATED",
+            f"Mission {result['mission_id']} created from blueprint {blueprint_key}.",
+            "O.R.I.O.N.",
+        )
+
+        return CreateMissionFromBlueprintResponse(
+            status="created",
+            mission_id=result["mission_id"],
+            blueprint_key=result["blueprint_key"],
+            title=result["title"],
+            goal=result["goal"],
+            step_count=result["step_count"],
+            created_at=result["created_at"],
+            message="Mission created from workflow blueprint.",
+        )
+
+    except Exception as error:
+        return CreateMissionFromBlueprintResponse(
+            status="failed",
+            mission_id=None,
+            blueprint_key=blueprint_key,
+            message=str(error),
+        )
+
+
+@app.get("/api/developer/reports", response_model=DeveloperReportsResponse)
+def developer_reports():
+    reports = list_developer_reports(limit=50)
+
+    log_activity(
+        "DEVELOPER_REPORTS_VIEW",
+        "Aurora OS requested developer reports.",
+        "Aurora OS",
+    )
+
+    return DeveloperReportsResponse(reports=reports)
+
+
+@app.get(
+    "/api/developer/workspaces/{workspace_id}/inspect",
+    response_model=DeveloperInspectResponse,
+)
+def developer_inspect_workspace(workspace_id: int):
+    content = inspect_workspace_for_development(workspace_id)
+
+    log_activity(
+        "DEVELOPER_WORKSPACE_INSPECT",
+        f"Developer inspection generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/diagnose",
+    response_model=DeveloperInspectResponse,
+)
+def developer_diagnose_workspace(workspace_id: int, request: DeveloperIssueRequest):
+    content = diagnose_workspace_issue(
+        workspace_id=workspace_id,
+        issue_description=request.issue_description,
+    )
+
+    log_activity(
+        "DEVELOPER_DIAGNOSIS",
+        f"Developer diagnosis generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/patch-plan",
+    response_model=DeveloperInspectResponse,
+)
+def developer_patch_plan(workspace_id: int, request: DeveloperIssueRequest):
+    content = create_patch_plan(
+        workspace_id=workspace_id,
+        issue_description=request.issue_description,
+        target_files=request.target_files or None,
+    )
+
+    log_activity(
+        "DEVELOPER_PATCH_PLAN",
+        f"Patch plan generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/request-patch",
+    response_model=DeveloperPatchResponse,
+)
+def developer_request_patch(workspace_id: int, request: DeveloperPatchRequest):
+    try:
+        approval_id = request_workspace_file_patch(
+            workspace_id=workspace_id,
+            relative_path=request.relative_path,
+            new_content=request.new_content,
+            reason=request.reason,
+        )
+
+        log_activity(
+            "DEVELOPER_PATCH_APPROVAL",
+            f"Patch approval created for workspace {workspace_id}: {request.relative_path}",
+            "O.R.I.O.N.",
+        )
+
+        return DeveloperPatchResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to patch {request.relative_path}.",
+        )
+
+    except Exception as error:
+        return DeveloperPatchResponse(
+            status="failed",
+            approval_id=None,
+            message=str(error),
+        )
+
+
+@app.get("/api/notifications/reminders", response_model=RemindersResponse)
+def notification_reminders():
+    refresh_due_reminders()
+
+    log_activity(
+        "REMINDERS_VIEW",
+        "Aurora OS requested local reminders.",
+        "Aurora OS",
+    )
+
+    return RemindersResponse(reminders=list_reminders(limit=100))
+
+
+@app.post("/api/notifications/reminders", response_model=ReminderItem)
+def notification_create_reminder(request: ReminderCreateRequest):
+    reminder = create_reminder_record(
+        title=request.title,
+        description=request.description,
+        due_at=request.due_at,
+        priority=request.priority,
+        source="Aurora OS",
+    )
+
+    log_activity(
+        "REMINDER_CREATED",
+        f"Reminder created: {reminder['title']}",
+        "Aurora OS",
+    )
+
+    return ReminderItem(**reminder)
+
+
+@app.post("/api/notifications/reminders/{reminder_id}/status", response_model=ReminderItem)
+def notification_update_reminder_status(
+    reminder_id: int,
+    request: ReminderStatusRequest,
+):
+    updated = update_reminder_status(
+        reminder_id=reminder_id,
+        status=request.status,
+    )
+    reminder = get_reminder(reminder_id)
+
+    if not updated or not reminder:
+        return ReminderItem(
+            id=reminder_id,
+            title="Reminder not found",
+            description="",
+            due_at="",
+            status="missing",
+            priority="medium",
+            source="O.R.I.O.N.",
+            created_at="",
+            updated_at="",
+        )
+
+    log_activity(
+        "REMINDER_STATUS_UPDATED",
+        f"Reminder {reminder_id} marked {request.status}.",
+        "Aurora OS",
+    )
+
+    return ReminderItem(**reminder)
+
+
+@app.get("/api/notifications/events", response_model=NotificationEventsResponse)
+def notification_events():
+    return NotificationEventsResponse(events=list_notification_events(limit=100))
+
+
+@app.get("/api/notifications/startup-briefing", response_model=StartupBriefingResponse)
+def notification_startup_briefing():
+    briefing = generate_startup_briefing()
+
+    log_activity(
+        "STARTUP_BRIEFING",
+        "Startup briefing generated.",
+        "O.R.I.O.N.",
+    )
+
+    return StartupBriefingResponse(status="generated", briefing=briefing)
+
+
+@app.get("/api/dashboard/intelligence", response_model=DashboardIntelligenceResponse)
+def dashboard_intelligence():
+    data = generate_dashboard_intelligence()
+    report = render_dashboard_intelligence_report()
+
+    log_activity(
+        "DASHBOARD_INTELLIGENCE",
+        f"Dashboard intelligence generated. Score: {data['intelligence_score']}.",
+        "O.R.I.O.N.",
+    )
+
+    return DashboardIntelligenceResponse(
+        intelligence_score=data["intelligence_score"],
+        readiness_label=data["readiness_label"],
+        mission_metrics=data["mission_metrics"],
+        workspace_metrics=data["workspace_metrics"],
+        memory_metrics=data["memory_metrics"],
+        risk_metrics=data["risk_metrics"],
+        activity_metrics=data["activity_metrics"],
+        developer_metrics=data["developer_metrics"],
+        notification_metrics=data["notification_metrics"],
+        user_settings=data["user_settings"],
+        plugin_metrics=data["plugin_metrics"],
+        tool_permission_metrics=data["tool_permission_metrics"],
+        tool_audit_metrics=data["tool_audit_metrics"],
+        recommendations=data["recommendations"],
+        report=report,
+    )
+
+
+@app.get("/api/settings/profile", response_model=UserSettingsResponse)
+def settings_profile():
+    log_activity(
+        "USER_SETTINGS_VIEW",
+        "Aurora OS requested user profile settings.",
+        "Aurora OS",
+    )
+
+    return UserSettingsResponse(
+        settings=list_user_settings(),
+        settings_map=get_user_settings_map(),
+        profile_summary=render_user_profile_summary(),
+    )
+
+
+@app.post("/api/settings/profile/reset", response_model=UserSettingsResponse)
+def settings_reset():
+    reset_user_settings()
+
+    log_activity(
+        "USER_SETTINGS_RESET",
+        "User profile settings reset to defaults.",
+        "Aurora OS",
+    )
+
+    return UserSettingsResponse(
+        settings=list_user_settings(),
+        settings_map=get_user_settings_map(),
+        profile_summary=render_user_profile_summary(),
+    )
+
+
+@app.post("/api/settings/profile/{setting_key}", response_model=UserSettingUpdateResponse)
+def settings_update(setting_key: str, request: UserSettingUpdateRequest):
+    try:
+        setting = update_user_setting(setting_key, request.value)
+
+        log_activity(
+            "USER_SETTING_UPDATED",
+            f"User setting updated: {setting_key}",
+            "Aurora OS",
+        )
+
+        return UserSettingUpdateResponse(
+            status="updated",
+            setting=UserSettingItem(**setting),
+            message=f"Setting {setting_key} updated.",
+        )
+    except Exception as error:
+        return UserSettingUpdateResponse(
+            status="failed",
+            setting=None,
+            message=str(error),
+        )
+
+
+@app.get("/api/plugins", response_model=PluginsResponse)
+def plugins_list():
+    log_activity(
+        "PLUGIN_REGISTRY_VIEW",
+        "Aurora OS requested plugin registry.",
+        "Aurora OS",
+    )
+
+    return PluginsResponse(
+        plugins=list_plugins(limit=200),
+        metrics=get_plugin_metrics(),
+        report=render_plugin_registry_report(),
+    )
+
+
+@app.get("/api/plugins/{plugin_key}", response_model=PluginStatusUpdateResponse)
+def plugins_get(plugin_key: str):
+    plugin = get_plugin(plugin_key)
+    if not plugin:
+        return PluginStatusUpdateResponse(
+            status="missing",
+            plugin=None,
+            message="Plugin not found.",
+        )
+
+    return PluginStatusUpdateResponse(
+        status="found",
+        plugin=PluginItem(**plugin),
+        message="Plugin found.",
+    )
+
+
+@app.post("/api/plugins/{plugin_key}/status", response_model=PluginStatusUpdateResponse)
+def plugins_update_status(plugin_key: str, request: PluginStatusUpdateRequest):
+    try:
+        plugin = set_plugin_enabled(plugin_key, request.enabled)
+
+        log_activity(
+            "PLUGIN_STATUS_UPDATED",
+            f"Plugin {plugin_key} enabled set to {request.enabled}.",
+            "Aurora OS",
+        )
+
+        return PluginStatusUpdateResponse(
+            status="updated",
+            plugin=PluginItem(**plugin),
+            message=f"Plugin {plugin_key} updated.",
+        )
+    except Exception as error:
+        return PluginStatusUpdateResponse(
+            status="failed",
+            plugin=None,
+            message=str(error),
+        )
+
+
+@app.get("/api/tools/permissions", response_model=ToolPermissionResponse)
+def tool_permissions():
+    log_activity(
+        "TOOL_PERMISSION_VIEW",
+        "Aurora OS requested tool permission matrix.",
+        "Aurora OS",
+    )
+    return ToolPermissionResponse(
+        metrics=get_tool_permission_metrics(),
+        matrix=get_tool_permission_matrix(),
+        report=render_tool_permission_report(),
+    )
+
+
+@app.get("/api/tools/permissions/{tool_name}", response_model=ToolPermissionCheckResponse)
+def tool_permission_check(tool_name: str):
+    decision = is_tool_allowed(tool_name)
+    return ToolPermissionCheckResponse(
+        allowed=decision["allowed"],
+        tool_name=decision["tool_name"],
+        plugin_key=decision["plugin_key"],
+        reason=decision["reason"],
+    )
+
+
+@app.get("/api/tools/audit", response_model=ToolAuditResponse)
+def tool_audit():
+    log_activity(
+        "TOOL_AUDIT_VIEW",
+        "Aurora OS requested Tool Audit Center.",
+        "Aurora OS",
+    )
+    return ToolAuditResponse(
+        metrics=get_tool_audit_metrics(),
+        events=list_tool_audit_events(limit=120),
+        report=render_tool_audit_report(),
+    )
+
+
+def _sidecar_response(status_data: Dict[str, Any]) -> BackendSidecarStatusResponse:
+    return BackendSidecarStatusResponse(
+        managed_by=status_data.get("managed_by", "O.R.I.O.N. Backend Sidecar"),
+        status=status_data.get("status", "unknown"),
+        pid=status_data.get("pid"),
+        host=status_data.get("host", "127.0.0.1"),
+        port=int(status_data.get("port", 8000)),
+        backend_url=status_data.get("backend_url", "http://127.0.0.1:8000"),
+        started_at=status_data.get("started_at", ""),
+        updated_at=status_data.get("updated_at", ""),
+        last_error=status_data.get("last_error", ""),
+        pid_running=bool(status_data.get("pid_running", False)),
+        port_open=bool(status_data.get("port_open", False)),
+        log_file=status_data.get("log_file", ""),
+        state_file=status_data.get("state_file", ""),
+        report=render_sidecar_report(),
+    )
+
+
+@app.get("/api/sidecar/status", response_model=BackendSidecarStatusResponse)
+def sidecar_status():
+    status_data = get_sidecar_status()
+    log_activity(
+        "SIDECAR_STATUS",
+        f"Backend sidecar status checked: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return _sidecar_response(status_data)
+
+
+@app.post("/api/sidecar/start", response_model=BackendSidecarActionResponse)
+def sidecar_start():
+    status_data = start_backend_sidecar()
+    log_activity(
+        "SIDECAR_START",
+        f"Backend sidecar start requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar start requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
+@app.post("/api/sidecar/stop", response_model=BackendSidecarActionResponse)
+def sidecar_stop():
+    status_data = stop_backend_sidecar()
+    log_activity(
+        "SIDECAR_STOP",
+        f"Backend sidecar stop requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar stop requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
+@app.post("/api/sidecar/restart", response_model=BackendSidecarActionResponse)
+def sidecar_restart():
+    status_data = restart_backend_sidecar()
+    log_activity(
+        "SIDECAR_RESTART",
+        f"Backend sidecar restart requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar restart requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
+@app.get("/api/desktop-shell/status", response_model=DesktopShellStatusResponse)
+def desktop_shell_status():
+    log_activity(
+        "DESKTOP_SHELL_STATUS",
+        "Aurora OS desktop shell checked backend status.",
+        "Aurora OS Desktop",
+    )
+
+    return DesktopShellStatusResponse(
+        status="online",
+        app_name="O.R.I.O.N. Aurora OS",
+        shell_version="3.8.0",
+        backend_url="http://127.0.0.1:8000",
+        frontend_mode="tauri_static_shell",
+        message="Desktop shell connected to O.R.I.O.N. backend with sidecar support.",
+    )
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     if not os.getenv("OPENAI_API_KEY"):
