@@ -122,10 +122,42 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "save_github_polish_artifacts": "github_polish",
     "get_portfolio_showcase_report": "portfolio_showcase",
     "save_portfolio_showcase_report": "portfolio_showcase",
+    # Post-release maintenance
+    "get_post_release_maintenance_report": "post_release_maintenance", "save_post_release_maintenance_report": "post_release_maintenance", "add_known_issue": "post_release_maintenance", "get_patch_plan": "post_release_maintenance",
+    # Patch release
+    "get_patch_release_report": "patch_release", "save_patch_release_report": "patch_release", "start_patch_release": "patch_release", "complete_patch_release": "patch_release", "generate_patch_release_package": "patch_release",
+    # Stable release
+    "get_stable_release_report": "stable_release", "save_stable_release_report": "stable_release", "lock_stable_release": "stable_release", "unlock_stable_release": "stable_release", "generate_stable_release_package": "stable_release",
+    # Production readiness
+    "get_production_readiness_report": "production_readiness", "save_production_readiness_report": "production_readiness", "generate_final_release_candidate_v2": "production_readiness",
+    # UI polish
+    "get_ui_polish_report": "ui_polish", "save_ui_polish_report": "ui_polish",
+    # Public landing
+    "get_public_landing_report": "public_landing", "save_public_landing_report": "public_landing",
+    # GitHub launch
+    "get_github_launch_report": "github_launch", "save_github_launch_artifacts": "github_launch",
+    # Final launch
+    "get_final_launch_report": "final_launch", "save_final_launch_report": "final_launch", "freeze_final_launch": "final_launch", "unfreeze_final_launch": "final_launch", "generate_final_launch_package": "final_launch",
+    # Demo recording
+    "get_demo_recording_report": "demo_recording",
+    "save_demo_recording_report": "demo_recording",
+    # Demo walkthrough
+    "get_demo_walkthrough_report": "demo_walkthrough",
+    "save_demo_walkthrough_report": "demo_walkthrough",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "portfolio_showcase",
+    "demo_walkthrough",
+    "demo_recording",
+    "final_launch",
+    "github_launch",
+    "public_landing",
+    "ui_polish",
+    "production_readiness",
+    "stable_release",
+    "post_release_maintenance",
+    "patch_release",
     "github_polish",
     "approval_system",
     "plugin_registry",
