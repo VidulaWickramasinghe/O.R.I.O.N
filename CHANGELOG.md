@@ -1,3 +1,15 @@
+## v5.3 — Demo Data Mode + Guided Portfolio Walkthrough
+
+### Added
+
+- Demo walkthrough types, registry, local storage, and sample data foundation
+- Guided Walkthrough panel, floating demo callout overlay, and progress controls
+- Demo walkthrough backend core, tools, API endpoints, plugin integration, and scanner checks
+
+### Safety
+
+- Presentation-only; no automatic tool execution, publishing, deletion, secret exposure, or approval bypass
+
 ## v5.2 — Screenshot Gallery + Portfolio Case Study Page
 
 ### Added

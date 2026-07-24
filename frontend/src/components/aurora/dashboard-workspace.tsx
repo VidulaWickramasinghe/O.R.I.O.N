@@ -27,6 +27,8 @@ import { FrontendRefactorPanel } from "@/components/aurora/panels/FrontendRefact
 import { DashboardLayoutPanel } from "@/components/aurora/panels/DashboardLayoutPanel";
 import { DashboardViewSelectorPanel } from "@/components/aurora/panels/DashboardViewSelectorPanel";
 import { OfflineBanner } from "@/components/aurora/resilience/OfflineBanner";
+import { DemoCalloutOverlay } from "@/components/aurora/resilience/DemoCalloutOverlay";
+import { GuidedWalkthroughPanel } from "@/components/aurora/panels/GuidedWalkthroughPanel";
 import { PanelErrorBoundary } from "@/components/aurora/resilience/PanelErrorBoundary";
 import { BackendSidecarPanel } from "@/components/aurora/panels/BackendSidecarPanel";
 import { DesktopShellPanel } from "@/components/aurora/panels/DesktopShellPanel";
@@ -200,6 +202,7 @@ export function DashboardWorkspace() {
     "Backend Sidecar",
     "Tool Permission Enforcement",
     "Tool Audit Center",
+    "Guided Walkthrough",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -243,6 +246,7 @@ export function DashboardWorkspace() {
     runFrontendRefactorScanFromStore, saveFrontendRefactorReportFromStore,
     runBackendSidecarActionFromStore, createReminderFromStore,
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
+    demoWalkthroughState, loadDemoWalkthroughStateFromStore, startDemoWalkthroughFromStore, stopDemoWalkthroughFromStore, nextDemoWalkthroughStepFromStore, previousDemoWalkthroughStepFromStore, resetDemoWalkthroughFromStore,
     panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
   } = useAuroraStore();
   const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
@@ -300,6 +304,7 @@ export function DashboardWorkspace() {
     void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
     void loadWorkspaces(); void loadDeveloperReports();
     void useAuroraStore.getState().loadPanelLayout();
+    loadDemoWalkthroughStateFromStore();
     void useAuroraStore.getState().loadActiveDashboardView();
     void useAuroraStore.getState().refreshAll();
     const timer = window.setInterval(() => {
@@ -335,7 +340,7 @@ export function DashboardWorkspace() {
           <StatusChip tone="success">System Online</StatusChip>
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System", "Security Policy", "Desktop Shell", "Backend Sidecar", "Tool Permission Enforcement", "Tool Audit Center"].map((item) => (
+          {["Hero", "Metrics", "Quick Actions", "Models", "Timeline", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Developer Mode", "Dashboard Intelligence", "Notification Engine", "User Settings", "Plugin System", "Security Policy", "Desktop Shell", "Backend Sidecar", "Tool Permission Enforcement", "Tool Audit Center", "Guided Walkthrough"].map((item) => (
             <button
               key={item}
               onClick={() => toggle(item)}
@@ -441,6 +446,17 @@ export function DashboardWorkspace() {
               onMoveUp={movePanelUp}
               onMoveDown={movePanelDown}
               onReset={resetPanelLayout}
+            />
+          )}
+
+          {widgets.includes("Guided Walkthrough") && panelVisible("guided-walkthrough") && (
+            <GuidedWalkthroughPanel
+              demoWalkthroughState={demoWalkthroughState}
+              onStart={startDemoWalkthroughFromStore}
+              onStop={stopDemoWalkthroughFromStore}
+              onNext={nextDemoWalkthroughStepFromStore}
+              onPrevious={previousDemoWalkthroughStepFromStore}
+              onReset={resetDemoWalkthroughFromStore}
             />
           )}
 
@@ -644,6 +660,7 @@ export function DashboardWorkspace() {
           )}
         </div>
       </div>
+      <DemoCalloutOverlay demoWalkthroughState={demoWalkthroughState} onNext={nextDemoWalkthroughStepFromStore} onStop={stopDemoWalkthroughFromStore} />
     </div>
   );
 }

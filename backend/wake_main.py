@@ -198,6 +198,11 @@ from tools.frontend_refactor_tools import (
     save_frontend_refactor_report,
 )
 
+from tools.demo_walkthrough_tools import (
+    get_demo_walkthrough_report,
+    save_demo_walkthrough_report,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -290,6 +295,8 @@ orion = Agent(
         inspect_frontend_architecture_tool,
         get_frontend_refactor_report,
         save_frontend_refactor_report,
+        get_demo_walkthrough_report,
+        save_demo_walkthrough_report,
     ],
 )
 

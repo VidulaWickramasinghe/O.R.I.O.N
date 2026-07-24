@@ -52,6 +52,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "frontend_refactor",
             "github_polish",
             "portfolio_showcase",
+            "demo_walkthrough",
         },
         "disabled_plugins": {
             "developer_tools",
@@ -101,6 +102,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "frontend_refactor",
             "github_polish",
             "portfolio_showcase",
+            "demo_walkthrough",
         },
         "disabled_plugins": set(),
     },
@@ -140,6 +142,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "frontend_refactor",
             "github_polish",
             "portfolio_showcase",
+            "demo_walkthrough",
         },
         "disabled_plugins": set(),
     },
