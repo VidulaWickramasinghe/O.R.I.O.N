@@ -9,9 +9,12 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v5.1 — GitHub Repository Polish + Portfolio Launch Prep**
+**v5.2 — Screenshot Gallery + Portfolio Case Study Page**
 
 ## Core Capabilities
+
+- Presentation-only portfolio screenshot gallery, case study, and demo narrative
+- Local portfolio showcase screenshot-readiness reporting
 
 - GitHub repository polish and local launch-preparation reports
 - Screenshot readiness and `.gitignore` safety checks

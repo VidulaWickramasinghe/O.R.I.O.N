@@ -273,6 +273,7 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "permissions": ["repo_scan", "portfolio_docs", "launch_checklist"],
         "default_enabled": True,
     },
+    {"key": "portfolio_showcase", "name": "Portfolio Showcase", "description": "Presentation-only screenshot gallery and portfolio readiness.", "category": "release", "risk_level": "low", "permissions": ["portfolio_showcase", "screenshot_gallery", "case_study"], "default_enabled": True},
 ]
 
 

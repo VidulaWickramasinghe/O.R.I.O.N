@@ -144,3 +144,5 @@ export type PublicReleasePackage = { status: string; version: string; name: stri
 
 export type GitHubPolishCheck = { name: string; ok: boolean; details: string; };
 export type GitHubPolishResult = { status: string; generated_at: string; passed: number; failed: number; checks: GitHubPolishCheck[]; github_description: string; github_topics: string[]; report: string; artifacts: Record<string, string>; };
+
+export type PortfolioShowcaseResult = { status: string; generated_at: string; expected_count: number; existing_count: number; missing_count: number; screenshots: Record<string, unknown>[]; existing: string[]; missing: Record<string, unknown>[]; report: string; path: string; };

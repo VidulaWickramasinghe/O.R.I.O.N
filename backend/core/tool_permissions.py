@@ -120,9 +120,12 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "save_frontend_refactor_report": "frontend_refactor",
     "get_github_polish_report": "github_polish",
     "save_github_polish_artifacts": "github_polish",
+    "get_portfolio_showcase_report": "portfolio_showcase",
+    "save_portfolio_showcase_report": "portfolio_showcase",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
+    "portfolio_showcase",
     "github_polish",
     "approval_system",
     "plugin_registry",

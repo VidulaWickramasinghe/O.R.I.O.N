@@ -1,3 +1,16 @@
+## v5.2 — Screenshot Gallery + Portfolio Case Study Page
+
+### Added
+
+- Portfolio screenshot metadata registry and gallery panel
+- Portfolio case study and public demo narrative panels
+- Presentation-only screenshot readiness core, tools, and API endpoints
+- Portfolio showcase frontend API service and documentation
+
+### Safety
+
+- Presentation-only: no push, publishing, deletion, secret exposure, or approval bypass
+
 ## v5.1 — GitHub Repository Polish + Portfolio Launch Prep
 
 ### Added

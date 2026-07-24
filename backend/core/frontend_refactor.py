@@ -36,6 +36,8 @@ EXPECTED_FILES = [
     "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx",
     "src/lib/api/quality-gate.ts",
     "src/lib/api/github-polish.ts",
+    "src/types/portfolio.ts", "src/lib/portfolioRegistry.ts", "src/lib/api/portfolio-showcase.ts",
+    "src/components/aurora/panels/ScreenshotGalleryPanel.tsx", "src/components/aurora/panels/PortfolioCaseStudyPanel.tsx", "src/components/aurora/panels/PortfolioDemoPanel.tsx", "src/components/aurora/panels/PortfolioShowcaseStatusPanel.tsx",
     "src/components/aurora/panels/GitHubPolishPanel.tsx",
     "src/types/workspaceViews.ts", "src/lib/workspaceViewStorage.ts",
 ]
@@ -83,7 +85,7 @@ def render_frontend_refactor_report() -> str:
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v5.1 GitHub Repository Polish Frontend Report
+    return f"""# O.R.I.O.N. v5.2 Screenshot Gallery + Portfolio Case Study Frontend Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}
