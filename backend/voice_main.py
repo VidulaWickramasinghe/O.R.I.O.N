@@ -189,6 +189,16 @@ from tools.frontend_refactor_tools import (
     get_frontend_refactor_report,
     save_frontend_refactor_report,
 )
+
+from tools.demo_walkthrough_tools import (
+    get_demo_walkthrough_report,
+    save_demo_walkthrough_report,
+)
+
+from tools.demo_recording_tools import (
+    get_demo_recording_report,
+    save_demo_recording_report,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -276,6 +286,10 @@ orion = Agent(
         inspect_frontend_architecture_tool,
         get_frontend_refactor_report,
         save_frontend_refactor_report,
+        get_demo_walkthrough_report,
+        save_demo_walkthrough_report,
+        get_demo_recording_report,
+        save_demo_recording_report,
     ],
 )
 
