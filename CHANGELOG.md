@@ -1,3 +1,7 @@
+## v6.1 — Post-Release Maintenance + Issue Triage Mode
+
+- Added local issue triage, known issues, patch planning, and maintenance reporting.
+
 ## v6.0 — Stable Public Release + Version Lock
 
 - Added local stable-release lock, checklist, reports, changelog, workflow, and package preparation.

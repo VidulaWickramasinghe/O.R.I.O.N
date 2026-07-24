@@ -274,6 +274,7 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {"key": "portfolio_showcase", "name": "Portfolio Showcase", "description": "Presentation-only screenshot gallery and portfolio readiness.", "category": "release", "risk_level": "low", "permissions": ["portfolio_showcase", "screenshot_gallery", "case_study"], "default_enabled": True},
+    {"key":"post_release_maintenance","name":"Post-Release Maintenance","description":"Local issue triage and patch planning.","category":"release","risk_level":"low","permissions":["issue_triage","maintenance_report","patch_planning"],"default_enabled":True},
     {"key":"stable_release","name":"Stable Public Release","description":"Stable public release state and version lock.","category":"release","risk_level":"low","permissions":["stable_release","version_lock"],"default_enabled":True},
     {"key":"production_readiness","name":"Production Readiness","description":"Combined launch verification and Final Release Candidate v2.","category":"release","risk_level":"low","permissions":["production_snapshot"],"default_enabled":True},
     {"key":"ui_polish","name":"UI Polish","description":"Mobile responsive showcase and public landing presentation readiness.","category":"frontend","risk_level":"low","permissions":["ui_scan"],"default_enabled":True},
