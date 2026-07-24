@@ -1,0 +1,1 @@
+export function PublicFeatureCard({title,description}:{title:string;description:string}){return <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 sm:p-6"><h3 className="font-black text-white">{title}</h3><p className="mt-3 text-sm text-slate-400">{description}</p></article>}
