@@ -9,7 +9,7 @@ import { AuroraDashboard } from "./aurora-dashboard";
 import { AuroraSidebar } from "./aurora-sidebar";
 import { AuroraTopbar } from "./aurora-topbar";
 import { AuroraCommandPalette } from "./command/aurora-command-palette";
-import { AuroraView, DashboardWidgetConfig } from "./aurora-types";
+import { AuroraView, DashboardWidgetConfig, DashboardWidgetId } from "./aurora-types";
 import { SimpleModule } from "./modules/simple-module";
 
 import { BrowserModule } from "./modules/browser-module";
@@ -36,6 +36,50 @@ type Message = {
   content: string;
 };
 
+const DASHBOARD_WIDGET_STORAGE_KEY = "aurora-dashboard-widgets";
+const LEFT_PANEL_STORAGE_KEY = "aurora-left-collapsed";
+const RIGHT_PANEL_STORAGE_KEY = "aurora-right-collapsed";
+
+const defaultDashboardWidgets: DashboardWidgetConfig[] = [
+  { id: "hero", label: "Hero Overview", enabled: true },
+  { id: "metrics", label: "Metric Cards", enabled: true },
+  { id: "quickActions", label: "Quick Actions", enabled: true },
+  { id: "models", label: "Models", enabled: true },
+  { id: "recentActivity", label: "Recent Activity", enabled: true },
+];
+
+function resolveSavedDashboardWidgets(saved: string | null) {
+  if (!saved) return defaultDashboardWidgets;
+
+  try {
+    const parsed = JSON.parse(saved) as Partial<DashboardWidgetConfig>[];
+    const savedById = new Map(
+      parsed
+        .filter((widget) => widget.id && typeof widget.enabled === "boolean")
+        .map((widget) => [widget.id as DashboardWidgetId, widget.enabled as boolean])
+    );
+
+    return defaultDashboardWidgets.map((widget) => ({
+      ...widget,
+      enabled: savedById.get(widget.id) ?? widget.enabled,
+    }));
+  } catch {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(DASHBOARD_WIDGET_STORAGE_KEY);
+    }
+    return defaultDashboardWidgets;
+  }
+}
+
+function readStoredBoolean(key: string, fallback: boolean) {
+  const saved = localStorage.getItem(key);
+
+  if (saved === "true") return true;
+  if (saved === "false") return false;
+
+  return fallback;
+}
+
 export function AuroraWorkspace() {
   const queryClient = useQueryClient();
 
@@ -53,16 +97,25 @@ export function AuroraWorkspace() {
   const [search, setSearch] = useState("");
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
 
-  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
-  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+  const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : readStoredBoolean(LEFT_PANEL_STORAGE_KEY, false)
+  );
+  const [rightPanelCollapsed, setRightPanelCollapsed] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : readStoredBoolean(RIGHT_PANEL_STORAGE_KEY, false)
+  );
 
-  const [dashboardWidgets, setDashboardWidgets] = useState<DashboardWidgetConfig[]>([
-    { id: "hero", label: "Hero Overview", enabled: true },
-    { id: "metrics", label: "Metric Cards", enabled: true },
-    { id: "quickActions", label: "Quick Actions", enabled: true },
-    { id: "models", label: "Models", enabled: true },
-    { id: "recentActivity", label: "Recent Activity", enabled: true },
-  ]);
+  const [dashboardWidgets, setDashboardWidgets] = useState<DashboardWidgetConfig[]>(
+    () =>
+      typeof window === "undefined"
+        ? defaultDashboardWidgets
+        : resolveSavedDashboardWidgets(
+            localStorage.getItem(DASHBOARD_WIDGET_STORAGE_KEY)
+          )
+  );
 
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([
@@ -78,36 +131,18 @@ export function AuroraWorkspace() {
 
   // Persistence Effects
   useEffect(() => {
-    const saved = localStorage.getItem("aurora-dashboard-widgets");
-
-    if (saved) {
-      try {
-        setDashboardWidgets(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem("aurora-dashboard-widgets");
-      }
-    }
-
-    const savedLeft = localStorage.getItem("aurora-left-collapsed");
-    const savedRight = localStorage.getItem("aurora-right-collapsed");
-
-    setLeftPanelCollapsed(savedLeft === "true");
-    setRightPanelCollapsed(savedRight === "true");
-  }, []);
-
-  useEffect(() => {
     localStorage.setItem(
-      "aurora-dashboard-widgets",
+      DASHBOARD_WIDGET_STORAGE_KEY,
       JSON.stringify(dashboardWidgets)
     );
   }, [dashboardWidgets]);
 
   useEffect(() => {
-    localStorage.setItem("aurora-left-collapsed", String(leftPanelCollapsed));
+    localStorage.setItem(LEFT_PANEL_STORAGE_KEY, String(leftPanelCollapsed));
   }, [leftPanelCollapsed]);
 
   useEffect(() => {
-    localStorage.setItem("aurora-right-collapsed", String(rightPanelCollapsed));
+    localStorage.setItem(RIGHT_PANEL_STORAGE_KEY, String(rightPanelCollapsed));
   }, [rightPanelCollapsed]);
 
   const apiOnline = status?.status === "online";
@@ -377,6 +412,8 @@ ${(data.files || []).join("\n")}`
           search={search}
           setSearch={setSearch}
           openCommandPalette={() => setCommandPaletteOpen(true)}
+          leftPanelCollapsed={leftPanelCollapsed}
+          rightPanelCollapsed={rightPanelCollapsed}
           toggleLeftPanel={() => setLeftPanelCollapsed((current) => !current)}
           toggleRightPanel={() => setRightPanelCollapsed((current) => !current)}
         />
