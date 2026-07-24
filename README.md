@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v4.6 — Panel Registry + Customizable Dashboard Layout**
+**v4.7 — Panel Groups, Layout Presets + Workspace Views**
 
 ## Core Capabilities
 
@@ -292,3 +292,10 @@ frontend/src-tauri/target/release/bundle/
 - Local panel visibility preferences
 - Pinned panel ordering
 - Dashboard Layout controls
+
+## v4.7 Capabilities
+
+- Dashboard layout presets
+- Panel groups
+- Security, Developer, Release, and Minimal views
+- Workspace view preference foundation

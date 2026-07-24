@@ -1,3 +1,17 @@
+## v4.7 — Panel Groups, Layout Presets + Workspace Views
+
+### Added
+
+- Panel groups and dashboard layout presets
+- Full Mission Control, Security, Developer, Release, and Minimal views
+- Dashboard View Selector panel and active-view persistence
+- Workspace view preference foundation
+
+### Safety
+
+- Dashboard views are local UI preferences only
+- Backend permissions and approval gates are unchanged
+
 ## v4.6 — Panel Registry + Customizable Dashboard Layout
 
 ### Added

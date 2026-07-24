@@ -25,6 +25,7 @@ import { getWorkspaces } from "@/lib/api/workspaces";
 import { createWorkflowMission, getWorkflowBlueprint, getWorkflowBlueprints } from "@/lib/api/workflows";
 import { FrontendRefactorPanel } from "@/components/aurora/panels/FrontendRefactorPanel";
 import { DashboardLayoutPanel } from "@/components/aurora/panels/DashboardLayoutPanel";
+import { DashboardViewSelectorPanel } from "@/components/aurora/panels/DashboardViewSelectorPanel";
 import { BackendSidecarPanel } from "@/components/aurora/panels/BackendSidecarPanel";
 import { DesktopShellPanel } from "@/components/aurora/panels/DesktopShellPanel";
 import { NotificationEnginePanel } from "@/components/aurora/panels/NotificationEnginePanel";
@@ -185,6 +186,7 @@ export function DashboardWorkspace() {
     "Developer Mode",
     "Dashboard Intelligence",
     "Dashboard Layout",
+    "Dashboard Views",
     "Notification Engine",
     "User Settings",
     "Plugin System",
@@ -239,7 +241,7 @@ export function DashboardWorkspace() {
     runFrontendRefactorScanFromStore, saveFrontendRefactorReportFromStore,
     runBackendSidecarActionFromStore, createReminderFromStore,
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
-    panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout,
+    panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset,
   } = useAuroraStore();
   const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
@@ -296,6 +298,7 @@ export function DashboardWorkspace() {
     void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
     void loadWorkspaces(); void loadDeveloperReports();
     void useAuroraStore.getState().loadPanelLayout();
+    void useAuroraStore.getState().loadActiveDashboardView();
     void useAuroraStore.getState().refreshAll();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
@@ -422,6 +425,10 @@ export function DashboardWorkspace() {
         </div>
 
         <div className="space-y-4">
+          {widgets.includes("Dashboard Views") && panelVisible("dashboard-view-selector") && (
+            <DashboardViewSelectorPanel activeDashboardView={activeDashboardView} onApplyView={applyDashboardViewPreset} />
+          )}
+
           {widgets.includes("Dashboard Layout") && (
             <DashboardLayoutPanel
               panelLayout={panelLayout}
