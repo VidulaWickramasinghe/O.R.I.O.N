@@ -122,10 +122,18 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "save_github_polish_artifacts": "github_polish",
     "get_portfolio_showcase_report": "portfolio_showcase",
     "save_portfolio_showcase_report": "portfolio_showcase",
+    # Demo recording
+    "get_demo_recording_report": "demo_recording",
+    "save_demo_recording_report": "demo_recording",
+    # Demo walkthrough
+    "get_demo_walkthrough_report": "demo_walkthrough",
+    "save_demo_walkthrough_report": "demo_walkthrough",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "portfolio_showcase",
+    "demo_walkthrough",
+    "demo_recording",
     "github_polish",
     "approval_system",
     "plugin_registry",

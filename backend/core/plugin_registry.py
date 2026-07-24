@@ -274,6 +274,8 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {"key": "portfolio_showcase", "name": "Portfolio Showcase", "description": "Presentation-only screenshot gallery and portfolio readiness.", "category": "release", "risk_level": "low", "permissions": ["portfolio_showcase", "screenshot_gallery", "case_study"], "default_enabled": True},
+    {"key": "demo_recording", "name": "Demo Recording Mode", "description": "Presenter controls, recording layout, scene presets, and demo recording readiness.", "category": "release", "risk_level": "low", "permissions": ["recording_mode", "presenter_controls", "demo_readiness"], "default_enabled": True},
+    {"key": "demo_walkthrough", "name": "Demo Walkthrough", "description": "Guided portfolio walkthrough, demo steps, and presentation-mode reporting.", "category": "release", "risk_level": "low", "permissions": ["demo_mode", "guided_walkthrough", "presentation"], "default_enabled": True},
 ]
 
 
