@@ -110,6 +110,128 @@ from core.context_engine import (
     get_context_preview,
 )
 
+from core.knowledge_base import (
+    init_knowledge_db,
+    index_document,
+    index_knowledge_folder,
+    list_knowledge_documents,
+    search_knowledge,
+    summarize_knowledge_document,
+)
+
+from core.vector_memory import (
+    init_vector_db,
+    rebuild_vector_index,
+    semantic_search,
+    list_vector_items,
+)
+
+from core.workflow_blueprints import (
+    list_blueprints,
+    get_blueprint,
+    render_blueprint,
+    create_mission_from_blueprint,
+)
+
+from core.developer_agent import (
+    init_developer_agent_db,
+    inspect_workspace_for_development,
+    diagnose_workspace_issue,
+    create_patch_plan,
+    list_developer_reports,
+    request_workspace_file_patch,
+    execute_approved_workspace_patch,
+)
+
+from core.dashboard_intelligence import (
+    generate_dashboard_intelligence,
+    render_dashboard_intelligence_report,
+)
+
+from core.notification_engine import (
+    init_notification_db,
+    create_reminder_record,
+    get_reminder,
+    list_reminders,
+    update_reminder_status,
+    refresh_due_reminders,
+    list_notification_events,
+    generate_startup_briefing,
+)
+
+from core.user_settings import (
+    init_user_settings_db,
+    list_user_settings,
+    get_user_settings_map,
+    update_user_setting,
+    reset_user_settings,
+    render_user_profile_summary,
+)
+
+from core.plugin_registry import (
+    init_plugin_registry_db,
+    list_plugins,
+    get_plugin,
+    set_plugin_enabled,
+    get_plugin_metrics,
+    render_plugin_registry_report,
+)
+
+from core.backend_sidecar import (
+    get_sidecar_status,
+    start_backend_sidecar,
+    stop_backend_sidecar,
+    restart_backend_sidecar,
+    render_sidecar_report,
+)
+
+from core.tool_permissions import (
+    get_tool_permission_matrix,
+    get_tool_permission_metrics,
+    is_tool_allowed,
+    render_tool_permission_report,
+)
+
+from core.tool_audit import (
+    get_tool_audit_metrics,
+    init_tool_audit_db,
+    list_tool_audit_events,
+    render_tool_audit_report,
+)
+
+from core.security_policy import (
+    apply_security_profile,
+    get_active_security_policy,
+    get_security_profile,
+    init_security_policy_db,
+    list_security_policy_events,
+    list_security_profiles,
+    render_security_policy_report,
+)
+
+from core.release_candidate import (
+    freeze_system,
+    generate_release_candidate_package,
+    generate_release_checklist as generate_release_candidate_checklist,
+    get_freeze_state,
+    init_release_candidate_db,
+    list_release_events,
+    render_release_candidate_report,
+    unfreeze_system,
+)
+
+from core.stabilization_manager import (
+    render_stabilization_report,
+    run_stabilization_scan,
+    save_stabilization_report,
+)
+
+from core.frontend_refactor import (
+    inspect_frontend_architecture,
+    render_frontend_refactor_report,
+    save_frontend_refactor_report,
+)
+
 from tools.safe_tools import (
     create_note,
     read_note,
@@ -161,11 +283,114 @@ from tools.workspace_tools import (
     summarize_workspace as summarize_workspace_tool,
 )
 
+from tools.system_doctor_tools import run_system_doctor_tool
+
+from tools.knowledge_tools import (
+    index_knowledge_document,
+    index_knowledge_folder_tool,
+    list_knowledge_documents_tool,
+    search_local_knowledge,
+    summarize_knowledge_document_tool,
+)
+
+from tools.vector_memory_tools import (
+    rebuild_vector_memory_index,
+    semantic_memory_search,
+    list_vector_memory_items,
+)
+
+from tools.workflow_blueprint_tools import (
+    list_workflow_blueprints,
+    read_workflow_blueprint,
+    create_mission_from_workflow_blueprint,
+)
+
+from tools.developer_agent_tools import (
+    inspect_workspace_for_development_tool,
+    diagnose_workspace_issue_tool,
+    create_workspace_patch_plan,
+    request_workspace_file_patch_tool,
+    list_developer_reports_tool,
+)
+
+from tools.dashboard_intelligence_tools import (
+    get_dashboard_intelligence_report,
+)
+
+from tools.notification_tools import (
+    create_local_reminder,
+    list_local_reminders,
+    complete_local_reminder,
+    refresh_due_reminders_tool,
+    generate_startup_briefing_tool,
+)
+
+from tools.user_settings_tools import (
+    list_user_profile_settings,
+    update_user_profile_setting,
+    reset_user_profile_settings,
+    get_user_profile_summary,
+)
+
+from tools.plugin_registry_tools import (
+    list_orion_plugins,
+    inspect_orion_plugin,
+    set_orion_plugin_enabled,
+    get_plugin_registry_report,
+)
+
+from tools.backend_sidecar_tools import (
+    get_backend_sidecar_status,
+    start_backend_sidecar_tool,
+    stop_backend_sidecar_tool,
+    restart_backend_sidecar_tool,
+)
+
+from tools.tool_permission_tools import (
+    get_tool_permission_report,
+    check_tool_permission,
+    get_tool_permission_metrics_tool,
+    list_tool_permission_matrix,
+)
+
+from tools.tool_audit_tools import (
+    get_tool_audit_report,
+    list_tool_audit_events_tool,
+    get_tool_audit_metrics_tool,
+)
+
+from tools.security_policy_tools import (
+    list_security_profiles_tool,
+    get_active_security_policy_tool,
+    apply_security_profile_tool,
+    get_security_policy_report,
+)
+
+from tools.release_candidate_tools import (
+    get_release_candidate_status,
+    freeze_release_candidate,
+    unfreeze_release_candidate,
+    generate_release_candidate_package_tool,
+    get_release_candidate_report,
+)
+
+from tools.stabilization_tools import (
+    get_stabilization_report,
+    run_stabilization_scan_tool,
+    save_stabilization_report as save_stabilization_report_tool,
+)
+
+from tools.frontend_refactor_tools import (
+    get_frontend_refactor_report,
+    inspect_frontend_architecture_tool,
+    save_frontend_refactor_report as save_frontend_refactor_report_tool,
+)
+
 
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="2.5.0",
+    version="4.3.0",
 )
 
 app.add_middleware(
@@ -216,10 +441,67 @@ orion = Agent(
         read_workspace_key_file,
         detect_workspace_tech_stack,
         summarize_workspace_tool,
+        run_system_doctor_tool,
+        index_knowledge_document,
+        index_knowledge_folder_tool,
+        list_knowledge_documents_tool,
+        search_local_knowledge,
+        summarize_knowledge_document_tool,
+        rebuild_vector_memory_index,
+        semantic_memory_search,
+        list_vector_memory_items,
+        list_workflow_blueprints,
+        read_workflow_blueprint,
+        create_mission_from_workflow_blueprint,
+        inspect_workspace_for_development_tool,
+        diagnose_workspace_issue_tool,
+        create_workspace_patch_plan,
+        request_workspace_file_patch_tool,
+        list_developer_reports_tool,
+        get_dashboard_intelligence_report,
+        create_local_reminder,
+        list_local_reminders,
+        complete_local_reminder,
+        refresh_due_reminders_tool,
+        generate_startup_briefing_tool,
+        list_user_profile_settings,
+        update_user_profile_setting,
+        reset_user_profile_settings,
+        get_user_profile_summary,
+        list_orion_plugins,
+        inspect_orion_plugin,
+        set_orion_plugin_enabled,
+        get_plugin_registry_report,
+        get_backend_sidecar_status,
+        start_backend_sidecar_tool,
+        stop_backend_sidecar_tool,
+        restart_backend_sidecar_tool,
+        get_tool_permission_report,
+        check_tool_permission,
+        get_tool_permission_metrics_tool,
+        list_tool_permission_matrix,
+        get_tool_audit_report,
+        list_tool_audit_events_tool,
+        get_tool_audit_metrics_tool,
+        list_security_profiles_tool,
+        get_active_security_policy_tool,
+        apply_security_profile_tool,
+        get_security_policy_report,
+        get_release_candidate_status,
+        freeze_release_candidate,
+        unfreeze_release_candidate,
+        generate_release_candidate_package_tool,
+        get_release_candidate_report,
+        run_stabilization_scan_tool,
+        get_stabilization_report,
+        save_stabilization_report_tool,
+        inspect_frontend_architecture_tool,
+        get_frontend_refactor_report,
+        save_frontend_refactor_report_tool,
     ],
 )
 
-session = SQLiteSession("orion_core_v25_dashboard")
+session = SQLiteSession("orion_core_v38_tool_audit_center")
 
 
 class ChatRequest(BaseModel):
@@ -488,6 +770,204 @@ class DesktopActionResponse(BaseModel):
     message: str
 
 
+class DesktopShellStatusResponse(BaseModel):
+    status: str
+    app_name: str
+    shell_version: str
+    backend_url: str
+    frontend_mode: str
+    message: str
+
+
+class BackendSidecarStatusResponse(BaseModel):
+    managed_by: str
+    status: str
+    pid: Optional[int] = None
+    host: str
+    port: int
+    backend_url: str
+    started_at: str
+    updated_at: str
+    last_error: str
+    pid_running: bool
+    port_open: bool
+    log_file: str
+    state_file: str
+    report: str
+
+
+class BackendSidecarActionResponse(BaseModel):
+    status: str
+    message: str
+    sidecar: BackendSidecarStatusResponse
+
+
+class ToolPermissionItem(BaseModel):
+    tool_name: str
+    plugin_key: str
+    plugin_name: str
+    enabled: bool
+    risk_level: str
+    category: str
+    permissions: List[str]
+    protected: bool
+
+
+class ToolPermissionResponse(BaseModel):
+    metrics: Dict[str, Any]
+    matrix: List[ToolPermissionItem]
+    report: str
+
+
+class ToolPermissionCheckResponse(BaseModel):
+    allowed: bool
+    tool_name: str
+    plugin_key: str
+    reason: str
+
+
+class ToolAuditEventItem(BaseModel):
+    id: int
+    tool_name: str
+    plugin_key: str
+    decision: str
+    reason: str
+    risk_level: str
+    category: str
+    source: str
+    created_at: str
+
+
+class ToolAuditResponse(BaseModel):
+    metrics: Dict[str, Any]
+    events: List[ToolAuditEventItem]
+    report: str
+
+
+
+
+class SecurityProfileItem(BaseModel):
+    key: str
+    name: str
+    description: str
+    safety_level: str
+    enabled_plugin_count: int
+    disabled_plugin_count: int
+
+
+class SecurityProfileDetail(BaseModel):
+    key: str
+    name: str
+    description: str
+    safety_level: str
+    enabled_plugins: List[str]
+    disabled_plugins: List[str]
+
+
+class SecurityPolicyEventItem(BaseModel):
+    id: int
+    profile_key: str
+    profile_name: str
+    summary: str
+    enabled_count: int
+    disabled_count: int
+    source: str
+    created_at: str
+
+
+class SecurityPolicyResponse(BaseModel):
+    active_policy: Dict[str, Any]
+    profiles: List[SecurityProfileItem]
+    events: List[SecurityPolicyEventItem]
+    report: str
+
+
+class SecurityPolicyApplyRequest(BaseModel):
+    profile_key: str
+
+
+class SecurityPolicyApplyResponse(BaseModel):
+    status: str
+    profile_key: str
+    profile_name: str
+    summary: str
+    enabled_count: int
+    disabled_count: int
+    unchanged_count: int
+    applied_at: str
+    active_policy: Dict[str, Any]
+
+
+class ReleaseFreezeState(BaseModel):
+    frozen: bool
+    release_version: str
+    release_name: str
+    freeze_reason: str
+    frozen_at: str
+    unfrozen_at: str
+    updated_at: str
+
+
+class ReleaseFreezeRequest(BaseModel):
+    reason: str = "Preparing O.R.I.O.N. v4.0 release candidate."
+
+
+class ReleaseChecklistItem(BaseModel):
+    item: str
+    ok: bool
+    details: str
+
+
+class ReleaseChecklistResponse(BaseModel):
+    passed: int
+    failed: int
+    items: List[ReleaseChecklistItem]
+
+
+class ReleaseEventItem(BaseModel):
+    id: int
+    event_type: str
+    title: str
+    message: str
+    artifact_path: str
+    created_at: str
+
+
+class ReleaseCandidateStatusResponse(BaseModel):
+    freeze_state: ReleaseFreezeState
+    checklist: ReleaseChecklistResponse
+    events: List[ReleaseEventItem]
+    report: str
+
+
+class ReleaseCandidatePackageResponse(BaseModel):
+    status: str
+    generated_at: str
+    summary_path: str
+    artifacts: Dict[str, str]
+    checklist: Dict[str, Any]
+
+
+class StabilizationRunRequest(BaseModel):
+    run_build: bool = False
+
+
+class StabilizationActionResponse(BaseModel):
+    status: str
+    generated_at: str
+    scan: Dict[str, Any]
+    report: str
+    path: str = ""
+
+
+class FrontendRefactorResponse(BaseModel):
+    status: str
+    generated_at: str
+    scan: Dict[str, Any]
+    report: str
+    path: str = ""
+
+
 class DemoStatusResponse(BaseModel):
     demo_mode: bool
     release_version: str
@@ -509,6 +989,290 @@ class DemoReleasePackResponse(BaseModel):
     files: List[str]
 
 
+class KnowledgeIndexRequest(BaseModel):
+    path: str
+    summary: str = ""
+
+
+class KnowledgeFolderIndexRequest(BaseModel):
+    folder_path: str
+
+
+class KnowledgeSearchRequest(BaseModel):
+    query: str
+    limit: int = 10
+
+
+class KnowledgeDocumentItem(BaseModel):
+    id: int
+    title: str
+    source_path: str
+    extension: str
+    size_bytes: int
+    summary: str
+    indexed_at: str
+    updated_at: str
+
+
+class KnowledgeDocumentsResponse(BaseModel):
+    documents: List[KnowledgeDocumentItem]
+
+
+class KnowledgeSearchItem(BaseModel):
+    chunk_id: int
+    document_id: int
+    chunk_index: int
+    content: str
+    title: str
+    source_path: str
+    extension: str
+
+
+class KnowledgeSearchResponse(BaseModel):
+    results: List[KnowledgeSearchItem]
+
+
+class KnowledgeActionResponse(BaseModel):
+    status: str
+    message: str
+    data: Dict[str, Any] = Field(default_factory=dict)
+
+
+class VectorRebuildResponse(BaseModel):
+    status: str
+    data: Dict[str, Any]
+
+
+class VectorItem(BaseModel):
+    id: int
+    source_type: str
+    source_id: str
+    title: str
+    content: str
+    metadata: Dict[str, Any]
+    created_at: str
+    updated_at: str
+
+
+class VectorItemsResponse(BaseModel):
+    items: List[VectorItem]
+
+
+class SemanticSearchRequest(BaseModel):
+    query: str
+    limit: int = 8
+
+
+class SemanticSearchItem(BaseModel):
+    id: int
+    source_type: str
+    source_id: str
+    title: str
+    content: str
+    metadata: Dict[str, Any]
+    score: float
+    created_at: str
+    updated_at: str
+
+
+class SemanticSearchResponse(BaseModel):
+    results: List[SemanticSearchItem]
+
+
+class WorkflowBlueprintItem(BaseModel):
+    key: str
+    name: str
+    description: str
+    priority: int
+    step_count: int
+
+
+class WorkflowBlueprintsResponse(BaseModel):
+    blueprints: List[WorkflowBlueprintItem]
+
+
+class WorkflowBlueprintDetailResponse(BaseModel):
+    key: str
+    name: str
+    description: str
+    priority: int
+    steps: List[str]
+    rendered: str
+
+
+class CreateMissionFromBlueprintRequest(BaseModel):
+    mission_title: str = ""
+    custom_goal: str = ""
+    workspace_id: Optional[int] = None
+
+
+class CreateMissionFromBlueprintResponse(BaseModel):
+    status: str
+    mission_id: Optional[int] = None
+    blueprint_key: str
+    title: str = ""
+    goal: str = ""
+    step_count: int = 0
+    created_at: str = ""
+    message: str = ""
+
+
+class DeveloperInspectResponse(BaseModel):
+    workspace_id: int
+    status: str
+    content: str
+
+
+class DeveloperIssueRequest(BaseModel):
+    issue_description: str
+    target_files: List[str] = Field(default_factory=list)
+
+
+class DeveloperPatchRequest(BaseModel):
+    relative_path: str
+    new_content: str
+    reason: str
+
+
+class DeveloperPatchResponse(BaseModel):
+    status: str
+    approval_id: Optional[int] = None
+    message: str
+
+
+class DeveloperReportItem(BaseModel):
+    id: int
+    workspace_id: int
+    report_type: str
+    title: str
+    content: str
+    artifact_path: str
+    created_at: str
+
+
+class DeveloperReportsResponse(BaseModel):
+    reports: List[DeveloperReportItem]
+
+
+class ReminderCreateRequest(BaseModel):
+    title: str
+    description: str = ""
+    due_at: str
+    priority: str = "medium"
+
+
+class ReminderStatusRequest(BaseModel):
+    status: str
+
+
+class ReminderItem(BaseModel):
+    id: int
+    title: str
+    description: str
+    due_at: str
+    status: str
+    priority: str
+    source: str
+    created_at: str
+    updated_at: str
+
+
+class RemindersResponse(BaseModel):
+    reminders: List[ReminderItem]
+
+
+class NotificationEventItem(BaseModel):
+    id: int
+    event_type: str
+    title: str
+    message: str
+    source: str
+    created_at: str
+
+
+class NotificationEventsResponse(BaseModel):
+    events: List[NotificationEventItem]
+
+
+class StartupBriefingResponse(BaseModel):
+    status: str
+    briefing: str
+
+
+class UserSettingItem(BaseModel):
+    key: str
+    value: str
+    description: str
+    updated_at: str
+    options: List[str] = Field(default_factory=list)
+
+
+class UserSettingsResponse(BaseModel):
+    settings: List[UserSettingItem]
+    settings_map: Dict[str, str]
+    profile_summary: str
+
+
+class UserSettingUpdateRequest(BaseModel):
+    value: str
+
+
+class UserSettingUpdateResponse(BaseModel):
+    status: str
+    setting: Optional[UserSettingItem] = None
+    message: str
+
+
+class PluginItem(BaseModel):
+    key: str
+    name: str
+    description: str
+    category: str
+    risk_level: str
+    permissions: List[str]
+    enabled: bool
+    built_in: bool
+    created_at: str
+    updated_at: str
+
+
+class PluginsResponse(BaseModel):
+    plugins: List[PluginItem]
+    metrics: Dict[str, Any]
+    report: str
+
+
+class PluginStatusUpdateRequest(BaseModel):
+    enabled: bool
+
+
+class PluginStatusUpdateResponse(BaseModel):
+    status: str
+    plugin: Optional[PluginItem] = None
+    message: str
+
+
+class DashboardIntelligenceResponse(BaseModel):
+    intelligence_score: int
+    readiness_label: str
+    mission_metrics: Dict[str, Any]
+    workspace_metrics: Dict[str, Any]
+    memory_metrics: Dict[str, Any]
+    risk_metrics: Dict[str, Any]
+    activity_metrics: Dict[str, Any]
+    developer_metrics: Dict[str, Any]
+    notification_metrics: Dict[str, Any]
+    user_settings: Dict[str, str]
+    plugin_metrics: Dict[str, Any]
+    tool_permission_metrics: Dict[str, Any]
+    tool_audit_metrics: Dict[str, Any]
+    security_policy: Dict[str, Any]
+    release_candidate: Dict[str, Any]
+    stabilization: Dict[str, Any]
+    recommendations: List[str]
+    report: str
+
+
 @app.on_event("startup")
 def startup_event():
     init_memory_db()
@@ -516,10 +1280,19 @@ def startup_event():
     init_approval_db()
     init_mission_run_db()
     init_workspace_db()
+    init_knowledge_db()
+    init_vector_db()
+    init_developer_agent_db()
+    init_notification_db()
+    init_user_settings_db()
+    init_plugin_registry_db()
+    init_tool_audit_db()
+    init_security_policy_db()
+    init_release_candidate_db()
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v2.5.0 started with Portfolio Release + Demo Mode enabled.",
+        "O.R.I.O.N. API v4.3.0 started with Frontend Refactor Manager enabled.",
         "API",
     )
 
@@ -528,7 +1301,7 @@ def startup_event():
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "2.5.0",
+        "version": "4.3.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -589,7 +1362,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="2.5",
+        version="4.3",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -618,6 +1391,22 @@ def status():
             "Controlled Multi-Step Mission Mode",
             "Desktop Control Layer",
             "Portfolio Release + Demo Mode",
+            "Local Knowledge Base + Document Intelligence",
+            "Vector Memory + Semantic Search",
+            "Workflow Templates + Mission Blueprints",
+            "Agentic Workspace Developer Mode",
+            "Visual Dashboard Intelligence",
+            "Notification + Reminder Engine",
+            "Secure User Profiles + Settings",
+            "Plugin System + Tool Registry",
+            "Packaged Desktop App Shell",
+            "Backend Sidecar + One-Click Desktop Launch",
+            "Tool Permission Enforcement Layer",
+            "Tool Permission Enforcement Expansion + Audit Center",
+            "Security Policy Profiles + Risk Modes",
+            "Autonomous Release Candidate + System Freeze",
+            "Stabilization, Bug Fixing + Codebase Cleanup",
+            "Frontend Component Extraction Phase 2",
         ],
     )
 
@@ -627,7 +1416,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "2.5.0",
+        "version": "4.3.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -639,7 +1428,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v2.5 Portfolio Release + Demo Mode",
+        "release": "v4.3 Frontend Component Extraction Phase 2",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -667,6 +1456,70 @@ def mission():
             "Portfolio demo mode",
             "Demo readiness report",
             "Portfolio release pack generation",
+            "Local Knowledge Base",
+            "Document indexing and search",
+            "Knowledge-aware context retrieval",
+            "Aurora OS Knowledge Base panel",
+            "Vector Memory",
+            "Semantic search",
+            "Embedding-based context retrieval",
+            "Meaning-aware memory and knowledge search",
+            "Workflow Blueprints",
+            "Reusable mission templates",
+            "Blueprint-to-mission generation",
+            "Standard release, research, bug-fix, and portfolio workflows",
+            "Agentic Workspace Developer Mode",
+            "Workspace inspection and diagnosis",
+            "Approval-gated patch planning",
+            "Developer report generation",
+            "Safe workspace file patching with backup",
+            "Dashboard Intelligence",
+            "System intelligence score",
+            "Mission and workspace analytics",
+            "Memory, knowledge, vector, approval, and activity metrics",
+            "Readiness recommendations",
+            "Notification + Reminder Engine",
+            "Secure User Profiles + Settings",
+            "Plugin System + Tool Registry",
+            "Local reminders",
+            "Startup briefing",
+            "Due task tracking",
+            "Notification event log",
+            "Secure local user profile settings",
+            "Safety level configuration",
+            "Default workspace preference",
+            "Voice, theme, and model preferences",
+            "Settings-aware context retrieval",
+            "Plugin System + Tool Registry",
+            "Plugin permissions and risk levels",
+            "Enable/disable plugin state",
+            "Plugin registry reports",
+            "Modular tool architecture foundation",
+            "Packaged desktop app shell",
+            "Tauri desktop wrapper",
+            "Static Aurora OS frontend export",
+            "Desktop shell backend status",
+            "Local desktop launch scripts",
+            "Backend sidecar manager",
+            "One-click desktop launch",
+            "Sidecar status panel",
+            "Local desktop shortcut installer",
+            "Backend process health tracking",
+            "Tool Permission Enforcement",
+            "Plugin-controlled tool access",
+            "Blocked tool logging",
+            "Tool-to-plugin permission matrix",
+            "High-risk tool visibility",
+            "Tool Audit Center",
+            "Allowed/blocked tool event history",
+            "Security decision reports",
+            "Expanded plugin enforcement coverage",
+            "Audit-aware Dashboard Intelligence",
+            "Security Policy Profiles",
+            "Strict, Balanced, and Developer Lab risk modes",
+            "Policy-controlled plugin states",
+            "Security policy event history",
+            "Risk-aware Dashboard Intelligence",
         ],
         "safety_model": [
             "No uncontrolled destructive commands",
@@ -678,6 +1531,8 @@ def mission():
             "Multi-step mission mode stops on approval, completion, error, or repeated step detection",
             "Desktop control actions must pass through the Command Approval System",
             "Portfolio demo mode uses generated release artifacts and readiness reporting",
+            "Local knowledge indexing reads supported local files only and skips heavy folders",
+            "Local reminders stay inside Aurora OS without external calendar, email, SMS, or push integrations",
         ],
     }
 
@@ -875,6 +1730,8 @@ def approve_request(approval_id: int):
 
         if approval and approval["action_type"] in ALLOWED_DESKTOP_ACTIONS:
             result = execute_approved_desktop_action(approval_id)
+        elif approval and approval["action_type"] == "APPLY_WORKSPACE_FILE_PATCH":
+            result = execute_approved_workspace_patch(approval)
         else:
             result = execute_approved_dev_action(approval_id)
 
@@ -1591,6 +2448,854 @@ def demo_release_pack():
     )
 
 
+@app.get("/api/knowledge/documents", response_model=KnowledgeDocumentsResponse)
+def knowledge_documents():
+    log_activity(
+        "KNOWLEDGE_DOCUMENTS_VIEW",
+        "Aurora OS requested indexed knowledge documents.",
+        "Aurora OS",
+    )
+    return KnowledgeDocumentsResponse(documents=list_knowledge_documents(limit=100))
+
+
+@app.post("/api/knowledge/index", response_model=KnowledgeActionResponse)
+def knowledge_index(request: KnowledgeIndexRequest):
+    try:
+        result = index_document(
+            path=request.path,
+            summary=request.summary,
+        )
+        log_activity(
+            "KNOWLEDGE_INDEXED",
+            f"Knowledge document indexed: {result['title']}",
+            "O.R.I.O.N.",
+        )
+        return KnowledgeActionResponse(
+            status="indexed",
+            message="Knowledge document indexed successfully.",
+            data=result,
+        )
+    except Exception as error:
+        return KnowledgeActionResponse(
+            status="failed",
+            message=str(error),
+            data={},
+        )
+
+
+@app.post("/api/knowledge/index-folder", response_model=KnowledgeActionResponse)
+def knowledge_index_folder(request: KnowledgeFolderIndexRequest):
+    try:
+        result = index_knowledge_folder(request.folder_path)
+        log_activity(
+            "KNOWLEDGE_FOLDER_INDEXED",
+            f"Knowledge folder indexed: {request.folder_path}",
+            "O.R.I.O.N.",
+        )
+        return KnowledgeActionResponse(
+            status="indexed",
+            message="Knowledge folder indexed successfully.",
+            data=result,
+        )
+    except Exception as error:
+        return KnowledgeActionResponse(
+            status="failed",
+            message=str(error),
+            data={},
+        )
+
+
+@app.post("/api/knowledge/search", response_model=KnowledgeSearchResponse)
+def knowledge_search(request: KnowledgeSearchRequest):
+    results = search_knowledge(
+        query=request.query,
+        limit=request.limit,
+    )
+    log_activity(
+        "KNOWLEDGE_SEARCH",
+        f"Knowledge search completed for query: {request.query}",
+        "O.R.I.O.N.",
+    )
+    return KnowledgeSearchResponse(results=results)
+
+
+@app.get(
+    "/api/knowledge/documents/{document_id}/summary",
+    response_model=KnowledgeActionResponse,
+)
+def knowledge_document_summary(document_id: int):
+    summary = summarize_knowledge_document(document_id)
+    log_activity(
+        "KNOWLEDGE_SUMMARY",
+        f"Knowledge document summary requested: {document_id}",
+        "O.R.I.O.N.",
+    )
+    return KnowledgeActionResponse(
+        status="generated",
+        message="Knowledge document summary generated.",
+        data={
+            "document_id": document_id,
+            "summary": summary,
+        },
+    )
+
+
+@app.get("/api/vector/items", response_model=VectorItemsResponse)
+def vector_items():
+    log_activity(
+        "VECTOR_ITEMS_VIEW",
+        "Aurora OS requested vector memory items.",
+        "Aurora OS",
+    )
+    return VectorItemsResponse(items=list_vector_items(limit=100))
+
+
+@app.post("/api/vector/rebuild", response_model=VectorRebuildResponse)
+def vector_rebuild():
+    try:
+        result = rebuild_vector_index()
+        log_activity(
+            "VECTOR_INDEX_REBUILT",
+            "Vector memory index rebuilt.",
+            "O.R.I.O.N.",
+        )
+        return VectorRebuildResponse(
+            status="rebuilt",
+            data=result,
+        )
+    except Exception as error:
+        log_activity(
+            "VECTOR_INDEX_FAILED",
+            f"Vector memory rebuild failed: {error}",
+            "O.R.I.O.N.",
+        )
+        return VectorRebuildResponse(
+            status="failed",
+            data={"error": str(error)},
+        )
+
+
+@app.post("/api/vector/search", response_model=SemanticSearchResponse)
+def vector_search(request: SemanticSearchRequest):
+    try:
+        results = semantic_search(
+            query=request.query,
+            limit=request.limit,
+        )
+        log_activity(
+            "SEMANTIC_SEARCH",
+            f"Semantic search completed for query: {request.query}",
+            "O.R.I.O.N.",
+        )
+        return SemanticSearchResponse(results=results)
+    except Exception as error:
+        log_activity(
+            "SEMANTIC_SEARCH_FAILED",
+            f"Semantic search failed: {error}",
+            "O.R.I.O.N.",
+        )
+        return SemanticSearchResponse(results=[])
+
+
+@app.get("/api/workflows/blueprints", response_model=WorkflowBlueprintsResponse)
+def workflow_blueprints():
+    log_activity(
+        "WORKFLOW_BLUEPRINTS_VIEW",
+        "Aurora OS requested workflow blueprints.",
+        "Aurora OS",
+    )
+
+    return WorkflowBlueprintsResponse(blueprints=list_blueprints())
+
+
+@app.get(
+    "/api/workflows/blueprints/{blueprint_key}",
+    response_model=WorkflowBlueprintDetailResponse,
+)
+def workflow_blueprint_detail(blueprint_key: str):
+    blueprint = get_blueprint(blueprint_key)
+
+    if not blueprint:
+        return WorkflowBlueprintDetailResponse(
+            key=blueprint_key,
+            name="Blueprint not found",
+            description="No workflow blueprint found with this key.",
+            priority=0,
+            steps=[],
+            rendered="Workflow blueprint not found.",
+        )
+
+    log_activity(
+        "WORKFLOW_BLUEPRINT_OPEN",
+        f"Workflow blueprint opened: {blueprint_key}",
+        "Aurora OS",
+    )
+
+    return WorkflowBlueprintDetailResponse(
+        key=blueprint["key"],
+        name=blueprint["name"],
+        description=blueprint["description"],
+        priority=blueprint["priority"],
+        steps=blueprint["steps"],
+        rendered=render_blueprint(blueprint_key),
+    )
+
+
+@app.post(
+    "/api/workflows/blueprints/{blueprint_key}/create-mission",
+    response_model=CreateMissionFromBlueprintResponse,
+)
+def workflow_create_mission(
+    blueprint_key: str,
+    request: CreateMissionFromBlueprintRequest,
+):
+    try:
+        result = create_mission_from_blueprint(
+            blueprint_key=blueprint_key,
+            mission_title=request.mission_title,
+            custom_goal=request.custom_goal,
+            workspace_id=request.workspace_id,
+        )
+
+        log_activity(
+            "WORKFLOW_MISSION_CREATED",
+            f"Mission {result['mission_id']} created from blueprint {blueprint_key}.",
+            "O.R.I.O.N.",
+        )
+
+        return CreateMissionFromBlueprintResponse(
+            status="created",
+            mission_id=result["mission_id"],
+            blueprint_key=result["blueprint_key"],
+            title=result["title"],
+            goal=result["goal"],
+            step_count=result["step_count"],
+            created_at=result["created_at"],
+            message="Mission created from workflow blueprint.",
+        )
+
+    except Exception as error:
+        return CreateMissionFromBlueprintResponse(
+            status="failed",
+            mission_id=None,
+            blueprint_key=blueprint_key,
+            message=str(error),
+        )
+
+
+@app.get("/api/developer/reports", response_model=DeveloperReportsResponse)
+def developer_reports():
+    reports = list_developer_reports(limit=50)
+
+    log_activity(
+        "DEVELOPER_REPORTS_VIEW",
+        "Aurora OS requested developer reports.",
+        "Aurora OS",
+    )
+
+    return DeveloperReportsResponse(reports=reports)
+
+
+@app.get(
+    "/api/developer/workspaces/{workspace_id}/inspect",
+    response_model=DeveloperInspectResponse,
+)
+def developer_inspect_workspace(workspace_id: int):
+    content = inspect_workspace_for_development(workspace_id)
+
+    log_activity(
+        "DEVELOPER_WORKSPACE_INSPECT",
+        f"Developer inspection generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/diagnose",
+    response_model=DeveloperInspectResponse,
+)
+def developer_diagnose_workspace(workspace_id: int, request: DeveloperIssueRequest):
+    content = diagnose_workspace_issue(
+        workspace_id=workspace_id,
+        issue_description=request.issue_description,
+    )
+
+    log_activity(
+        "DEVELOPER_DIAGNOSIS",
+        f"Developer diagnosis generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/patch-plan",
+    response_model=DeveloperInspectResponse,
+)
+def developer_patch_plan(workspace_id: int, request: DeveloperIssueRequest):
+    content = create_patch_plan(
+        workspace_id=workspace_id,
+        issue_description=request.issue_description,
+        target_files=request.target_files or None,
+    )
+
+    log_activity(
+        "DEVELOPER_PATCH_PLAN",
+        f"Patch plan generated for workspace {workspace_id}.",
+        "O.R.I.O.N.",
+    )
+
+    return DeveloperInspectResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=content,
+    )
+
+
+@app.post(
+    "/api/developer/workspaces/{workspace_id}/request-patch",
+    response_model=DeveloperPatchResponse,
+)
+def developer_request_patch(workspace_id: int, request: DeveloperPatchRequest):
+    try:
+        approval_id = request_workspace_file_patch(
+            workspace_id=workspace_id,
+            relative_path=request.relative_path,
+            new_content=request.new_content,
+            reason=request.reason,
+        )
+
+        log_activity(
+            "DEVELOPER_PATCH_APPROVAL",
+            f"Patch approval created for workspace {workspace_id}: {request.relative_path}",
+            "O.R.I.O.N.",
+        )
+
+        return DeveloperPatchResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to patch {request.relative_path}.",
+        )
+
+    except Exception as error:
+        return DeveloperPatchResponse(
+            status="failed",
+            approval_id=None,
+            message=str(error),
+        )
+
+
+@app.get("/api/notifications/reminders", response_model=RemindersResponse)
+def notification_reminders():
+    refresh_due_reminders()
+
+    log_activity(
+        "REMINDERS_VIEW",
+        "Aurora OS requested local reminders.",
+        "Aurora OS",
+    )
+
+    return RemindersResponse(reminders=list_reminders(limit=100))
+
+
+@app.post("/api/notifications/reminders", response_model=ReminderItem)
+def notification_create_reminder(request: ReminderCreateRequest):
+    reminder = create_reminder_record(
+        title=request.title,
+        description=request.description,
+        due_at=request.due_at,
+        priority=request.priority,
+        source="Aurora OS",
+    )
+
+    log_activity(
+        "REMINDER_CREATED",
+        f"Reminder created: {reminder['title']}",
+        "Aurora OS",
+    )
+
+    return ReminderItem(**reminder)
+
+
+@app.post("/api/notifications/reminders/{reminder_id}/status", response_model=ReminderItem)
+def notification_update_reminder_status(
+    reminder_id: int,
+    request: ReminderStatusRequest,
+):
+    updated = update_reminder_status(
+        reminder_id=reminder_id,
+        status=request.status,
+    )
+    reminder = get_reminder(reminder_id)
+
+    if not updated or not reminder:
+        return ReminderItem(
+            id=reminder_id,
+            title="Reminder not found",
+            description="",
+            due_at="",
+            status="missing",
+            priority="medium",
+            source="O.R.I.O.N.",
+            created_at="",
+            updated_at="",
+        )
+
+    log_activity(
+        "REMINDER_STATUS_UPDATED",
+        f"Reminder {reminder_id} marked {request.status}.",
+        "Aurora OS",
+    )
+
+    return ReminderItem(**reminder)
+
+
+@app.get("/api/notifications/events", response_model=NotificationEventsResponse)
+def notification_events():
+    return NotificationEventsResponse(events=list_notification_events(limit=100))
+
+
+@app.get("/api/notifications/startup-briefing", response_model=StartupBriefingResponse)
+def notification_startup_briefing():
+    briefing = generate_startup_briefing()
+
+    log_activity(
+        "STARTUP_BRIEFING",
+        "Startup briefing generated.",
+        "O.R.I.O.N.",
+    )
+
+    return StartupBriefingResponse(status="generated", briefing=briefing)
+
+
+@app.get("/api/dashboard/intelligence", response_model=DashboardIntelligenceResponse)
+def dashboard_intelligence():
+    data = generate_dashboard_intelligence()
+    report = render_dashboard_intelligence_report()
+
+    log_activity(
+        "DASHBOARD_INTELLIGENCE",
+        f"Dashboard intelligence generated. Score: {data['intelligence_score']}.",
+        "O.R.I.O.N.",
+    )
+
+    return DashboardIntelligenceResponse(
+        intelligence_score=data["intelligence_score"],
+        readiness_label=data["readiness_label"],
+        mission_metrics=data["mission_metrics"],
+        workspace_metrics=data["workspace_metrics"],
+        memory_metrics=data["memory_metrics"],
+        risk_metrics=data["risk_metrics"],
+        activity_metrics=data["activity_metrics"],
+        developer_metrics=data["developer_metrics"],
+        notification_metrics=data["notification_metrics"],
+        user_settings=data["user_settings"],
+        plugin_metrics=data["plugin_metrics"],
+        tool_permission_metrics=data["tool_permission_metrics"],
+        tool_audit_metrics=data["tool_audit_metrics"],
+        security_policy=data["security_policy"],
+        release_candidate=data["release_candidate"],
+        stabilization=data["stabilization"],
+        recommendations=data["recommendations"],
+        report=report,
+    )
+
+
+@app.get("/api/settings/profile", response_model=UserSettingsResponse)
+def settings_profile():
+    log_activity(
+        "USER_SETTINGS_VIEW",
+        "Aurora OS requested user profile settings.",
+        "Aurora OS",
+    )
+
+    return UserSettingsResponse(
+        settings=list_user_settings(),
+        settings_map=get_user_settings_map(),
+        profile_summary=render_user_profile_summary(),
+    )
+
+
+@app.post("/api/settings/profile/reset", response_model=UserSettingsResponse)
+def settings_reset():
+    reset_user_settings()
+
+    log_activity(
+        "USER_SETTINGS_RESET",
+        "User profile settings reset to defaults.",
+        "Aurora OS",
+    )
+
+    return UserSettingsResponse(
+        settings=list_user_settings(),
+        settings_map=get_user_settings_map(),
+        profile_summary=render_user_profile_summary(),
+    )
+
+
+@app.post("/api/settings/profile/{setting_key}", response_model=UserSettingUpdateResponse)
+def settings_update(setting_key: str, request: UserSettingUpdateRequest):
+    try:
+        setting = update_user_setting(setting_key, request.value)
+
+        log_activity(
+            "USER_SETTING_UPDATED",
+            f"User setting updated: {setting_key}",
+            "Aurora OS",
+        )
+
+        return UserSettingUpdateResponse(
+            status="updated",
+            setting=UserSettingItem(**setting),
+            message=f"Setting {setting_key} updated.",
+        )
+    except Exception as error:
+        return UserSettingUpdateResponse(
+            status="failed",
+            setting=None,
+            message=str(error),
+        )
+
+
+@app.get("/api/plugins", response_model=PluginsResponse)
+def plugins_list():
+    log_activity(
+        "PLUGIN_REGISTRY_VIEW",
+        "Aurora OS requested plugin registry.",
+        "Aurora OS",
+    )
+
+    return PluginsResponse(
+        plugins=list_plugins(limit=200),
+        metrics=get_plugin_metrics(),
+        report=render_plugin_registry_report(),
+    )
+
+
+@app.get("/api/plugins/{plugin_key}", response_model=PluginStatusUpdateResponse)
+def plugins_get(plugin_key: str):
+    plugin = get_plugin(plugin_key)
+    if not plugin:
+        return PluginStatusUpdateResponse(
+            status="missing",
+            plugin=None,
+            message="Plugin not found.",
+        )
+
+    return PluginStatusUpdateResponse(
+        status="found",
+        plugin=PluginItem(**plugin),
+        message="Plugin found.",
+    )
+
+
+@app.post("/api/plugins/{plugin_key}/status", response_model=PluginStatusUpdateResponse)
+def plugins_update_status(plugin_key: str, request: PluginStatusUpdateRequest):
+    try:
+        plugin = set_plugin_enabled(plugin_key, request.enabled)
+
+        log_activity(
+            "PLUGIN_STATUS_UPDATED",
+            f"Plugin {plugin_key} enabled set to {request.enabled}.",
+            "Aurora OS",
+        )
+
+        return PluginStatusUpdateResponse(
+            status="updated",
+            plugin=PluginItem(**plugin),
+            message=f"Plugin {plugin_key} updated.",
+        )
+    except Exception as error:
+        return PluginStatusUpdateResponse(
+            status="failed",
+            plugin=None,
+            message=str(error),
+        )
+
+
+@app.get("/api/tools/permissions", response_model=ToolPermissionResponse)
+def tool_permissions():
+    log_activity(
+        "TOOL_PERMISSION_VIEW",
+        "Aurora OS requested tool permission matrix.",
+        "Aurora OS",
+    )
+    return ToolPermissionResponse(
+        metrics=get_tool_permission_metrics(),
+        matrix=get_tool_permission_matrix(),
+        report=render_tool_permission_report(),
+    )
+
+
+@app.get("/api/tools/permissions/{tool_name}", response_model=ToolPermissionCheckResponse)
+def tool_permission_check(tool_name: str):
+    decision = is_tool_allowed(tool_name)
+    return ToolPermissionCheckResponse(
+        allowed=decision["allowed"],
+        tool_name=decision["tool_name"],
+        plugin_key=decision["plugin_key"],
+        reason=decision["reason"],
+    )
+
+
+@app.get("/api/tools/audit", response_model=ToolAuditResponse)
+def tool_audit():
+    log_activity(
+        "TOOL_AUDIT_VIEW",
+        "Aurora OS requested Tool Audit Center.",
+        "Aurora OS",
+    )
+    return ToolAuditResponse(
+        metrics=get_tool_audit_metrics(),
+        events=list_tool_audit_events(limit=120),
+        report=render_tool_audit_report(),
+    )
+
+
+
+@app.get("/api/security/policy", response_model=SecurityPolicyResponse)
+def security_policy_status():
+    log_activity(
+        "SECURITY_POLICY_VIEW",
+        "Aurora OS requested security policy status.",
+        "Aurora OS",
+    )
+    return SecurityPolicyResponse(
+        active_policy=get_active_security_policy(),
+        profiles=list_security_profiles(),
+        events=list_security_policy_events(limit=50),
+        report=render_security_policy_report(),
+    )
+
+
+@app.get("/api/security/policy/profiles/{profile_key}", response_model=SecurityProfileDetail)
+def security_policy_profile_detail(profile_key: str):
+    profile = get_security_profile(profile_key)
+    if not profile:
+        return SecurityProfileDetail(
+            key=profile_key,
+            name="Profile not found",
+            description="No matching security profile.",
+            safety_level="unknown",
+            enabled_plugins=[],
+            disabled_plugins=[],
+        )
+    return SecurityProfileDetail(**profile)
+
+
+@app.post("/api/security/policy/apply", response_model=SecurityPolicyApplyResponse)
+def security_policy_apply(request: SecurityPolicyApplyRequest):
+    result = apply_security_profile(profile_key=request.profile_key, source="Aurora OS")
+    log_activity("SECURITY_POLICY_APPLIED", result["summary"], "Aurora OS")
+    return SecurityPolicyApplyResponse(
+        status=result["status"],
+        profile_key=result["profile_key"],
+        profile_name=result["profile_name"],
+        summary=result["summary"],
+        enabled_count=result["enabled_count"],
+        disabled_count=result["disabled_count"],
+        unchanged_count=result["unchanged_count"],
+        applied_at=result["applied_at"],
+        active_policy=result["active_policy"],
+    )
+
+
+@app.get("/api/release-candidate/status", response_model=ReleaseCandidateStatusResponse)
+def release_candidate_status():
+    log_activity(
+        "RELEASE_CANDIDATE_STATUS",
+        "Aurora OS requested v4.0 release candidate status.",
+        "Aurora OS",
+    )
+    return ReleaseCandidateStatusResponse(
+        freeze_state=ReleaseFreezeState(**get_freeze_state()),
+        checklist=ReleaseChecklistResponse(**generate_release_candidate_checklist()),
+        events=list_release_events(limit=50),
+        report=render_release_candidate_report(),
+    )
+
+
+@app.post("/api/release-candidate/freeze", response_model=ReleaseFreezeState)
+def release_candidate_freeze(request: ReleaseFreezeRequest):
+    state = freeze_system(reason=request.reason, release_version="v4.0")
+    log_activity("SYSTEM_FREEZE_ENABLED", request.reason, "Aurora OS")
+    return ReleaseFreezeState(**state)
+
+
+@app.post("/api/release-candidate/unfreeze", response_model=ReleaseFreezeState)
+def release_candidate_unfreeze(request: ReleaseFreezeRequest):
+    state = unfreeze_system(reason=request.reason)
+    log_activity("SYSTEM_FREEZE_DISABLED", request.reason, "Aurora OS")
+    return ReleaseFreezeState(**state)
+
+
+@app.post("/api/release-candidate/package", response_model=ReleaseCandidatePackageResponse)
+def release_candidate_package():
+    result = generate_release_candidate_package()
+    log_activity(
+        "RELEASE_CANDIDATE_PACKAGE",
+        f"v4.0 release candidate package generated: {result['summary_path']}",
+        "Aurora OS",
+    )
+    return ReleaseCandidatePackageResponse(
+        status=result["status"],
+        generated_at=result["generated_at"],
+        summary_path=result["summary_path"],
+        artifacts=result["artifacts"],
+        checklist=result["checklist"],
+    )
+
+
+@app.post("/api/stabilization/scan", response_model=StabilizationActionResponse)
+def stabilization_scan(request: StabilizationRunRequest):
+    scan = run_stabilization_scan(run_build=request.run_build)
+    report = render_stabilization_report(run_build=request.run_build)
+    log_activity(
+        "STABILIZATION_SCAN",
+        f"v4.1 stabilization scan completed. Status: {scan['status']}.",
+        "O.R.I.O.N.",
+    )
+    return StabilizationActionResponse(
+        status=scan["status"], generated_at=scan["generated_at"], scan=scan, report=report
+    )
+
+
+@app.post("/api/stabilization/report/save", response_model=StabilizationActionResponse)
+def stabilization_report_save(request: StabilizationRunRequest):
+    result = save_stabilization_report(run_build=request.run_build)
+    scan = run_stabilization_scan(run_build=False)
+    log_activity("STABILIZATION_REPORT_SAVED", f"v4.1 stabilization report saved: {result['path']}", "O.R.I.O.N.")
+    return StabilizationActionResponse(
+        status=result["status"], generated_at=result["generated_at"], scan=scan,
+        report=result["report"], path=result["path"],
+    )
+
+
+@app.get("/api/frontend/refactor", response_model=FrontendRefactorResponse)
+def frontend_refactor_status():
+    scan = inspect_frontend_architecture()
+    report = render_frontend_refactor_report()
+    log_activity("FRONTEND_REFACTOR_SCAN", f"Frontend refactor scan completed. Status: {scan['status']}.", "O.R.I.O.N.")
+    return FrontendRefactorResponse(
+        status=scan["status"], generated_at=scan["generated_at"], scan=scan, report=report
+    )
+
+
+@app.post("/api/frontend/refactor/report/save", response_model=FrontendRefactorResponse)
+def frontend_refactor_report_save():
+    result = save_frontend_refactor_report()
+    scan = inspect_frontend_architecture()
+    log_activity("FRONTEND_REFACTOR_REPORT_SAVED", f"Frontend refactor report saved: {result['path']}", "O.R.I.O.N.")
+    return FrontendRefactorResponse(
+        status=result["status"], generated_at=result["generated_at"], scan=scan,
+        report=result["report"], path=result["path"],
+    )
+
+
+def _sidecar_response(status_data: Dict[str, Any]) -> BackendSidecarStatusResponse:
+    return BackendSidecarStatusResponse(
+        managed_by=status_data.get("managed_by", "O.R.I.O.N. Backend Sidecar"),
+        status=status_data.get("status", "unknown"),
+        pid=status_data.get("pid"),
+        host=status_data.get("host", "127.0.0.1"),
+        port=int(status_data.get("port", 8000)),
+        backend_url=status_data.get("backend_url", "http://127.0.0.1:8000"),
+        started_at=status_data.get("started_at", ""),
+        updated_at=status_data.get("updated_at", ""),
+        last_error=status_data.get("last_error", ""),
+        pid_running=bool(status_data.get("pid_running", False)),
+        port_open=bool(status_data.get("port_open", False)),
+        log_file=status_data.get("log_file", ""),
+        state_file=status_data.get("state_file", ""),
+        report=render_sidecar_report(),
+    )
+
+
+@app.get("/api/sidecar/status", response_model=BackendSidecarStatusResponse)
+def sidecar_status():
+    status_data = get_sidecar_status()
+    log_activity(
+        "SIDECAR_STATUS",
+        f"Backend sidecar status checked: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return _sidecar_response(status_data)
+
+
+@app.post("/api/sidecar/start", response_model=BackendSidecarActionResponse)
+def sidecar_start():
+    status_data = start_backend_sidecar()
+    log_activity(
+        "SIDECAR_START",
+        f"Backend sidecar start requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar start requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
+@app.post("/api/sidecar/stop", response_model=BackendSidecarActionResponse)
+def sidecar_stop():
+    status_data = stop_backend_sidecar()
+    log_activity(
+        "SIDECAR_STOP",
+        f"Backend sidecar stop requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar stop requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
+@app.post("/api/sidecar/restart", response_model=BackendSidecarActionResponse)
+def sidecar_restart():
+    status_data = restart_backend_sidecar()
+    log_activity(
+        "SIDECAR_RESTART",
+        f"Backend sidecar restart requested. Status: {status_data['status']}.",
+        "O.R.I.O.N.",
+    )
+    return BackendSidecarActionResponse(
+        status=status_data["status"],
+        message="Backend sidecar restart requested.",
+        sidecar=_sidecar_response(status_data),
+    )
+
+
+@app.get("/api/desktop-shell/status", response_model=DesktopShellStatusResponse)
+def desktop_shell_status():
+    log_activity(
+        "DESKTOP_SHELL_STATUS",
+        "Aurora OS desktop shell checked backend status.",
+        "Aurora OS Desktop",
+    )
+
+    return DesktopShellStatusResponse(
+        status="online",
+        app_name="O.R.I.O.N. Aurora OS",
+        shell_version="4.3.0",
+        backend_url="http://127.0.0.1:8000",
+        frontend_mode="tauri_static_shell",
+        message="Desktop shell connected to O.R.I.O.N. backend with sidecar support.",
+    )
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     if not os.getenv("OPENAI_API_KEY"):
@@ -1664,5 +3369,3 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             response=f"O.R.I.O.N. encountered an error: {error}"
         )
-
-
