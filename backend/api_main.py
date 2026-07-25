@@ -228,18 +228,11 @@ from core.demo_walkthrough import (
     render_demo_walkthrough_report,
     save_demo_walkthrough_report as save_demo_walkthrough_report_core,
 )
+
 from core.demo_recording import (
     inspect_demo_recording_readiness,
     render_demo_recording_report,
     save_demo_recording_report as save_demo_recording_report_core,
-)
-from core.patch_release import (
-    complete_patch_release,
-    generate_hotfix_checklist,
-    generate_patch_release_package,
-    render_patch_release_report,
-    save_patch_release_report,
-    start_patch_release,
 )
 from core.github_polish import generate_github_polish_checklist, render_github_polish_report, save_github_polish_artifacts
 from core.public_release import generate_public_release_package, render_public_release_report
@@ -404,15 +397,14 @@ from tools.frontend_refactor_tools import (
     save_frontend_refactor_report as save_frontend_refactor_report_tool,
 )
 
-from tools.demo_walkthrough_tools import get_demo_walkthrough_report, save_demo_walkthrough_report
-from tools.demo_recording_tools import get_demo_recording_report, save_demo_recording_report
+from tools.demo_walkthrough_tools import (
+    get_demo_walkthrough_report,
+    save_demo_walkthrough_report,
+)
 
-from tools.patch_release_tools import (
-    complete_patch_release as complete_patch_release_tool,
-    generate_patch_release_package as generate_patch_release_package_tool,
-    get_patch_release_report,
-    save_patch_release_report as save_patch_release_report_tool,
-    start_patch_release as start_patch_release_tool,
+from tools.demo_recording_tools import (
+    get_demo_recording_report,
+    save_demo_recording_report,
 )
 
 
@@ -490,20 +482,10 @@ class DemoRecordingResponse(BaseModel):
     path: str = ""
 
 
-class PatchReleaseStartRequest(BaseModel):
-    patch_version: str = "v6.0.1"
-    patch_type: str = "maintenance"
-    reason: str = "Post-release maintenance patch."
-
-
-class PatchReleaseCompleteRequest(BaseModel):
-    reason: str = "Patch release workflow completed locally."
-
-
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="6.2.0",
+    version="5.4.0",
 )
 
 app.add_middleware(
@@ -611,11 +593,6 @@ orion = Agent(
         inspect_frontend_architecture_tool,
         get_frontend_refactor_report,
         save_frontend_refactor_report_tool,
-        get_patch_release_report,
-        save_patch_release_report_tool,
-        start_patch_release_tool,
-        complete_patch_release_tool,
-        generate_patch_release_package_tool,
         get_demo_walkthrough_report,
         save_demo_walkthrough_report,
         get_demo_recording_report,
@@ -1484,7 +1461,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="6.2",
+        version="5.4",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -3504,47 +3481,6 @@ def demo_recording_report_save():
     scan = inspect_demo_recording_readiness()
     log_activity("DEMO_RECORDING_REPORT", f"Demo recording report saved: {saved['path']}", "O.R.I.O.N.")
     return DemoRecordingResponse(**scan, report=saved["report"], path=saved["path"])
-
-
-@app.get("/api/patch-release/status")
-def patch_release_status():
-    """Return the local-only v6.2 patch-release readiness checklist."""
-    checklist = generate_hotfix_checklist()
-    log_activity("PATCH_RELEASE_STATUS", "Patch release status requested.", "Aurora OS")
-    return {**checklist, "report": render_patch_release_report()}
-
-
-@app.post("/api/patch-release/start")
-def patch_release_start(request: PatchReleaseStartRequest):
-    state = start_patch_release(
-        patch_version=request.patch_version,
-        patch_type=request.patch_type,
-        reason=request.reason,
-    )
-    log_activity("PATCH_RELEASE_STARTED", request.reason, "Aurora OS")
-    return state
-
-
-@app.post("/api/patch-release/complete")
-def patch_release_complete(request: PatchReleaseCompleteRequest):
-    state = complete_patch_release(reason=request.reason)
-    log_activity("PATCH_RELEASE_COMPLETED", request.reason, "Aurora OS")
-    return state
-
-
-@app.post("/api/patch-release/report/save")
-def patch_release_report_save():
-    saved = save_patch_release_report()
-    log_activity("PATCH_RELEASE_REPORT_SAVED", f"Patch release report saved: {saved['path']}", "Aurora OS")
-    return saved
-
-
-@app.post("/api/patch-release/package")
-def patch_release_package():
-    package = generate_patch_release_package()
-    log_activity("PATCH_RELEASE_PACKAGE", f"Patch release package generated: {package['summary_path']}", "Aurora OS")
-    return package
-
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):

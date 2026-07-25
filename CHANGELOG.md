@@ -1,3 +1,13 @@
+## v6.3 — Changelog Intelligence + Release Notes Composer
+
+### Added
+
+- Local changelog, patch-note, GitHub-release-draft, public-summary, and communication-pack composition.
+
+### Safety
+
+- Local drafts only; no GitHub push, publishing, release or issue modification, deletion, or approval bypass.
+
 ## v6.2 — Patch Release Manager + Hotfix Workflow
 
 ### Added
