@@ -127,6 +127,7 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     # Patch release
     "get_patch_release_report": "patch_release", "save_patch_release_report": "patch_release", "start_patch_release": "patch_release", "complete_patch_release": "patch_release", "generate_patch_release_package": "patch_release",
     "get_changelog_intelligence_report": "changelog_intelligence", "save_changelog_intelligence_artifacts": "changelog_intelligence",
+    "get_roadmap_report": "roadmap_planner", "save_roadmap_report": "roadmap_planner", "add_future_feature": "roadmap_planner", "generate_roadmap_package": "roadmap_planner",
     # Stable release
     "get_stable_release_report": "stable_release", "save_stable_release_report": "stable_release", "lock_stable_release": "stable_release", "unlock_stable_release": "stable_release", "generate_stable_release_package": "stable_release",
     # Production readiness
@@ -160,6 +161,7 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "post_release_maintenance",
     "patch_release",
     "changelog_intelligence",
+    "roadmap_planner",
     "github_polish",
     "approval_system",
     "plugin_registry",

@@ -1,3 +1,13 @@
+## v6.4 — Roadmap Planner + Future Feature Governance
+
+### Added
+
+- Local future-feature registry, classification, priority scoring, safety review, release buckets, and roadmap packages.
+
+### Safety
+
+- Planning only; no automatic feature implementation, GitHub issue changes, pushes, releases, deletions, or approval bypasses.
+
 ## v6.3 — Changelog Intelligence + Release Notes Composer
 
 ### Added
