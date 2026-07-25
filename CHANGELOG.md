@@ -3,6 +3,7 @@
 ### Added
 
 - Local feature risk scoring, review decisions, required controls, development eligibility, reports, and approval packages.
+- Rebuilt Aurora OS shell, mission-first dashboard, responsive navigation, context rail, assistant dock, operational workspaces, central version configuration, and shared UI states.
 
 ### Safety
 
