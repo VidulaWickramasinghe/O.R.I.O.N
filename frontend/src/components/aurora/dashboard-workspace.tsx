@@ -372,7 +372,7 @@ export function DashboardWorkspace() {
               Good Evening, Wichel. O.R.I.O.N. is ready.
             </h1>
             <p className="mt-1 text-slate-400">
-              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v4.6
+              Operational Response and Intelligent Orchestration Network · Think. Plan. Act. Learn. · v6.5
             </p>
           </div>
           <StatusChip tone="success">System Online</StatusChip>
