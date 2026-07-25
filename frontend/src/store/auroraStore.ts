@@ -41,101 +41,164 @@ import {getStableReleaseStatus,lockStableRelease,unlockStableRelease,saveStableR
 
 type SidecarAction = "start" | "stop" | "restart";
 type Store = {
-  dashboardIntelligence: DashboardIntelligence | null; dashboardIntelligenceLoading: boolean;
-  plugins: PluginItem[]; pluginMetrics: Record<string, unknown>; pluginRegistryReport: string; pluginLoadingKey: string | null;
-  toolPermissionMatrix: ToolPermissionItem[]; toolPermissionMetrics: Record<string, unknown>; toolPermissionReport: string;
-  toolAuditEvents: ToolAuditEventItem[]; toolAuditMetrics: Record<string, unknown>; toolAuditReport: string;
-  securityProfiles: SecurityProfileItem[]; securityPolicyEvents: SecurityPolicyEventItem[]; securityPolicyActive: Record<string, unknown>; securityPolicyReport: string; securityPolicyLoadingKey: string | null;
-  releaseCandidateStatus: ReleaseCandidateStatus | null; releaseCandidatePackage: ReleaseCandidatePackage | null; releaseCandidateLoading: boolean;
-  stabilizationResult: StabilizationResult | null; stabilizationLoading: boolean;
-  frontendRefactorResult: FrontendRefactorResult | null; frontendRefactorLoading: boolean;
-  publicLandingResult: PublicLandingResult | null; publicLandingLoading: boolean; uiPolishResult: UIPolishResult | null; uiPolishLoading: boolean; productionReadinessResult: ProductionReadinessResult | null; finalReleaseCandidateV2: FinalReleaseCandidateV2 | null; productionReadinessLoading: boolean; stableReleaseStatus: StableReleaseStatus | null; stableReleasePackage: StableReleasePackage | null; stableReleaseLoading: boolean; postReleaseMaintenanceResult:PostReleaseMaintenanceResult|null; knownIssues:KnownIssue[]; patchPlan:PatchPlan|null; postReleaseMaintenanceLoading:boolean; patchReleaseStatus:PatchReleaseStatus|null; patchReleasePackage:PatchReleasePackage|null; patchReleaseLoading:boolean; roadmapPlannerResult:RoadmapPlannerResult|null;futureFeatures:FutureFeature[];roadmapPackage:RoadmapPackage|null;roadmapPlannerLoading:boolean;safetyReviewBoardResult:SafetyReviewBoardResult|null;featureReviews:FeatureReview[];safetyReviewPackage:SafetyReviewPackage|null;safetyReviewBoardLoading:boolean;
-  desktopShellStatus: DesktopShellStatus | null; desktopShellLoading: boolean;
-  backendSidecarStatus: BackendSidecarStatus | null; backendSidecarLoading: boolean;
-  reminders: ReminderItem[]; notificationEvents: NotificationEventItem[]; startupBriefing: StartupBriefing | null; reminderTitle: string; reminderDueAt: string; reminderLoading: boolean;
-  userSettingsProfile: UserSettingsProfile | null; settingsLoadingKey: string | null; status: SystemStatus | null; backendOnline: boolean; backendLastCheckedAt: string; backendLastError: string; checkBackendHealth: () => Promise<void>; lastError: string; activeDashboardView: AuroraDashboardViewId; panelLayout: AuroraPanelLayoutItem[];
-  recordingModeState: RecordingModeState; loadRecordingModeStateFromStore: () => void; startRecordingModeFromStore: () => void; stopRecordingModeFromStore: () => void; setRecordingSceneFromStore: (sceneId: RecordingSceneId) => void; toggleRecordingLargeCalloutFromStore: () => void; toggleRecordingHideNoisyPanelsFromStore: () => void; toggleRecordingTimerFromStore: () => void; toggleRecordingChecklistFromStore: () => void; resetRecordingModeFromStore: () => void;
-  demoWalkthroughState: DemoWalkthroughState; loadDemoWalkthroughStateFromStore: () => void; startDemoWalkthroughFromStore: () => void; stopDemoWalkthroughFromStore: () => void; nextDemoWalkthroughStepFromStore: () => void; previousDemoWalkthroughStepFromStore: () => void; resetDemoWalkthroughFromStore: () => void;
-  loadActiveDashboardView: () => void; applyDashboardViewPreset: (id: AuroraDashboardViewId) => void; loadPanelLayout: () => void; togglePanelVisibility: (id: AuroraPanelId) => void; togglePanelPinned: (id: AuroraPanelId) => void; movePanelUp: (id: AuroraPanelId) => void; movePanelDown: (id: AuroraPanelId) => void; resetPanelLayout: () => void; getVisiblePanelLayout: () => AuroraPanelLayoutItem[];
-  setReminderTitle: (value: string) => void; setReminderDueAt: (value: string) => void; patchLocalSettingValue: (key: string, value: string) => void;
-  loadRoadmapPlannerStatusFromStore:()=>Promise<void>;saveRoadmapPlannerReportFromStore:()=>Promise<void>;loadFutureFeaturesFromStore:()=>Promise<void>;addFutureFeatureFromStore:(title:string,description:string)=>Promise<void>;generateRoadmapPackageFromStore:()=>Promise<void>;loadSafetyReviewBoardStatusFromStore:()=>Promise<void>;saveSafetyReviewBoardReportFromStore:()=>Promise<void>;loadFeatureReviewsFromStore:()=>Promise<void>;createFeatureReviewFromStore:(id:string)=>Promise<void>;generateSafetyReviewPackageFromStore:()=>Promise<void>;
-  loadRoadmapPlannerStatusFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to load roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  saveRoadmapPlannerReportFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await saveRoadmapPlannerReport();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to save roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  loadFutureFeaturesFromStore:async()=>{try{set({futureFeatures:(await getFutureFeatures()).features,lastError:""})}catch{fail(set,"Failed to load features.")}},
-  addFutureFeatureFromStore:async(title,description)=>{set({roadmapPlannerLoading:true});try{await addFutureFeature(title,description);const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to add feature.")}finally{set({roadmapPlannerLoading:false})}},
-  generateRoadmapPackageFromStore:async()=>{set({roadmapPlannerLoading:true});try{set({roadmapPackage:await generateRoadmapPackage(),lastError:""})}catch{fail(set,"Failed to generate roadmap package.")}finally{set({roadmapPlannerLoading:false})}},
-  loadSafetyReviewBoardStatusFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await getSafetyReviewBoardStatus();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to load safety board.")}finally{set({safetyReviewBoardLoading:false})}},
-  saveSafetyReviewBoardReportFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await saveSafetyReviewBoardReport();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to save safety report.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadFeatureReviewsFromStore:async()=>{try{set({featureReviews:(await getFeatureReviews()).reviews,lastError:""})}catch{fail(set,"Failed to load reviews.")}},
-  createFeatureReviewFromStore:async(id)=>{set({safetyReviewBoardLoading:true});try{const d=await createFeatureReview(id);set({safetyReviewBoardResult:d.snapshot,featureReviews:d.snapshot.reviews,lastError:""})}catch{fail(set,"Failed to create review.")}finally{set({safetyReviewBoardLoading:false})}},
-  generateSafetyReviewPackageFromStore:async()=>{set({safetyReviewBoardLoading:true});try{set({safetyReviewPackage:await generateSafetyReviewPackage(),lastError:""})}catch{fail(set,"Failed to generate safety package.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadPostReleaseMaintenanceStatusFromStore:()=>Promise<void>; savePostReleaseMaintenanceReportFromStore:()=>Promise<void>; loadKnownIssuesFromStore:()=>Promise<void>; addKnownIssueFromStore:(title:string,body:string)=>Promise<void>; loadPatchPlanFromStore:()=>Promise<void>; loadPatchReleaseStatusFromStore:()=>Promise<void>; startPatchReleaseFromStore:()=>Promise<void>; completePatchReleaseFromStore:()=>Promise<void>; savePatchReleaseReportFromStore:()=>Promise<void>; generatePatchReleasePackageFromStore:()=>Promise<void>;
-  loadRoadmapPlannerStatusFromStore:()=>Promise<void>;saveRoadmapPlannerReportFromStore:()=>Promise<void>;loadFutureFeaturesFromStore:()=>Promise<void>;addFutureFeatureFromStore:(title:string,description:string)=>Promise<void>;generateRoadmapPackageFromStore:()=>Promise<void>;loadSafetyReviewBoardStatusFromStore:()=>Promise<void>;saveSafetyReviewBoardReportFromStore:()=>Promise<void>;loadFeatureReviewsFromStore:()=>Promise<void>;createFeatureReviewFromStore:(id:string)=>Promise<void>;generateSafetyReviewPackageFromStore:()=>Promise<void>;
-  loadRoadmapPlannerStatusFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to load roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  saveRoadmapPlannerReportFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await saveRoadmapPlannerReport();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to save roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  loadFutureFeaturesFromStore:async()=>{try{set({futureFeatures:(await getFutureFeatures()).features,lastError:""})}catch{fail(set,"Failed to load features.")}},
-  addFutureFeatureFromStore:async(title,description)=>{set({roadmapPlannerLoading:true});try{await addFutureFeature(title,description);const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to add feature.")}finally{set({roadmapPlannerLoading:false})}},
-  generateRoadmapPackageFromStore:async()=>{set({roadmapPlannerLoading:true});try{set({roadmapPackage:await generateRoadmapPackage(),lastError:""})}catch{fail(set,"Failed to generate roadmap package.")}finally{set({roadmapPlannerLoading:false})}},
-  loadSafetyReviewBoardStatusFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await getSafetyReviewBoardStatus();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to load safety board.")}finally{set({safetyReviewBoardLoading:false})}},
-  saveSafetyReviewBoardReportFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await saveSafetyReviewBoardReport();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to save safety report.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadFeatureReviewsFromStore:async()=>{try{set({featureReviews:(await getFeatureReviews()).reviews,lastError:""})}catch{fail(set,"Failed to load reviews.")}},
-  createFeatureReviewFromStore:async(id)=>{set({safetyReviewBoardLoading:true});try{const d=await createFeatureReview(id);set({safetyReviewBoardResult:d.snapshot,featureReviews:d.snapshot.reviews,lastError:""})}catch{fail(set,"Failed to create review.")}finally{set({safetyReviewBoardLoading:false})}},
-  generateSafetyReviewPackageFromStore:async()=>{set({safetyReviewBoardLoading:true});try{set({safetyReviewPackage:await generateSafetyReviewPackage(),lastError:""})}catch{fail(set,"Failed to generate safety package.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadPostReleaseMaintenanceStatusFromStore:async()=>{set({postReleaseMaintenanceLoading:true});try{const d=await getPostReleaseMaintenanceStatus();set({postReleaseMaintenanceResult:d,patchPlan:d.patch_plan,lastError:""})}catch{fail(set,"Failed to load maintenance status.")}finally{set({postReleaseMaintenanceLoading:false})}},
-  savePostReleaseMaintenanceReportFromStore:async()=>{set({postReleaseMaintenanceLoading:true});try{const d=await savePostReleaseMaintenanceReport();set({postReleaseMaintenanceResult:d,patchPlan:d.patch_plan,lastError:""})}catch{fail(set,"Failed to save maintenance report.")}finally{set({postReleaseMaintenanceLoading:false})}},
-  loadKnownIssuesFromStore:async()=>{try{set({knownIssues:(await getKnownIssues()).issues,lastError:""})}catch{fail(set,"Failed to load known issues.")}},
-  addKnownIssueFromStore:async(title,body)=>{set({postReleaseMaintenanceLoading:true});try{const d=await addKnownIssue(title,body);const issues=await getKnownIssues();set({knownIssues:issues.issues,patchPlan:d.patch_plan,lastError:""})}catch{fail(set,"Failed to add known issue.")}finally{set({postReleaseMaintenanceLoading:false})}},
-  loadPatchPlanFromStore:async()=>{try{set({patchPlan:await getPatchPlan(),lastError:""})}catch{fail(set,"Failed to load patch plan.")}},
-  loadPatchReleaseStatusFromStore:async()=>{set({patchReleaseLoading:true});try{set({patchReleaseStatus:await getPatchReleaseStatus(),lastError:""})}catch{fail(set,"Failed to load patch release.")}finally{set({patchReleaseLoading:false})}},
-  startPatchReleaseFromStore:async()=>{set({patchReleaseLoading:true});try{await startPatchRelease();set({patchReleaseStatus:await getPatchReleaseStatus(),lastError:""})}catch{fail(set,"Failed to start patch release.")}finally{set({patchReleaseLoading:false})}},
-  completePatchReleaseFromStore:async()=>{set({patchReleaseLoading:true});try{await completePatchRelease();set({patchReleaseStatus:await getPatchReleaseStatus(),lastError:""})}catch{fail(set,"Failed to complete patch release.")}finally{set({patchReleaseLoading:false})}},
-  savePatchReleaseReportFromStore:async()=>{set({patchReleaseLoading:true});try{set({patchReleaseStatus:await savePatchReleaseReport(),lastError:""})}catch{fail(set,"Failed to save patch report.")}finally{set({patchReleaseLoading:false})}},
-  generatePatchReleasePackageFromStore:async()=>{set({patchReleaseLoading:true});try{set({patchReleasePackage:await generatePatchReleasePackage(),lastError:""})}catch{fail(set,"Failed to generate patch package.")}finally{set({patchReleaseLoading:false})}},
-  loadProductionReadinessStatusFromStore:()=>Promise<void>; saveProductionReadinessReportFromStore:()=>Promise<void>; generateFinalReleaseCandidateV2FromStore:()=>Promise<void>; loadStableReleaseStatusFromStore:()=>Promise<void>; lockStableReleaseFromStore:()=>Promise<void>; unlockStableReleaseFromStore:()=>Promise<void>; saveStableReleaseReportFromStore:()=>Promise<void>; generateStableReleasePackageFromStore:()=>Promise<void>;
-    loadRoadmapPlannerStatusFromStore:()=>Promise<void>;saveRoadmapPlannerReportFromStore:()=>Promise<void>;loadFutureFeaturesFromStore:()=>Promise<void>;addFutureFeatureFromStore:(title:string,description:string)=>Promise<void>;generateRoadmapPackageFromStore:()=>Promise<void>;loadSafetyReviewBoardStatusFromStore:()=>Promise<void>;saveSafetyReviewBoardReportFromStore:()=>Promise<void>;loadFeatureReviewsFromStore:()=>Promise<void>;createFeatureReviewFromStore:(id:string)=>Promise<void>;generateSafetyReviewPackageFromStore:()=>Promise<void>;
-  loadRoadmapPlannerStatusFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to load roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  saveRoadmapPlannerReportFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await saveRoadmapPlannerReport();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to save roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  loadFutureFeaturesFromStore:async()=>{try{set({futureFeatures:(await getFutureFeatures()).features,lastError:""})}catch{fail(set,"Failed to load features.")}},
-  addFutureFeatureFromStore:async(title,description)=>{set({roadmapPlannerLoading:true});try{await addFutureFeature(title,description);const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to add feature.")}finally{set({roadmapPlannerLoading:false})}},
-  generateRoadmapPackageFromStore:async()=>{set({roadmapPlannerLoading:true});try{set({roadmapPackage:await generateRoadmapPackage(),lastError:""})}catch{fail(set,"Failed to generate roadmap package.")}finally{set({roadmapPlannerLoading:false})}},
-  loadSafetyReviewBoardStatusFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await getSafetyReviewBoardStatus();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to load safety board.")}finally{set({safetyReviewBoardLoading:false})}},
-  saveSafetyReviewBoardReportFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await saveSafetyReviewBoardReport();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to save safety report.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadFeatureReviewsFromStore:async()=>{try{set({featureReviews:(await getFeatureReviews()).reviews,lastError:""})}catch{fail(set,"Failed to load reviews.")}},
-  createFeatureReviewFromStore:async(id)=>{set({safetyReviewBoardLoading:true});try{const d=await createFeatureReview(id);set({safetyReviewBoardResult:d.snapshot,featureReviews:d.snapshot.reviews,lastError:""})}catch{fail(set,"Failed to create review.")}finally{set({safetyReviewBoardLoading:false})}},
-  generateSafetyReviewPackageFromStore:async()=>{set({safetyReviewBoardLoading:true});try{set({safetyReviewPackage:await generateSafetyReviewPackage(),lastError:""})}catch{fail(set,"Failed to generate safety package.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadPostReleaseMaintenanceStatusFromStore:()=>Promise<void>; savePostReleaseMaintenanceReportFromStore:()=>Promise<void>; loadKnownIssuesFromStore:()=>Promise<void>; addKnownIssueFromStore:(title:string,body:string)=>Promise<void>; loadPatchPlanFromStore:()=>Promise<void>; loadPatchReleaseStatusFromStore:()=>Promise<void>; startPatchReleaseFromStore:()=>Promise<void>; completePatchReleaseFromStore:()=>Promise<void>; savePatchReleaseReportFromStore:()=>Promise<void>; generatePatchReleasePackageFromStore:()=>Promise<void>;
-  loadRoadmapPlannerStatusFromStore:()=>Promise<void>;saveRoadmapPlannerReportFromStore:()=>Promise<void>;loadFutureFeaturesFromStore:()=>Promise<void>;addFutureFeatureFromStore:(title:string,description:string)=>Promise<void>;generateRoadmapPackageFromStore:()=>Promise<void>;loadSafetyReviewBoardStatusFromStore:()=>Promise<void>;saveSafetyReviewBoardReportFromStore:()=>Promise<void>;loadFeatureReviewsFromStore:()=>Promise<void>;createFeatureReviewFromStore:(id:string)=>Promise<void>;generateSafetyReviewPackageFromStore:()=>Promise<void>;
-  loadRoadmapPlannerStatusFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to load roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  saveRoadmapPlannerReportFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await saveRoadmapPlannerReport();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to save roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  loadFutureFeaturesFromStore:async()=>{try{set({futureFeatures:(await getFutureFeatures()).features,lastError:""})}catch{fail(set,"Failed to load features.")}},
-  addFutureFeatureFromStore:async(title,description)=>{set({roadmapPlannerLoading:true});try{await addFutureFeature(title,description);const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to add feature.")}finally{set({roadmapPlannerLoading:false})}},
-  generateRoadmapPackageFromStore:async()=>{set({roadmapPlannerLoading:true});try{set({roadmapPackage:await generateRoadmapPackage(),lastError:""})}catch{fail(set,"Failed to generate roadmap package.")}finally{set({roadmapPlannerLoading:false})}},
-  loadSafetyReviewBoardStatusFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await getSafetyReviewBoardStatus();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to load safety board.")}finally{set({safetyReviewBoardLoading:false})}},
-  saveSafetyReviewBoardReportFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await saveSafetyReviewBoardReport();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to save safety report.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadFeatureReviewsFromStore:async()=>{try{set({featureReviews:(await getFeatureReviews()).reviews,lastError:""})}catch{fail(set,"Failed to load reviews.")}},
-  createFeatureReviewFromStore:async(id)=>{set({safetyReviewBoardLoading:true});try{const d=await createFeatureReview(id);set({safetyReviewBoardResult:d.snapshot,featureReviews:d.snapshot.reviews,lastError:""})}catch{fail(set,"Failed to create review.")}finally{set({safetyReviewBoardLoading:false})}},
-  generateSafetyReviewPackageFromStore:async()=>{set({safetyReviewBoardLoading:true});try{set({safetyReviewPackage:await generateSafetyReviewPackage(),lastError:""})}catch{fail(set,"Failed to generate safety package.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadPostReleaseMaintenanceStatusFromStore:async()=>{set({postReleaseMaintenanceLoading:true});try{const d=await getPostReleaseMaintenanceStatus();set({postReleaseMaintenanceResult:d,patchPlan:d.patch_plan,lastError:""})}catch{fail(set,"Failed to load maintenance status.")}finally{set({postReleaseMaintenanceLoading:false})}},
-  savePostReleaseMaintenanceReportFromStore:async()=>{set({postReleaseMaintenanceLoading:true});try{const d=await savePostReleaseMaintenanceReport();set({postReleaseMaintenanceResult:d,patchPlan:d.patch_plan,lastError:""})}catch{fail(set,"Failed to save maintenance report.")}finally{set({postReleaseMaintenanceLoading:false})}},
-  loadKnownIssuesFromStore:async()=>{try{set({knownIssues:(await getKnownIssues()).issues,lastError:""})}catch{fail(set,"Failed to load known issues.")}},
-  addKnownIssueFromStore:async(title,body)=>{set({postReleaseMaintenanceLoading:true});try{const d=await addKnownIssue(title,body);const issues=await getKnownIssues();set({knownIssues:issues.issues,patchPlan:d.patch_plan,lastError:""})}catch{fail(set,"Failed to add known issue.")}finally{set({postReleaseMaintenanceLoading:false})}},
-  loadPatchPlanFromStore:async()=>{try{set({patchPlan:await getPatchPlan(),lastError:""})}catch{fail(set,"Failed to load patch plan.")}},
-  loadPatchReleaseStatusFromStore:async()=>{set({patchReleaseLoading:true});try{set({patchReleaseStatus:await getPatchReleaseStatus(),lastError:""})}catch{fail(set,"Failed to load patch release.")}finally{set({patchReleaseLoading:false})}},
-  startPatchReleaseFromStore:async()=>{set({patchReleaseLoading:true});try{await startPatchRelease();set({patchReleaseStatus:await getPatchReleaseStatus(),lastError:""})}catch{fail(set,"Failed to start patch release.")}finally{set({patchReleaseLoading:false})}},
-  completePatchReleaseFromStore:async()=>{set({patchReleaseLoading:true});try{await completePatchRelease();set({patchReleaseStatus:await getPatchReleaseStatus(),lastError:""})}catch{fail(set,"Failed to complete patch release.")}finally{set({patchReleaseLoading:false})}},
-  savePatchReleaseReportFromStore:async()=>{set({patchReleaseLoading:true});try{set({patchReleaseStatus:await savePatchReleaseReport(),lastError:""})}catch{fail(set,"Failed to save patch report.")}finally{set({patchReleaseLoading:false})}},
-  generatePatchReleasePackageFromStore:async()=>{set({patchReleaseLoading:true});try{set({patchReleasePackage:await generatePatchReleasePackage(),lastError:""})}catch{fail(set,"Failed to generate patch package.")}finally{set({patchReleaseLoading:false})}},
-  loadProductionReadinessStatusFromStore:async()=>{set({productionReadinessLoading:true});try{set({productionReadinessResult:await getProductionReadinessStatus(),lastError:""})}catch{fail(set,"Failed to load production readiness.")}finally{set({productionReadinessLoading:false})}},
-  saveProductionReadinessReportFromStore:async()=>{set({productionReadinessLoading:true});try{set({productionReadinessResult:await saveProductionReadinessReport(),lastError:""})}catch{fail(set,"Failed to save production readiness.")}finally{set({productionReadinessLoading:false})}},
-  generateFinalReleaseCandidateV2FromStore:async()=>{set({productionReadinessLoading:true});try{set({finalReleaseCandidateV2:await generateFinalReleaseCandidateV2(),lastError:""})}catch{fail(set,"Failed to generate RC v2.")}finally{set({productionReadinessLoading:false})}},
-  loadStableReleaseStatusFromStore:async()=>{set({stableReleaseLoading:true});try{set({stableReleaseStatus:await getStableReleaseStatus(),lastError:""})}catch{fail(set,"Failed to load stable release.")}finally{set({stableReleaseLoading:false})}},
-  lockStableReleaseFromStore:async()=>{set({stableReleaseLoading:true});try{await lockStableRelease("O.R.I.O.N. stable public release lock.");set({stableReleaseStatus:await getStableReleaseStatus(),lastError:""})}catch{fail(set,"Failed to lock stable release.")}finally{set({stableReleaseLoading:false})}},
-  unlockStableReleaseFromStore:async()=>{set({stableReleaseLoading:true});try{await unlockStableRelease("Stable release lock lifted.");set({stableReleaseStatus:await getStableReleaseStatus(),lastError:""})}catch{fail(set,"Failed to unlock stable release.")}finally{set({stableReleaseLoading:false})}},
-  saveStableReleaseReportFromStore:async()=>{set({stableReleaseLoading:true});try{set({stableReleaseStatus:await saveStableReleaseReport(),lastError:""})}catch{fail(set,"Failed to save stable release report.")}finally{set({stableReleaseLoading:false})}},
-  generateStableReleasePackageFromStore:async()=>{set({stableReleaseLoading:true});try{set({stableReleasePackage:await generateStableReleasePackage(),lastError:""})}catch{fail(set,"Failed to generate stable release package.")}finally{set({stableReleaseLoading:false})}},
-  loadPublicLandingStatusFromStore: () => Promise<void>; savePublicLandingReportFromStore: () => Promise<void>; loadUIPolishStatusFromStore: () => Promise<void>; saveUIPolishReportFromStore: () => Promise<void>;
-    loadDashboardIntelligence: () => Promise<void>; loadPlugins: () => Promise<void>; loadToolPermissions: () => Promise<void>; loadToolAudit: () => Promise<void>; loadSecurityPolicy: () => Promise<void>; loadReleaseCandidateStatus: () => Promise<void>; loadFrontendRefactorStatus: () => Promise<void>; loadDesktopShellStatus: () => Promise<void>; loadBackendSidecarStatus: () => Promise<void>; loadReminders: () => Promise<void>; loadNotificationEvents: () => Promise<void>; loadStartupBriefing: () => Promise<void>; loadUserSettingsProfile: () => Promise<void>;
-  refreshAll: () => Promise<void>; updatePluginStatusFromStore: (key: string, enabled: boolean) => Promise<void>; applySecurityProfileFromStore: (key: string) => Promise<void>; freezeReleaseCandidateFromStore: () => Promise<void>; unfreezeReleaseCandidateFromStore: () => Promise<void>; generateReleaseCandidatePackageFromStore: () => Promise<void>; runStabilizationScanFromStore: (build?: boolean) => Promise<void>; saveStabilizationReportFromStore: (build?: boolean) => Promise<void>; runFrontendRefactorScanFromStore: () => Promise<void>; saveFrontendRefactorReportFromStore: () => Promise<void>; runBackendSidecarActionFromStore: (action: SidecarAction) => Promise<void>; createReminderFromStore: () => Promise<void>; updateReminderStatusFromStore: (id: number, status: string) => Promise<void>; updateUserSettingFromStore: (key: string, value: string) => Promise<void>; resetUserSettingsFromStore: () => Promise<void>;
+  dashboardIntelligence: DashboardIntelligence | null;
+  dashboardIntelligenceLoading: boolean;
+  plugins: PluginItem[];
+  pluginMetrics: Record<string, unknown>;
+  pluginRegistryReport: string;
+  pluginLoadingKey: string | null;
+  toolPermissionMatrix: ToolPermissionItem[];
+  toolPermissionMetrics: Record<string, unknown>;
+  toolPermissionReport: string;
+  toolAuditEvents: ToolAuditEventItem[];
+  toolAuditMetrics: Record<string, unknown>;
+  toolAuditReport: string;
+  securityProfiles: SecurityProfileItem[];
+  securityPolicyEvents: SecurityPolicyEventItem[];
+  securityPolicyActive: Record<string, unknown>;
+  securityPolicyReport: string;
+  securityPolicyLoadingKey: string | null;
+  releaseCandidateStatus: ReleaseCandidateStatus | null;
+  releaseCandidatePackage: ReleaseCandidatePackage | null;
+  releaseCandidateLoading: boolean;
+  stabilizationResult: StabilizationResult | null;
+  stabilizationLoading: boolean;
+  frontendRefactorResult: FrontendRefactorResult | null;
+  frontendRefactorLoading: boolean;
+  publicLandingResult: PublicLandingResult | null;
+  publicLandingLoading: boolean;
+  uiPolishResult: UIPolishResult | null;
+  uiPolishLoading: boolean;
+  productionReadinessResult: ProductionReadinessResult | null;
+  finalReleaseCandidateV2: FinalReleaseCandidateV2 | null;
+  productionReadinessLoading: boolean;
+  stableReleaseStatus: StableReleaseStatus | null;
+  stableReleasePackage: StableReleasePackage | null;
+  stableReleaseLoading: boolean;
+  postReleaseMaintenanceResult:PostReleaseMaintenanceResult|null;
+  knownIssues:KnownIssue[];
+  patchPlan:PatchPlan|null;
+  postReleaseMaintenanceLoading:boolean;
+  patchReleaseStatus:PatchReleaseStatus|null;
+  patchReleasePackage:PatchReleasePackage|null;
+  patchReleaseLoading:boolean;
+  roadmapPlannerResult:RoadmapPlannerResult|null;
+  futureFeatures:FutureFeature[];
+  roadmapPackage:RoadmapPackage|null;
+  roadmapPlannerLoading:boolean;
+  safetyReviewBoardResult:SafetyReviewBoardResult|null;
+  featureReviews:FeatureReview[];
+  safetyReviewPackage:SafetyReviewPackage|null;
+  safetyReviewBoardLoading:boolean;
+  desktopShellStatus: DesktopShellStatus | null;
+  desktopShellLoading: boolean;
+  backendSidecarStatus: BackendSidecarStatus | null;
+  backendSidecarLoading: boolean;
+  reminders: ReminderItem[];
+  notificationEvents: NotificationEventItem[];
+  startupBriefing: StartupBriefing | null;
+  reminderTitle: string;
+  reminderDueAt: string;
+  reminderLoading: boolean;
+  userSettingsProfile: UserSettingsProfile | null;
+  settingsLoadingKey: string | null;
+  status: SystemStatus | null;
+  backendOnline: boolean;
+  backendLastCheckedAt: string;
+  backendLastError: string;
+  checkBackendHealth: () => Promise<void>;
+  lastError: string;
+  activeDashboardView: AuroraDashboardViewId;
+  panelLayout: AuroraPanelLayoutItem[];
+  recordingModeState: RecordingModeState;
+  loadRecordingModeStateFromStore: () => void;
+  startRecordingModeFromStore: () => void;
+  stopRecordingModeFromStore: () => void;
+  setRecordingSceneFromStore: (sceneId: RecordingSceneId) => void;
+  toggleRecordingLargeCalloutFromStore: () => void;
+  toggleRecordingHideNoisyPanelsFromStore: () => void;
+  toggleRecordingTimerFromStore: () => void;
+  toggleRecordingChecklistFromStore: () => void;
+  resetRecordingModeFromStore: () => void;
+  demoWalkthroughState: DemoWalkthroughState;
+  loadDemoWalkthroughStateFromStore: () => void;
+  startDemoWalkthroughFromStore: () => void;
+  stopDemoWalkthroughFromStore: () => void;
+  nextDemoWalkthroughStepFromStore: () => void;
+  previousDemoWalkthroughStepFromStore: () => void;
+  resetDemoWalkthroughFromStore: () => void;
+  loadActiveDashboardView: () => void;
+  applyDashboardViewPreset: (id: AuroraDashboardViewId) => void;
+  loadPanelLayout: () => void;
+  togglePanelVisibility: (id: AuroraPanelId) => void;
+  togglePanelPinned: (id: AuroraPanelId) => void;
+  movePanelUp: (id: AuroraPanelId) => void;
+  movePanelDown: (id: AuroraPanelId) => void;
+  resetPanelLayout: () => void;
+  getVisiblePanelLayout: () => AuroraPanelLayoutItem[];
+  setReminderTitle: (value: string) => void;
+  setReminderDueAt: (value: string) => void;
+  patchLocalSettingValue: (key: string, value: string) => void;
+  loadRoadmapPlannerStatusFromStore:()=>Promise<void>;
+  saveRoadmapPlannerReportFromStore:()=>Promise<void>;
+  loadFutureFeaturesFromStore:()=>Promise<void>;
+  addFutureFeatureFromStore:(title:string,description:string)=>Promise<void>;
+  generateRoadmapPackageFromStore:()=>Promise<void>;
+  loadSafetyReviewBoardStatusFromStore:()=>Promise<void>;
+  saveSafetyReviewBoardReportFromStore:()=>Promise<void>;
+  loadFeatureReviewsFromStore:()=>Promise<void>;
+  createFeatureReviewFromStore:(id:string)=>Promise<void>;
+  generateSafetyReviewPackageFromStore:()=>Promise<void>;
+  loadPostReleaseMaintenanceStatusFromStore:()=>Promise<void>;
+  savePostReleaseMaintenanceReportFromStore:()=>Promise<void>;
+  loadKnownIssuesFromStore:()=>Promise<void>;
+  addKnownIssueFromStore:(title:string,body:string)=>Promise<void>;
+  loadPatchPlanFromStore:()=>Promise<void>;
+  loadPatchReleaseStatusFromStore:()=>Promise<void>;
+  startPatchReleaseFromStore:()=>Promise<void>;
+  completePatchReleaseFromStore:()=>Promise<void>;
+  savePatchReleaseReportFromStore:()=>Promise<void>;
+  generatePatchReleasePackageFromStore:()=>Promise<void>;
+  loadProductionReadinessStatusFromStore:()=>Promise<void>;
+  saveProductionReadinessReportFromStore:()=>Promise<void>;
+  generateFinalReleaseCandidateV2FromStore:()=>Promise<void>;
+  loadStableReleaseStatusFromStore:()=>Promise<void>;
+  lockStableReleaseFromStore:()=>Promise<void>;
+  unlockStableReleaseFromStore:()=>Promise<void>;
+  saveStableReleaseReportFromStore:()=>Promise<void>;
+  generateStableReleasePackageFromStore:()=>Promise<void>;
+  loadPublicLandingStatusFromStore: () => Promise<void>;
+  savePublicLandingReportFromStore: () => Promise<void>;
+  loadUIPolishStatusFromStore: () => Promise<void>;
+  saveUIPolishReportFromStore: () => Promise<void>;
+  loadDashboardIntelligence: () => Promise<void>;
+  loadPlugins: () => Promise<void>;
+  loadToolPermissions: () => Promise<void>;
+  loadToolAudit: () => Promise<void>;
+  loadSecurityPolicy: () => Promise<void>;
+  loadReleaseCandidateStatus: () => Promise<void>;
+  loadFrontendRefactorStatus: () => Promise<void>;
+  loadDesktopShellStatus: () => Promise<void>;
+  loadBackendSidecarStatus: () => Promise<void>;
+  loadReminders: () => Promise<void>;
+  loadNotificationEvents: () => Promise<void>;
+  loadStartupBriefing: () => Promise<void>;
+  loadUserSettingsProfile: () => Promise<void>;
+  refreshAll: () => Promise<void>;
+  updatePluginStatusFromStore: (key: string, enabled: boolean) => Promise<void>;
+  applySecurityProfileFromStore: (key: string) => Promise<void>;
+  freezeReleaseCandidateFromStore: () => Promise<void>;
+  unfreezeReleaseCandidateFromStore: () => Promise<void>;
+  generateReleaseCandidatePackageFromStore: () => Promise<void>;
+  runStabilizationScanFromStore: (build?: boolean) => Promise<void>;
+  saveStabilizationReportFromStore: (build?: boolean) => Promise<void>;
+  runFrontendRefactorScanFromStore: () => Promise<void>;
+  saveFrontendRefactorReportFromStore: () => Promise<void>;
+  runBackendSidecarActionFromStore: (action: SidecarAction) => Promise<void>;
+  createReminderFromStore: () => Promise<void>;
+  updateReminderStatusFromStore: (id: number, status: string) => Promise<void>;
+  updateUserSettingFromStore: (key: string, value: string) => Promise<void>;
+  resetUserSettingsFromStore: () => Promise<void>;
 };
 const fail = (set: (state: Partial<Store>) => void, message: string) => set({ lastError: message });
 export const useAuroraStore = create<Store>((set, get) => ({
@@ -167,19 +230,6 @@ export const useAuroraStore = create<Store>((set, get) => ({
   getVisiblePanelLayout: () => sortPanelLayout(get().panelLayout).filter((item) => item.visible),
   setReminderTitle: (reminderTitle) => set({ reminderTitle }), setReminderDueAt: (reminderDueAt) => set({ reminderDueAt }),
   patchLocalSettingValue: (key, value) => set((s) => !s.userSettingsProfile ? s : { userSettingsProfile: { ...s.userSettingsProfile, settings: s.userSettingsProfile.settings.map((item) => item.key === key ? { ...item, value } : item) } }),
-  loadRoadmapPlannerStatusFromStore:()=>Promise<void>;saveRoadmapPlannerReportFromStore:()=>Promise<void>;loadFutureFeaturesFromStore:()=>Promise<void>;addFutureFeatureFromStore:(title:string,description:string)=>Promise<void>;generateRoadmapPackageFromStore:()=>Promise<void>;loadSafetyReviewBoardStatusFromStore:()=>Promise<void>;saveSafetyReviewBoardReportFromStore:()=>Promise<void>;loadFeatureReviewsFromStore:()=>Promise<void>;createFeatureReviewFromStore:(id:string)=>Promise<void>;generateSafetyReviewPackageFromStore:()=>Promise<void>;
-  loadRoadmapPlannerStatusFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to load roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  saveRoadmapPlannerReportFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await saveRoadmapPlannerReport();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to save roadmap.")}finally{set({roadmapPlannerLoading:false})}},
-  loadFutureFeaturesFromStore:async()=>{try{set({futureFeatures:(await getFutureFeatures()).features,lastError:""})}catch{fail(set,"Failed to load features.")}},
-  addFutureFeatureFromStore:async(title,description)=>{set({roadmapPlannerLoading:true});try{await addFutureFeature(title,description);const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to add feature.")}finally{set({roadmapPlannerLoading:false})}},
-  generateRoadmapPackageFromStore:async()=>{set({roadmapPlannerLoading:true});try{set({roadmapPackage:await generateRoadmapPackage(),lastError:""})}catch{fail(set,"Failed to generate roadmap package.")}finally{set({roadmapPlannerLoading:false})}},
-  loadSafetyReviewBoardStatusFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await getSafetyReviewBoardStatus();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to load safety board.")}finally{set({safetyReviewBoardLoading:false})}},
-  saveSafetyReviewBoardReportFromStore:async()=>{set({safetyReviewBoardLoading:true});try{const d=await saveSafetyReviewBoardReport();set({safetyReviewBoardResult:d,featureReviews:d.reviews,lastError:""})}catch{fail(set,"Failed to save safety report.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadFeatureReviewsFromStore:async()=>{try{set({featureReviews:(await getFeatureReviews()).reviews,lastError:""})}catch{fail(set,"Failed to load reviews.")}},
-  createFeatureReviewFromStore:async(id)=>{set({safetyReviewBoardLoading:true});try{const d=await createFeatureReview(id);set({safetyReviewBoardResult:d.snapshot,featureReviews:d.snapshot.reviews,lastError:""})}catch{fail(set,"Failed to create review.")}finally{set({safetyReviewBoardLoading:false})}},
-  generateSafetyReviewPackageFromStore:async()=>{set({safetyReviewBoardLoading:true});try{set({safetyReviewPackage:await generateSafetyReviewPackage(),lastError:""})}catch{fail(set,"Failed to generate safety package.")}finally{set({safetyReviewBoardLoading:false})}},
-  loadPostReleaseMaintenanceStatusFromStore:()=>Promise<void>; savePostReleaseMaintenanceReportFromStore:()=>Promise<void>; loadKnownIssuesFromStore:()=>Promise<void>; addKnownIssueFromStore:(title:string,body:string)=>Promise<void>; loadPatchPlanFromStore:()=>Promise<void>; loadPatchReleaseStatusFromStore:()=>Promise<void>; startPatchReleaseFromStore:()=>Promise<void>; completePatchReleaseFromStore:()=>Promise<void>; savePatchReleaseReportFromStore:()=>Promise<void>; generatePatchReleasePackageFromStore:()=>Promise<void>;
-  loadRoadmapPlannerStatusFromStore:()=>Promise<void>;saveRoadmapPlannerReportFromStore:()=>Promise<void>;loadFutureFeaturesFromStore:()=>Promise<void>;addFutureFeatureFromStore:(title:string,description:string)=>Promise<void>;generateRoadmapPackageFromStore:()=>Promise<void>;loadSafetyReviewBoardStatusFromStore:()=>Promise<void>;saveSafetyReviewBoardReportFromStore:()=>Promise<void>;loadFeatureReviewsFromStore:()=>Promise<void>;createFeatureReviewFromStore:(id:string)=>Promise<void>;generateSafetyReviewPackageFromStore:()=>Promise<void>;
   loadRoadmapPlannerStatusFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await getRoadmapPlannerStatus();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to load roadmap.")}finally{set({roadmapPlannerLoading:false})}},
   saveRoadmapPlannerReportFromStore:async()=>{set({roadmapPlannerLoading:true});try{const d=await saveRoadmapPlannerReport();set({roadmapPlannerResult:d,futureFeatures:d.roadmap_plan.features,lastError:""})}catch{fail(set,"Failed to save roadmap.")}finally{set({roadmapPlannerLoading:false})}},
   loadFutureFeaturesFromStore:async()=>{try{set({futureFeatures:(await getFutureFeatures()).features,lastError:""})}catch{fail(set,"Failed to load features.")}},

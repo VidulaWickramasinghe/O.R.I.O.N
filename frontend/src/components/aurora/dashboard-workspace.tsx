@@ -9,19 +9,8 @@ import { dashboardModels, dashboardTimeline } from "@/lib/aurora-data";
 import { agents } from "@/lib/agent-data";
 import { memoryItems } from "@/lib/memory-data";
 import { projects } from "@/lib/project-data";
-import { getDashboardIntelligence } from "@/lib/api/dashboard";
-import { getDesktopShellStatus } from "@/lib/api/desktop";
 import { createDeveloperPatchPlan, diagnoseDeveloperWorkspace, getDeveloperReports, inspectDeveloperWorkspace } from "@/lib/api/developer";
-import { getFrontendRefactorStatus, saveFrontendRefactorReport } from "@/lib/api/frontend-refactor";
 import { getKnowledgeDocuments, indexKnowledgeFolder, searchKnowledge } from "@/lib/api/knowledge";
-import { createReminder, getNotificationEvents, getReminders, getStartupBriefing, updateReminderStatus } from "@/lib/api/notifications";
-import { getPlugins, updatePluginStatus } from "@/lib/api/plugins";
-import { generateReleaseCandidatePackage, getReleaseCandidateStatus, freezeReleaseCandidate, unfreezeReleaseCandidate } from "@/lib/api/release";
-import { applySecurityProfile, getSecurityPolicy } from "@/lib/api/security";
-import { getUserSettingsProfile, resetUserSettings, updateUserSetting } from "@/lib/api/settings";
-import { getBackendSidecarStatus, runBackendSidecarAction as runSidecarApiAction } from "@/lib/api/sidecar";
-import { runStabilizationScan, saveStabilizationReport } from "@/lib/api/stabilization";
-import { getToolAudit, getToolPermissions } from "@/lib/api/tools";
 import { getVectorItems, rebuildVectorIndex, searchVector } from "@/lib/api/vector";
 import { getWorkspaces } from "@/lib/api/workspaces";
 import { createWorkflowMission, getWorkflowBlueprint, getWorkflowBlueprints } from "@/lib/api/workflows";
@@ -53,27 +42,7 @@ import { UserSettingsPanel } from "@/components/aurora/panels/UserSettingsPanel"
 import { GlassPanel } from "./glass-panel";
 import { StatusChip } from "./status-chip";
 
-import type {
-  BackendSidecarStatus,
-  DesktopShellStatus,
-  NotificationEventItem,
-  PluginItem,
-  ReminderItem,
-  SecurityPolicyEventItem,
-  SecurityProfileItem,
-  ToolAuditEventItem,
-  ToolPermissionItem,
-  UserSettingsProfile,
-  WorkspaceItem,
-} from "@/types/orion";
-
-import type {
-  DashboardIntelligence,
-  ReleaseCandidatePackage,
-  ReleaseCandidateStatus,
-  StabilizationResult,
-  FrontendRefactorResult,
-} from "@/types/orion";
+import type { WorkspaceItem } from "@/types/orion";
 import { DashboardIntelligencePanel } from "@/components/aurora/panels/DashboardIntelligencePanel";
 import { ReleaseCandidatePanel } from "@/components/aurora/panels/ReleaseCandidatePanel";
 import { StabilizationPanel } from "@/components/aurora/panels/StabilizationPanel";
@@ -155,40 +124,6 @@ type DeveloperInspectResult = {
   content: string;
 };
 
-type PluginsResponse = {
-  plugins: PluginItem[];
-  metrics: Record<string, unknown>;
-  report: string;
-};
-
-type BackendSidecarAction = {
-  status: string;
-  message: string;
-  sidecar: BackendSidecarStatus;
-};
-
-
-type ToolPermissionResponse = {
-  metrics: Record<string, unknown>;
-  matrix: ToolPermissionItem[];
-  report: string;
-};
-
-
-type ToolAuditResponse = {
-  metrics: Record<string, unknown>;
-  events: ToolAuditEventItem[];
-  report: string;
-};
-
-type SecurityPolicyResponse = {
-  active_policy: Record<string, unknown>;
-  profiles: SecurityProfileItem[];
-  events: SecurityPolicyEventItem[];
-  report: string;
-};
-
-
 export function DashboardWorkspace() {
   const [widgets, setWidgets] = useState([
     "Hero",
@@ -259,7 +194,7 @@ export function DashboardWorkspace() {
     desktopShellLoading, backendSidecarStatus, backendSidecarLoading, reminders,
     notificationEvents, startupBriefing, reminderTitle, reminderDueAt, reminderLoading,
     userSettingsProfile, settingsLoadingKey, setReminderTitle, setReminderDueAt,
-    patchLocalSettingValue, loadDashboardIntelligence, loadDesktopShellStatus,
+    loadDashboardIntelligence, loadDesktopShellStatus,
     loadBackendSidecarStatus, loadStartupBriefing, updatePluginStatusFromStore,
     applySecurityProfileFromStore, freezeReleaseCandidateFromStore,
     unfreezeReleaseCandidateFromStore, generateReleaseCandidatePackageFromStore,
@@ -273,16 +208,16 @@ export function DashboardWorkspace() {
         postReleaseMaintenanceResult,knownIssues,patchPlan,postReleaseMaintenanceLoading,loadPostReleaseMaintenanceStatusFromStore,savePostReleaseMaintenanceReportFromStore,loadKnownIssuesFromStore,addKnownIssueFromStore,loadPatchPlanFromStore,patchReleaseStatus,patchReleasePackage,patchReleaseLoading,loadPatchReleaseStatusFromStore,startPatchReleaseFromStore,completePatchReleaseFromStore,savePatchReleaseReportFromStore,generatePatchReleasePackageFromStore,
         productionReadinessResult, finalReleaseCandidateV2, productionReadinessLoading, loadProductionReadinessStatusFromStore, saveProductionReadinessReportFromStore, generateFinalReleaseCandidateV2FromStore, stableReleaseStatus, stableReleasePackage, stableReleaseLoading, loadStableReleaseStatusFromStore, lockStableReleaseFromStore, unlockStableReleaseFromStore, saveStableReleaseReportFromStore, generateStableReleasePackageFromStore,
         publicLandingResult, publicLandingLoading, loadPublicLandingStatusFromStore, savePublicLandingReportFromStore, uiPolishResult, uiPolishLoading, loadUIPolishStatusFromStore, saveUIPolishReportFromStore,
-        panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
+        panelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
   } = useAuroraStore();
-  const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
-  const [notificationMessage, setNotificationMessage] = useState("");
-  const [settingsMessage, setSettingsMessage] = useState("");
-  const [pluginMessage, setPluginMessage] = useState("");
-  const [backendSidecarMessage, setBackendSidecarMessage] = useState("");
-  const [securityPolicyMessage, setSecurityPolicyMessage] = useState("");
-  const [releaseCandidateMessage, setReleaseCandidateMessage] = useState("");
-  const [stabilizationMessage, setStabilizationMessage] = useState("");
+  const [dashboardIntelligenceMessage] = useState("");
+  const [notificationMessage] = useState("");
+  const [settingsMessage] = useState("");
+  const [pluginMessage] = useState("");
+  const [backendSidecarMessage] = useState("");
+  const [securityPolicyMessage] = useState("");
+  const [releaseCandidateMessage] = useState("");
+  const [stabilizationMessage] = useState("");
 
   const cleanRecordingPanels = new Set([
     "dashboard-intelligence", "dashboard-view-selector", "presenter-controls",
@@ -356,7 +291,7 @@ export function DashboardWorkspace() {
       void useAuroraStore.getState().refreshAll();
     }, 5000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore]);
 
   function metricValue(
     source: Record<string, unknown> | undefined,
@@ -644,7 +579,7 @@ export function DashboardWorkspace() {
               setReminderDueAt={setReminderDueAt}
               createReminder={createReminderFromStore}
               updateReminderStatus={updateReminderStatusFromStore}
-              generateStartupBriefing={() => loadStartupBriefing(true)}
+              generateStartupBriefing={() => loadStartupBriefing()}
             />
             </SafePanel>
           )}
