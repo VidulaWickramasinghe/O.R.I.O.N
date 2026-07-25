@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from core.plugin_registry import get_plugin_metrics, list_plugins, set_plugin_enabled
 from core.tool_audit import record_tool_audit_event
 from core.user_settings import update_user_setting
+from core.database import managed_connection
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -202,7 +203,7 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
 
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    return managed_connection(DB_PATH)
 
 
 def _now() -> str:
