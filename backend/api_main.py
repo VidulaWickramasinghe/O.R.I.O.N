@@ -1770,11 +1770,6 @@ def health():
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
-        return MissionReportResponse(
-            mission_id=mission_id,
-            report_path="",
-            status="mission_not_found",
-        )
 
 @app.get("/api/mission")
 def mission():
@@ -2728,10 +2723,10 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
-        log_activity(
-            "DESKTOP_APPROVAL_CREATED",
-            f"Approval created to open URL: {request.url}",
-            "O.R.I.O.N.",
+        return DesktopActionResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to start dev server for workspace {workspace_id}.",
         )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
