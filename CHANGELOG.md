@@ -1,3 +1,13 @@
+## v6.2 — Dashboard, Reminder, and Profile Safety Hardening
+
+### Improved
+
+- Dashboard Intelligence now renders one consistent analytics snapshot and tolerates invalid mission/workspace metadata.
+- Reminder timestamps are normalized to UTC, relative times must be positive, due refreshes are idempotent, and completed/cancelled reminders are terminal.
+- Reminder and settings API payloads now have explicit size and value constraints, with missing reminders returning HTTP 404.
+- Default workspace preferences must reference a registered workspace, while display names reject multiline and secret-like values.
+- Installation documentation now uses `~/O.R.I.O.N/` and the canonical `VidulaWickramasinghe/O.R.I.O.N` GitHub repository.
+
 ## v6.2 — Semantic, Workflow, and Developer Safety Hardening
 
 ### Improved

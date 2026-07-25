@@ -1063,7 +1063,7 @@ function KnowledgeBasePanel({
             <input
               value={path}
               onChange={(event) => setPath(event.target.value)}
-              placeholder="/home/titanvx/O.R.I.O.N/orion-ai/docs"
+              placeholder="~/O.R.I.O.N/docs"
               className="min-w-0 flex-1 rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2"
             />
             <button
