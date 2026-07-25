@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from core.mission_planner import create_mission_record
+from core.workspace_manager import get_workspace_record
 
 
 WORKFLOW_BLUEPRINTS: Dict[str, Dict[str, Any]] = {
@@ -189,16 +190,19 @@ def create_mission_from_blueprint(
     if not blueprint:
         raise ValueError(f"Blueprint not found: {blueprint_key}")
 
+    if workspace_id is not None and not get_workspace_record(workspace_id):
+        raise ValueError(f"Workspace not found: {workspace_id}")
+
     title = mission_title.strip() or blueprint["name"]
-    workspace_note = f" Workspace ID: {workspace_id}." if workspace_id else ""
+    workspace_note = f" Workspace ID: {workspace_id}." if workspace_id is not None else ""
     goal = custom_goal.strip() or (
         f"Run the {blueprint['name']} safely using O.R.I.O.N. workflows."
         f"{workspace_note}"
     )
 
-    steps = blueprint["steps"]
+    steps = list(blueprint["steps"])
 
-    if workspace_id:
+    if workspace_id is not None:
         steps = [
             step.replace("selected workspace", f"workspace {workspace_id}")
             for step in steps
