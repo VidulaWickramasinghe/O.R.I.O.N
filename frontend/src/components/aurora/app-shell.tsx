@@ -1,12 +1,3 @@
 "use client";
-import { ReactNode } from "react";
-import { AiOrb } from "./ai-orb";
-import { CommandPalette } from "./command-palette";
-import { ContextPanel } from "./context-panel";
-import { NotificationCenter } from "./notification-center";
-import { Sidebar } from "./sidebar";
-import { Topbar } from "./topbar";
-
-export function AppShell({ children }: { children: ReactNode }) {
-  return <main className="aurora-os-bg flex h-screen overflow-hidden bg-[#05070B] text-slate-100"><Sidebar/><section className="flex min-w-0 flex-1 flex-col"><Topbar/><div className="min-h-0 flex-1 overflow-y-auto p-4 xl:p-5">{children}</div></section><ContextPanel/><AiOrb/><CommandPalette/><NotificationCenter/></main>;
-}
+import type { ReactNode } from "react"; import { AiOrb } from "./ai-orb"; import { CommandPalette } from "./command-palette"; import { ContextPanel } from "./context-panel"; import { MobileNavigation } from "./navigation/mobile-navigation"; import { NotificationCenter } from "./notification-center"; import { Sidebar } from "./sidebar"; import { Topbar } from "./topbar";
+export function AppShell({children}:{children:ReactNode}){return <main className="aurora-os-bg grid h-dvh min-w-0 grid-cols-[minmax(0,1fr)] overflow-hidden text-slate-100 lg:grid-cols-[auto_minmax(0,1fr)]"><Sidebar/><section className="flex min-h-0 min-w-0 flex-col"><Topbar/><div id="main-workspace" className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-3 pb-24 pt-3 sm:px-5 sm:pt-5 lg:pb-8">{children}</div></section><ContextPanel/><AiOrb/><MobileNavigation/><CommandPalette/><NotificationCenter/></main>}

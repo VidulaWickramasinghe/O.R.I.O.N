@@ -1733,6 +1733,120 @@ def memory_items():
     )
     return MemoryResponse(items=list_recent_memory(limit=20))
 
+@app.get("/api/mission")
+def mission():
+    return {
+        "name": "O.R.I.O.N.",
+        "full_name": "Operational Response and Intelligent Orchestration Network",
+        "interface": "Aurora OS",
+        "tagline": "Think. Plan. Act. Learn.",
+        "release": "v6.2 Patch Release Manager + Hotfix Workflow",
+        "capabilities": [
+            "AI chat console",
+            "Project memory",
+            "Safe developer tools",
+            "Voice mode",
+            "Wake phrase mode",
+            "Live activity timeline",
+            "Tool-level instrumentation",
+            "Project launcher",
+            "Mission Planner System",
+            "Command Approval System",
+            "Controlled Autonomous Mission Execution Loop",
+            "Mission Run History",
+            "Mission Execution Reports",
+            "Workspace context retrieval",
+            "Project context retrieval",
+            "Memory context retrieval",
+            "Mission context retrieval",
+            "Controlled multi-step mission execution",
+            "Desktop control approvals",
+            "Open workspace in VS Code",
+            "Open workspace folder",
+            "Start workspace development server",
+            "Open approved URLs in browser",
+            "Portfolio demo mode",
+            "Demo readiness report",
+            "Portfolio release pack generation",
+            "Local Knowledge Base",
+            "Document indexing and search",
+            "Knowledge-aware context retrieval",
+            "Aurora OS Knowledge Base panel",
+            "Vector Memory",
+            "Semantic search",
+            "Embedding-based context retrieval",
+            "Meaning-aware memory and knowledge search",
+            "Workflow Blueprints",
+            "Reusable mission templates",
+            "Blueprint-to-mission generation",
+            "Standard release, research, bug-fix, and portfolio workflows",
+            "Agentic Workspace Developer Mode",
+            "Workspace inspection and diagnosis",
+            "Approval-gated patch planning",
+            "Developer report generation",
+            "Safe workspace file patching with backup",
+            "Dashboard Intelligence",
+            "System intelligence score",
+            "Mission and workspace analytics",
+            "Memory, knowledge, vector, approval, and activity metrics",
+            "Readiness recommendations",
+            "Notification + Reminder Engine",
+            "Secure User Profiles + Settings",
+            "Plugin System + Tool Registry",
+            "Local reminders",
+            "Startup briefing",
+            "Due task tracking",
+            "Notification event log",
+            "Secure local user profile settings",
+            "Safety level configuration",
+            "Default workspace preference",
+            "Voice, theme, and model preferences",
+            "Settings-aware context retrieval",
+            "Plugin System + Tool Registry",
+            "Plugin permissions and risk levels",
+            "Enable/disable plugin state",
+            "Plugin registry reports",
+            "Modular tool architecture foundation",
+            "Packaged desktop app shell",
+            "Tauri desktop wrapper",
+            "Static Aurora OS frontend export",
+            "Desktop shell backend status",
+            "Local desktop launch scripts",
+            "Backend sidecar manager",
+            "One-click desktop launch",
+            "Sidecar status panel",
+            "Local desktop shortcut installer",
+            "Backend process health tracking",
+            "Tool Permission Enforcement",
+            "Plugin-controlled tool access",
+            "Blocked tool logging",
+            "Tool-to-plugin permission matrix",
+            "High-risk tool visibility",
+            "Tool Audit Center",
+            "Allowed/blocked tool event history",
+            "Security decision reports",
+            "Expanded plugin enforcement coverage",
+            "Audit-aware Dashboard Intelligence",
+            "Security Policy Profiles",
+            "Strict, Balanced, and Developer Lab risk modes",
+            "Policy-controlled plugin states",
+            "Security policy event history",
+            "Risk-aware Dashboard Intelligence",
+        ],
+        "safety_model": [
+            "No uncontrolled destructive commands",
+            "Safe project directory access",
+            "Approved developer command execution only",
+            "Approved desktop actions only",
+            "Activity and tool execution logging",
+            "Mission run history records every controlled execution cycle",
+            "Multi-step mission mode stops on approval, completion, error, or repeated step detection",
+            "Desktop control actions must pass through the Command Approval System",
+            "Portfolio demo mode uses generated release artifacts and readiness reporting",
+            "Local knowledge indexing reads supported local files only and skips heavy folders",
+            "Local reminders stay inside Aurora OS without external calendar, email, SMS, or push integrations",
+        ],
+    }
 
 @app.get("/api/memory/search", response_model=MemoryResponse)
 def memory_search(q: str):
@@ -2467,6 +2581,11 @@ def desktop_open_vscode(workspace_id: int):
             message=str(error),
         )
 
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open workspace folder {workspace_id}.",
+            "O.R.I.O.N.",
+        )
 
 @app.post("/api/desktop/workspaces/{workspace_id}/open-folder", response_model=DesktopActionResponse)
 def desktop_open_folder(workspace_id: int):
@@ -2515,6 +2634,11 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open URL: {request.url}",
+            "O.R.I.O.N.",
+        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):
