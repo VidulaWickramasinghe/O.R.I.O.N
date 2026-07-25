@@ -1,4 +1,5 @@
 import { WorkspaceItem } from "../aurora-types";
+import { runDesktopWorkspaceAction } from "@/lib/api/desktop";
 import { ModuleShell } from "./module-shell";
 
 type WorkspacesModuleProps = {
@@ -13,7 +14,10 @@ export function WorkspacesModule({
   refresh,
 }: WorkspacesModuleProps) {
   async function desktopAction(workspaceId: number, action: string) {
-    const endpointMap: Record<string, string> = {
+    const endpointMap: Record<
+      string,
+      "open-vscode" | "open-folder" | "start-dev"
+    > = {
       vscode: "open-vscode",
       folder: "open-folder",
       dev: "start-dev",
@@ -22,12 +26,7 @@ export function WorkspacesModule({
     const endpoint = endpointMap[action];
 
     try {
-      const response = await fetch(
-        `http://127.0.0.1:8000/api/desktop/workspaces/${workspaceId}/${endpoint}`,
-        { method: "POST" }
-      );
-
-      const data = await response.json();
+      const data = await runDesktopWorkspaceAction(workspaceId, endpoint);
 
       onAssistantMessage(
         `Desktop Control: ${data.status}\n\n${data.message}\n\n${
