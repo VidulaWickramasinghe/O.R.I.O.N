@@ -1,3 +1,17 @@
+## v6.2 — Production Hardening + Knowledge Validation
+
+### Added
+
+- One-command setup, diagnostics, and combined startup scripts.
+- Comprehensive System Doctor checks for environment, dependencies, repository layout, backend compilation, frontend build configuration, `.gitignore` safety, and backend state.
+- Live `/api/system/doctor` endpoint and upgraded Aurora OS Production Health module.
+- Release hardening checklist documenting the local validation workflow.
+
+### Verified
+
+- Local Knowledge Base indexing, search, API routes, dashboard panel, and context-engine integration remain enabled in the v6.2 release line.
+- System Doctor reports never expose the configured API key value.
+
 ## v6.2 — Patch Release Manager + Hotfix Workflow
 
 ### Added
