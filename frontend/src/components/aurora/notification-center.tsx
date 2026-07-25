@@ -1,13 +1,3 @@
 "use client";
-import { X } from "lucide-react";
-import { notifications } from "@/lib/aurora-data";
-import { useUiStore } from "@/store/ui-store";
-import { GlassPanel } from "./glass-panel";
-import { StatusChip } from "./status-chip";
-
-export function NotificationCenter() {
-  const open = useUiStore((state) => state.notificationsOpen);
-  const setOpen = useUiStore((state) => state.setNotificationsOpen);
-  if (!open) return null;
-  return <div className="fixed inset-0 z-50 bg-black/30" onClick={() => setOpen(false)}><aside className="ml-auto h-full w-full max-w-sm border-l border-white/10 bg-[#05070B]/95 p-5 backdrop-blur-2xl" onClick={(e) => e.stopPropagation()}><div className="flex items-center justify-between"><h2 className="text-lg font-black text-white">Notifications</h2><button aria-label="Close notifications" onClick={() => setOpen(false)} className="rounded-xl border border-white/10 p-2 text-slate-400"><X size={16}/></button></div><div className="mt-5 space-y-3">{notifications.map((note) => <GlassPanel key={note.title} className="p-4"><div className="flex items-center justify-between gap-3"><p className="font-bold text-white">{note.title}</p><StatusChip tone={note.tone}>{note.tone}</StatusChip></div><p className="mt-2 text-sm text-slate-400">{note.detail}</p></GlassPanel>)}</div></aside></div>;
-}
+import { BellOff, X } from "lucide-react"; import { notifications } from "@/lib/aurora-data"; import { useUiStore } from "@/store/ui-store"; import { StatusBadge } from "./data-display/StatusBadge";
+export function NotificationCenter(){const open=useUiStore(s=>s.notificationsOpen);const setOpen=useUiStore(s=>s.setNotificationsOpen);if(!open)return null;return <div className="fixed inset-0 z-[60] bg-black/55" onClick={()=>setOpen(false)}><aside role="dialog" aria-modal="true" aria-label="Notifications" className="ml-auto h-full w-[min(390px,100vw)] border-l border-white/10 bg-slate-950 p-4 shadow-2xl" onClick={event=>event.stopPropagation()}><header className="flex h-12 items-center justify-between"><h2 className="text-lg font-semibold">Notifications</h2><button aria-label="Close notifications" onClick={()=>setOpen(false)} className="aurora-icon-button"><X size={17}/></button></header><div className="mt-4 space-y-3">{notifications.length?notifications.map(note=><article key={note.title} className="rounded-xl border border-white/10 p-4"><div className="flex items-center justify-between gap-3"><p className="font-medium">{note.title}</p><StatusBadge status={note.tone}/></div><p className="mt-2 text-sm text-slate-400">{note.detail}</p></article>):<div className="flex min-h-56 flex-col items-center justify-center text-center"><BellOff className="text-slate-500"/><p className="mt-4 font-medium">No notifications loaded</p><p className="mt-2 text-sm text-slate-500">Connect the backend to retrieve real notification events.</p></div>}</div></aside></div>}

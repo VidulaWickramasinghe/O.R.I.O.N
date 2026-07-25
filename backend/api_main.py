@@ -2027,6 +2027,8 @@ def reject_request(approval_id: int):
         "result": "Rejected by user.",
     }
 
+    internal_prompt = f"""
+You are O.R.I.O.N. running a controlled mission execution cycle.
 
 @app.post("/api/missions/{mission_id}/run-next", response_model=MissionRunResponse)
 async def run_next_mission_step(mission_id: int):
@@ -2357,6 +2359,12 @@ def github_release_checklist(workspace_id: int, request: GitHubReleaseRequest):
         artifact_path=result["artifact_path"],
     )
 
+    return GitHubReleaseResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=result["content"],
+        artifact_path=result["artifact_path"],
+    )
 
 @app.post("/api/workspaces/{workspace_id}/github-release/commit-message", response_model=GitHubReleaseResponse)
 def github_release_commit_message(workspace_id: int, request: GitHubReleaseRequest):
