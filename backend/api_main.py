@@ -2723,6 +2723,11 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
+        return DesktopActionResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to start dev server for workspace {workspace_id}.",
+        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):

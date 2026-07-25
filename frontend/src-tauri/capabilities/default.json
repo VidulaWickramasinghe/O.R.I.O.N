@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability for the O.R.I.O.N. Aurora OS desktop shell. No filesystem or shell permissions are granted in v3.5.",
+  "description": "Default capability for O.R.I.O.N. Aurora OS 6.5. No filesystem or shell permissions are granted.",
   "windows": [
     "main"
   ],
