@@ -273,6 +273,14 @@ from core.stable_release import (
     save_stable_release_report,
     unlock_stable_release,
 )
+from core.post_release_maintenance import (
+    add_known_issue,
+    generate_maintenance_snapshot,
+    generate_patch_plan,
+    load_known_issues,
+    render_maintenance_report,
+    save_maintenance_report,
+)
 from core.frontend_refactor import (
     inspect_frontend_architecture,
     render_frontend_refactor_report,
@@ -476,6 +484,13 @@ from tools.stable_release_tools import (
     lock_stable_release as lock_stable_release_tool,
     unlock_stable_release as unlock_stable_release_tool,
     generate_stable_release_package as generate_stable_release_package_tool,
+)
+
+from tools.post_release_maintenance_tools import (
+    get_post_release_maintenance_report as get_post_release_maintenance_report_tool,
+    save_post_release_maintenance_report as save_post_release_maintenance_report_tool,
+    add_known_issue as add_known_issue_tool,
+    get_patch_plan as get_patch_plan_tool,
 )
 
 
@@ -691,13 +706,26 @@ class SystemDoctorResponse(BaseModel):
 
 
 class PatchReleaseStartRequest(BaseModel):
-    patch_version: str = "v6.0.1"
-    patch_type: str = "maintenance"
-    reason: str = "Post-release maintenance patch."
+    patch_version: str = Field(default="v6.2.1", pattern=r"^v6\.2\.[1-9][0-9]*$")
+    patch_type: Literal["maintenance", "bugfix", "hotfix"] = "maintenance"
+    reason: str = Field(default="Post-release maintenance patch.", min_length=1, max_length=500)
 
 
 class PatchReleaseCompleteRequest(BaseModel):
-    reason: str = "Patch release workflow completed locally."
+    reason: str = Field(default="Patch release workflow completed locally.", min_length=1, max_length=500)
+
+
+class KnownIssueRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    body: str = Field(default="", max_length=5000)
+    source: str = Field(default="manual", min_length=1, max_length=40)
+
+
+class PostReleaseMaintenanceResponse(BaseModel):
+    status: str; generated_at: str; release_version: str; release_name: str
+    passed: int; failed: int; checks: List[Dict[str, Any]]; version_lock: Dict[str, Any]
+    stable_release: Dict[str, Any]; production: Dict[str, Any]; patch_plan: Dict[str, Any]
+    safety: Dict[str, Any]; report: str; path: str = ""
 
 
 @asynccontextmanager
@@ -865,6 +893,10 @@ orion = Agent(
         lock_stable_release_tool,
         unlock_stable_release_tool,
         generate_stable_release_package_tool,
+        get_post_release_maintenance_report_tool,
+        save_post_release_maintenance_report_tool,
+        add_known_issue_tool,
+        get_patch_plan_tool,
     ],
 )
 
@@ -2723,11 +2755,6 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
-        return DesktopActionResponse(
-            status="approval_required",
-            approval_id=approval_id,
-            message=f"Approval required to start dev server for workspace {workspace_id}.",
-        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):
@@ -3919,6 +3946,36 @@ def system_doctor():
     return SystemDoctorResponse(**result, report=report)
 
 
+@app.get("/api/post-release-maintenance/status", response_model=PostReleaseMaintenanceResponse)
+def post_release_maintenance_status():
+    snapshot = generate_maintenance_snapshot()
+    return PostReleaseMaintenanceResponse(**snapshot, report=render_maintenance_report(snapshot))
+
+
+@app.post("/api/post-release-maintenance/report/save", response_model=PostReleaseMaintenanceResponse)
+def post_release_maintenance_report_save():
+    saved = save_maintenance_report(); snapshot = saved["snapshot"]
+    log_activity("POST_RELEASE_MAINTENANCE_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
+    return PostReleaseMaintenanceResponse(**snapshot, report=saved["report"], path=saved["path"])
+
+
+@app.get("/api/post-release-maintenance/issues")
+def post_release_maintenance_issues():
+    return load_known_issues()
+
+
+@app.post("/api/post-release-maintenance/issues/add")
+def post_release_maintenance_issue_add(request: KnownIssueRequest):
+    issue = add_known_issue(request.title, request.body, request.source)
+    log_activity("KNOWN_ISSUE_ADDED", issue["title"], "O.R.I.O.N.")
+    return {"issue": issue, "patch_plan": generate_patch_plan()}
+
+
+@app.get("/api/post-release-maintenance/patch-plan")
+def post_release_maintenance_patch_plan():
+    return generate_patch_plan()
+
+
 @app.get("/api/patch-release/status")
 def patch_release_status():
     """Return the local-only v6.2 patch-release readiness checklist."""
@@ -3929,18 +3986,20 @@ def patch_release_status():
 
 @app.post("/api/patch-release/start")
 def patch_release_start(request: PatchReleaseStartRequest):
-    state = start_patch_release(
-        patch_version=request.patch_version,
-        patch_type=request.patch_type,
-        reason=request.reason,
-    )
+    try:
+        state = start_patch_release(request.patch_version, request.patch_type, request.reason)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     log_activity("PATCH_RELEASE_STARTED", request.reason, "Aurora OS")
     return state
 
 
 @app.post("/api/patch-release/complete")
 def patch_release_complete(request: PatchReleaseCompleteRequest):
-    state = complete_patch_release(reason=request.reason)
+    try:
+        state = complete_patch_release(reason=request.reason)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     log_activity("PATCH_RELEASE_COMPLETED", request.reason, "Aurora OS")
     return state
 
@@ -3954,7 +4013,10 @@ def patch_release_report_save():
 
 @app.post("/api/patch-release/package")
 def patch_release_package():
-    package = generate_patch_release_package()
+    try:
+        package = generate_patch_release_package()
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     log_activity("PATCH_RELEASE_PACKAGE", f"Patch release package generated: {package['summary_path']}", "Aurora OS")
     return package
 

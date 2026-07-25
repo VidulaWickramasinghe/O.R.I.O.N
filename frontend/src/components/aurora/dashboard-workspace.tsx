@@ -43,6 +43,8 @@ import { ToolAuditPanel } from "@/components/aurora/panels/ToolAuditPanel";
 import { ToolPermissionPanel } from "@/components/aurora/panels/ToolPermissionPanel";
 import { PublicLandingPanel } from "@/components/aurora/panels/PublicLandingPanel";
 import { ProductionReadinessPanel } from "@/components/aurora/panels/ProductionReadinessPanel";
+import { PostReleaseMaintenancePanel } from "@/components/aurora/panels/PostReleaseMaintenancePanel";
+import { PatchReleasePanel } from "@/components/aurora/panels/PatchReleasePanel";
 import { StableReleasePanel } from "@/components/aurora/panels/StableReleasePanel";
 import { UIPolishPanel } from "@/components/aurora/panels/UIPolishPanel";
 import { UserSettingsPanel } from "@/components/aurora/panels/UserSettingsPanel";
@@ -216,6 +218,8 @@ export function DashboardWorkspace() {
     "UI Polish",
     "Production Readiness",
     "Stable Public Release",
+    "Post-Release Maintenance",
+    "Patch Release",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -261,7 +265,8 @@ export function DashboardWorkspace() {
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
     recordingModeState, loadRecordingModeStateFromStore, startRecordingModeFromStore, stopRecordingModeFromStore, setRecordingSceneFromStore, toggleRecordingLargeCalloutFromStore, toggleRecordingHideNoisyPanelsFromStore, toggleRecordingTimerFromStore, toggleRecordingChecklistFromStore, resetRecordingModeFromStore,
     demoWalkthroughState, loadDemoWalkthroughStateFromStore, startDemoWalkthroughFromStore, stopDemoWalkthroughFromStore, nextDemoWalkthroughStepFromStore, previousDemoWalkthroughStepFromStore, resetDemoWalkthroughFromStore,
-    productionReadinessResult, finalReleaseCandidateV2, productionReadinessLoading, loadProductionReadinessStatusFromStore, saveProductionReadinessReportFromStore, generateFinalReleaseCandidateV2FromStore, stableReleaseStatus, stableReleasePackage, stableReleaseLoading, loadStableReleaseStatusFromStore, lockStableReleaseFromStore, unlockStableReleaseFromStore, saveStableReleaseReportFromStore, generateStableReleasePackageFromStore,
+    postReleaseMaintenanceResult,knownIssues,patchPlan,postReleaseMaintenanceLoading,loadPostReleaseMaintenanceStatusFromStore,savePostReleaseMaintenanceReportFromStore,loadKnownIssuesFromStore,addKnownIssueFromStore,loadPatchPlanFromStore,patchReleaseStatus,patchReleasePackage,patchReleaseLoading,loadPatchReleaseStatusFromStore,startPatchReleaseFromStore,completePatchReleaseFromStore,savePatchReleaseReportFromStore,generatePatchReleasePackageFromStore,
+        productionReadinessResult, finalReleaseCandidateV2, productionReadinessLoading, loadProductionReadinessStatusFromStore, saveProductionReadinessReportFromStore, generateFinalReleaseCandidateV2FromStore, stableReleaseStatus, stableReleasePackage, stableReleaseLoading, loadStableReleaseStatusFromStore, lockStableReleaseFromStore, unlockStableReleaseFromStore, saveStableReleaseReportFromStore, generateStableReleasePackageFromStore,
         publicLandingResult, publicLandingLoading, loadPublicLandingStatusFromStore, savePublicLandingReportFromStore, uiPolishResult, uiPolishLoading, loadUIPolishStatusFromStore, saveUIPolishReportFromStore,
         panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
   } = useAuroraStore();
@@ -485,6 +490,12 @@ export function DashboardWorkspace() {
             />
           )}
 
+          {widgets.includes("Patch Release") && panelVisible("patch-release") && (
+            <SafePanel panelId="patch-release"><PatchReleasePanel status={patchReleaseStatus} pkg={patchReleasePackage} loading={patchReleaseLoading} onCheck={loadPatchReleaseStatusFromStore} onStart={startPatchReleaseFromStore} onComplete={completePatchReleaseFromStore} onSave={savePatchReleaseReportFromStore} onPackage={generatePatchReleasePackageFromStore}/></SafePanel>
+          )}
+          {widgets.includes("Post-Release Maintenance") && panelVisible("post-release-maintenance") && (
+            <SafePanel panelId="post-release-maintenance"><PostReleaseMaintenancePanel result={postReleaseMaintenanceResult} issues={knownIssues} plan={patchPlan} loading={postReleaseMaintenanceLoading} onCheck={loadPostReleaseMaintenanceStatusFromStore} onSave={savePostReleaseMaintenanceReportFromStore} onLoad={loadKnownIssuesFromStore} onAdd={addKnownIssueFromStore} onPlan={loadPatchPlanFromStore}/></SafePanel>
+          )}
           {widgets.includes("Stable Public Release") && panelVisible("stable-release") && (
             <SafePanel panelId="stable-release"><StableReleasePanel status={stableReleaseStatus} pkg={stableReleasePackage} loading={stableReleaseLoading} onCheck={loadStableReleaseStatusFromStore} onLock={lockStableReleaseFromStore} onUnlock={unlockStableReleaseFromStore} onSave={saveStableReleaseReportFromStore} onPackage={generateStableReleasePackageFromStore}/></SafePanel>
           )}

@@ -894,5 +894,37 @@ class ProductionReleaseTests(unittest.TestCase):
             stable_release.lock_stable_release("x" * 501)
 
 
+class MaintenanceAndPatchTests(unittest.TestCase):
+    def test_known_issue_read_has_no_write_side_effect(self) -> None:
+        from core import post_release_maintenance as maintenance
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path=Path(temp_dir)/"issues.json"
+            with patch.object(maintenance,"ISSUES",path): data=maintenance.load_known_issues()
+            self.assertEqual(data["issues"],[])
+            self.assertFalse(path.exists())
+
+    def test_issue_input_is_bounded_and_security_takes_precedence(self) -> None:
+        from core import post_release_maintenance as maintenance
+        classification=maintenance.classify_issue_text("UI leaks API key")
+        self.assertEqual(classification["category"],"security")
+        self.assertEqual(classification["priority"],"critical")
+        with self.assertRaises(ValueError): maintenance.classify_issue_text("x"*201)
+
+    def test_patch_state_read_is_side_effect_free_and_validated(self) -> None:
+        from core import patch_release
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root=Path(temp_dir); state_path=root/"state.json"
+            with patch.object(patch_release,"PATCH_RELEASE_DIR",root),patch.object(patch_release,"PATCH_STATE_FILE",state_path):
+                self.assertFalse(patch_release.load_patch_state()["active"]); self.assertFalse(state_path.exists())
+                with self.assertRaises(ValueError): patch_release.start_patch_release("v6.0.1")
+                state=patch_release.start_patch_release("v6.2.1","hotfix","urgent fix")
+                self.assertTrue(state["active"]); self.assertEqual(state["patch_type"],"hotfix")
+
+    def test_patch_package_requires_active_workflow(self) -> None:
+        from core import patch_release
+        with patch.object(patch_release,"generate_hotfix_checklist",return_value={"patch_state":{"active":False}}):
+            with self.assertRaises(ValueError): patch_release.generate_patch_release_package()
+
+
 if __name__ == "__main__":
     unittest.main()

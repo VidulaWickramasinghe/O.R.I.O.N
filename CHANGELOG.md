@@ -1113,3 +1113,10 @@
 - Added a validated, atomic local stable-version marker and gated release packaging.
 - Added Production Readiness and Stable Release APIs, agent tools, Aurora panels, and frontend services.
 - Kept all GitHub publishing and generated release artifacts manual and local-only.
+
+## Maintenance and patch workflow hardening
+
+- Added bounded local issue triage, deterministic classification, and atomic known-issue storage.
+- Added maintenance status/report APIs and Aurora issue-triage controls.
+- Validated `v6.2.N` patch versions and patch types, made state reads side-effect free, and gated completion and packaging on an active workflow.
+- Added atomic, collision-safe patch artifacts and local-only safety declarations.

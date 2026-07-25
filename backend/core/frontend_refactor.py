@@ -49,6 +49,8 @@ EXPECTED_FILES = [
     "src/lib/api/ui-polish.ts", "src/components/aurora/panels/UIPolishPanel.tsx",
     "src/lib/api/production-readiness.ts", "src/components/aurora/panels/ProductionReadinessPanel.tsx",
     "src/lib/api/stable-release.ts", "src/components/aurora/panels/StableReleasePanel.tsx",
+    "src/lib/api/post-release-maintenance.ts", "src/components/aurora/panels/PostReleaseMaintenancePanel.tsx",
+    "src/lib/api/patch-release.ts", "src/components/aurora/panels/PatchReleasePanel.tsx",
     "src/lib/api/github-launch.ts", "src/components/aurora/panels/GitHubLaunchPanel.tsx",
     "src/lib/api/final-launch.ts", "src/components/aurora/panels/FinalLaunchPanel.tsx",
     "src/types/recording.ts", "src/lib/recordingRegistry.ts", "src/lib/recordingModeStorage.ts", "src/components/aurora/panels/PresenterControlsPanel.tsx", "src/components/aurora/resilience/RecordingModeOverlay.tsx",

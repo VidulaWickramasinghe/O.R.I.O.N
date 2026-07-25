@@ -94,3 +94,6 @@ backend/data/ui_polish/
 
 backend/data/production_readiness/
 backend/data/stable_release/
+
+backend/data/post_release_maintenance/
+backend/data/patch_release/

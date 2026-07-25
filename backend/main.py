@@ -232,6 +232,13 @@ from tools.stable_release_tools import (
     generate_stable_release_package as generate_stable_release_package_tool,
 )
 
+from tools.post_release_maintenance_tools import (
+    get_post_release_maintenance_report as get_post_release_maintenance_report_tool,
+    save_post_release_maintenance_report as save_post_release_maintenance_report_tool,
+    add_known_issue as add_known_issue_tool,
+    get_patch_plan as get_patch_plan_tool,
+)
+
 
 load_dotenv(dotenv_path="backend/.env")
 
@@ -342,6 +349,10 @@ orion = Agent(
         lock_stable_release_tool,
         unlock_stable_release_tool,
         generate_stable_release_package_tool,
+        get_post_release_maintenance_report_tool,
+        save_post_release_maintenance_report_tool,
+        add_known_issue_tool,
+        get_patch_plan_tool,
     ],
 )
 
