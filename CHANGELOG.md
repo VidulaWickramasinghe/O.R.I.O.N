@@ -1,3 +1,37 @@
+## v6.2 — Dashboard, Reminder, and Profile Safety Hardening
+
+### Improved
+
+- Dashboard Intelligence now renders one consistent analytics snapshot and tolerates invalid mission/workspace metadata.
+- Reminder timestamps are normalized to UTC, relative times must be positive, due refreshes are idempotent, and completed/cancelled reminders are terminal.
+- Reminder and settings API payloads now have explicit size and value constraints, with missing reminders returning HTTP 404.
+- Default workspace preferences must reference a registered workspace, while display names reject multiline and secret-like values.
+- Installation documentation now uses `~/O.R.I.O.N/` and the canonical `VidulaWickramasinghe/O.R.I.O.N` GitHub repository.
+
+## v6.2 — Semantic, Workflow, and Developer Safety Hardening
+
+### Improved
+
+- Vector embeddings now resolve credentials at call time and rebuilds report partial or failed indexing accurately.
+- Workflow missions reject unknown workspace identifiers instead of creating unusable plans.
+- Developer patch paths use path-aware containment checks, validate payload sizes and reasons, and write atomically.
+- Approved file patches preserve uniquely timestamped backups and cannot be replayed after processing.
+- Backend regression tests now cover semantic configuration, rebuild status, workflow validation, and patch safety.
+
+## v6.2 — Production Hardening + Knowledge Validation
+
+### Added
+
+- One-command setup, diagnostics, and combined startup scripts.
+- Comprehensive System Doctor checks for environment, dependencies, repository layout, backend compilation, frontend build configuration, `.gitignore` safety, and backend state.
+- Live `/api/system/doctor` endpoint and upgraded Aurora OS Production Health module.
+- Release hardening checklist documenting the local validation workflow.
+
+### Verified
+
+- Local Knowledge Base indexing, search, API routes, dashboard panel, and context-engine integration remain enabled in the v6.2 release line.
+- System Doctor reports never expose the configured API key value.
+
 ## v6.2 — Patch Release Manager + Hotfix Workflow
 
 ### Added

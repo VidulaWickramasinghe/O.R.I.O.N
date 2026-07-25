@@ -11,8 +11,42 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 ## Current Release
 **v6.2 — Patch Release Manager + Hotfix Workflow**
 
+## Quick Setup
+
+Use the canonical repository and project path for all commands:
+[VidulaWickramasinghe/O.R.I.O.N](https://github.com/VidulaWickramasinghe/O.R.I.O.N).
+
+```bash
+cd ~
+git clone https://github.com/VidulaWickramasinghe/O.R.I.O.N.git O.R.I.O.N
+cd ~/O.R.I.O.N/
+```
+
+Install backend and frontend dependencies, prepare the local environment file,
+and run the backend compile gate with one command:
+
+```bash
+./scripts/setup_orion.sh
+```
+
+Then set `OPENAI_API_KEY` in `backend/.env`, run diagnostics, and launch both
+services:
+
+```bash
+./scripts/doctor.sh
+./scripts/start_orion.sh
+```
+
+Aurora OS is available at `http://localhost:3000`; the local API is available
+at `http://127.0.0.1:8000`.
+
 ## Core Capabilities
 
+- Production Health panel
+- System Doctor environment, dependency, compile, and layout diagnostics
+- One-command local installer
+- Safer combined backend/frontend startup
+- Local Knowledge Base and knowledge-aware context retrieval
 - Presentation-only portfolio screenshot gallery, case study, and demo narrative
 - Local portfolio showcase screenshot-readiness reporting
 
