@@ -1807,6 +1807,7 @@ def mission_runs_for_mission(mission_id: int):
             limit=50,
         )
     )
+    return MissionRunsResponse(runs=list_mission_runs(limit=30))
 
 
 @app.post("/api/missions/{mission_id}/report", response_model=MissionReportResponse)
@@ -1839,6 +1840,7 @@ def mission_report(mission_id: int):
         report_path=report_path,
         status="created",
     )
+    return ApprovalsResponse(approvals=list_approval_requests(limit=30))
 
 
 @app.get("/api/approvals", response_model=ApprovalsResponse)
