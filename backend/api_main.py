@@ -2385,6 +2385,12 @@ def github_release_notes(workspace_id: int, request: GitHubReleaseRequest):
         artifact_path=result["artifact_path"],
     )
 
+    return GitHubReleaseResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=result["content"],
+        artifact_path=result["artifact_path"],
+    )
 
 @app.post("/api/workspaces/{workspace_id}/github-release/checklist", response_model=GitHubReleaseResponse)
 def github_release_checklist(workspace_id: int, request: GitHubReleaseRequest):
@@ -2651,6 +2657,11 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open URL: {request.url}",
+            "O.R.I.O.N.",
+        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):
@@ -2675,6 +2686,10 @@ def desktop_open_url(request: DesktopUrlRequest):
             message=str(error),
         )
 
+@app.get("/api/demo/status", response_model=DemoStatusResponse)
+def demo_status():
+    state = load_demo_state()
+    readiness_report = generate_demo_readiness_report()
 
 @app.get("/api/demo/status", response_model=DemoStatusResponse)
 def demo_status():
