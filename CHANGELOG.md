@@ -1,3 +1,86 @@
+## v6.4 — Roadmap Planner + Future Feature Governance
+
+### Added
+
+- Local future-feature registry, classification, priority scoring, safety review, release buckets, and roadmap packages.
+
+### Safety
+
+- Planning only; no automatic feature implementation, GitHub issue changes, pushes, releases, deletions, or approval bypasses.
+
+## v6.3 — Changelog Intelligence + Release Notes Composer
+
+### Added
+
+- Local changelog, patch-note, GitHub-release-draft, public-summary, and communication-pack composition.
+
+### Safety
+
+- Local drafts only; no GitHub push, publishing, release or issue modification, deletion, or approval bypass.
+
+## v6.2 — Patch Release Manager + Hotfix Workflow
+
+### Added
+
+- Local patch workflow state, patch candidate classifier, hotfix checklist, patch notes, reports, and package artifacts.
+- Patch Release plugin and permission-aware agent tools.
+
+### Safety
+
+- Local planning and artifact generation only: no GitHub issue edits, pushes, publishing, deletions, or approval bypasses.
+
+## v6.1 — Post-Release Maintenance + Issue Triage Mode
+
+- Added local issue triage, known issues, patch planning, and maintenance reporting.
+
+## v6.0 — Stable Public Release + Version Lock
+
+- Added local stable-release lock, checklist, reports, changelog, workflow, and package preparation.
+
+## v5.9 — Production Readiness Snapshot + Final Release Candidate v2
+
+- Added combined local production readiness verification and Final Release Candidate v2 generation.
+
+## v5.8 — Final UI Polish + Mobile Responsive Showcase
+
+- Added responsive public-demo components and UI polish readiness reporting.
+
+## v5.7 — Public Demo Website + Landing Page Export
+
+- Added public demo route, landing readiness core, and static-export checks.
+- Safety: no publishing, GitHub push, secret exposure, or approval bypass.
+
+## v5.6 — GitHub Launch Assistant + Release Draft Prep
+
+- Added local release drafts, badges, templates, safe-push checklist, and launch artifacts.
+- Safety: no push, publishing, deletion, secret exposure, or approval bypass.
+
+## v5.5 — Final Public Launch Checklist + Repository Freeze
+
+- Added final launch checks, repository freeze state, reports, package generation, API, and Aurora panel.
+- Safety: no push, publishing, deletion, secret exposure, or approval bypass.
+
+## v5.4 — Demo Recording Mode + Presenter Controls
+
+### Added
+- Recording mode state, scene presets, presenter controls, overlay, timer, checklist, and clean layout controls
+- Recording readiness core, API, tools, plugin integration, and scanner checks
+
+### Safety
+- Presentation-only; no automatic screen recording, publishing, tool execution, or approval bypass
+
+## v5.3 — Demo Data Mode + Guided Portfolio Walkthrough
+
+### Added
+
+- Demo walkthrough types, registry, local storage, and sample data foundation
+- Guided Walkthrough panel, floating demo callout overlay, and progress controls
+- Demo walkthrough backend core, tools, API endpoints, plugin integration, and scanner checks
+
+### Safety
+
+- Presentation-only; no automatic tool execution, publishing, deletion, secret exposure, or approval bypass
+
 ## v5.2 — Screenshot Gallery + Portfolio Case Study Page
 
 ### Added

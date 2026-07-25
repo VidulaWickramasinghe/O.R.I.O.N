@@ -162,3 +162,5 @@ body {
   background-size: 42px 42px;
   mask-image: linear-gradient(to bottom, black, transparent 82%);
 }
+html { scroll-behavior: smooth; }
+@media (max-width: 640px) { body { overflow-x: hidden; } pre { max-width: 100%; } }

@@ -274,6 +274,18 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {"key": "portfolio_showcase", "name": "Portfolio Showcase", "description": "Presentation-only screenshot gallery and portfolio readiness.", "category": "release", "risk_level": "low", "permissions": ["portfolio_showcase", "screenshot_gallery", "case_study"], "default_enabled": True},
+    {"key":"post_release_maintenance","name":"Post-Release Maintenance","description":"Local issue triage and patch planning.","category":"release","risk_level":"low","permissions":["issue_triage","maintenance_report","patch_planning"],"default_enabled":True},
+    {"key":"patch_release","name":"Patch Release Manager","description":"Local patch planning, hotfix workflow, patch notes, and manual patch packaging.","category":"release","risk_level":"low","permissions":["patch_planning","hotfix_workflow","patch_notes"],"default_enabled":True},
+    {"key":"changelog_intelligence","name":"Changelog Intelligence","description":"Composes local changelog entries, release notes, public summaries, and maintenance communication drafts.","category":"release","risk_level":"low","permissions":["changelog_composer","release_notes","communication_pack"],"default_enabled":True},
+    {"key":"roadmap_planner","name":"Roadmap Planner","description":"Future feature planning, governance, safety review, and release bucket prioritization.","category":"release","risk_level":"low","permissions":["roadmap_planning","feature_governance","priority_scoring"],"default_enabled":True},
+    {"key":"stable_release","name":"Stable Public Release","description":"Stable public release state and version lock.","category":"release","risk_level":"low","permissions":["stable_release","version_lock"],"default_enabled":True},
+    {"key":"production_readiness","name":"Production Readiness","description":"Combined launch verification and Final Release Candidate v2.","category":"release","risk_level":"low","permissions":["production_snapshot"],"default_enabled":True},
+    {"key":"ui_polish","name":"UI Polish","description":"Mobile responsive showcase and public landing presentation readiness.","category":"frontend","risk_level":"low","permissions":["ui_scan"],"default_enabled":True},
+    {"key":"public_landing","name":"Public Landing Page","description":"Public demo website and static export readiness.","category":"release","risk_level":"low","permissions":["landing_page"],"default_enabled":True},
+    {"key":"github_launch","name":"GitHub Launch Assistant","description":"Prepares release draft, badges, templates, and safe push checklist.","category":"release","risk_level":"low","permissions":["release_draft","github_templates","safe_push_checklist"],"default_enabled":True},
+    {"key": "final_launch", "name": "Final Public Launch", "description": "Final launch checklist, repository freeze, release verification, and public portfolio readiness.", "category": "release", "risk_level": "low", "permissions": ["final_launch_checklist", "repository_freeze", "launch_package"], "default_enabled": True},
+    {"key": "demo_recording", "name": "Demo Recording Mode", "description": "Presenter controls, recording layout, scene presets, and demo recording readiness.", "category": "release", "risk_level": "low", "permissions": ["recording_mode", "presenter_controls", "demo_readiness"], "default_enabled": True},
+    {"key": "demo_walkthrough", "name": "Demo Walkthrough", "description": "Guided portfolio walkthrough, demo steps, and presentation-mode reporting.", "category": "release", "risk_level": "low", "permissions": ["demo_mode", "guided_walkthrough", "presentation"], "default_enabled": True},
 ]
 
 
