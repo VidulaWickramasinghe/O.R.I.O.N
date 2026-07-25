@@ -1,6 +1,6 @@
 from agents import function_tool
-from backend.core.tool_logger import instrument_tool
-from backend.core.persistent_memory import (
+from core.tool_logger import instrument_tool
+from core.persistent_memory import (
     save_memory_item,
     list_recent_memory,
     search_memory_items,

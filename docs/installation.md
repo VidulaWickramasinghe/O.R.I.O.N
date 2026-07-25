@@ -3,5 +3,7 @@
 ## 1. Clone Repository
 
 ```bash
-git clone <your-repository-url>
-cd orion-ai
+cd ~
+git clone https://github.com/VidulaWickramasinghe/O.R.I.O.N.git O.R.I.O.N
+cd ~/O.R.I.O.N/
+```
