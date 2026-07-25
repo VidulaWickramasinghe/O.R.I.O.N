@@ -99,6 +99,12 @@ class FrontendRefactorTests(unittest.TestCase):
         self.assertEqual(scan["store_direct_fetch_count"], 0)
         self.assertEqual(scan["store_hardcoded_api_count"], 0)
 
+    def test_frontend_resilience_is_wired_into_dashboard(self) -> None:
+        scan = frontend_refactor.inspect_frontend_architecture()
+
+        self.assertTrue(scan["resilience_ready"])
+        self.assertGreaterEqual(scan["panel_boundary_count"], 15)
+
     def test_report_has_refactor_identity_and_uses_supplied_scan(self) -> None:
         scan = {
             "generated_at": "now",
@@ -111,6 +117,7 @@ class FrontendRefactorTests(unittest.TestCase):
             "files": [],
             "resilience_file_count": 0,
             "resilience_ready": False,
+            "panel_boundary_count": 0,
             "github_polish_panel_exists": False,
             "github_polish_service_exists": False,
             "final_launch_panel_exists": False,
