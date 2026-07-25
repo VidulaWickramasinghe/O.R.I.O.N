@@ -1,3 +1,3 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { OperationalWorkspace } from "@/components/aurora/operational-workspace";
-export default function Page(){return <AppShell><OperationalWorkspace kind="analytics"/></AppShell>}
+import { OperationalAnalytics } from "@/components/analytics/operational-analytics";
+export default function Page(){return <AppShell><OperationalAnalytics/></AppShell>}
