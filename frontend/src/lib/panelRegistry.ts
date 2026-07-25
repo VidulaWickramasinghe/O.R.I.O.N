@@ -11,3 +11,28 @@ export const createDefaultPanelLayout=():AuroraPanelLayoutItem[]=>AURORA_PANEL_R
 export const getPanelDefinition=(id:AuroraPanelId)=>AURORA_PANEL_REGISTRY.find(x=>x.id===id); export const getDashboardPreset=(id:AuroraDashboardViewId)=>AURORA_DASHBOARD_PRESETS.find(x=>x.id===id);
 export const createLayoutFromPreset=(id:AuroraDashboardViewId):AuroraPanelLayoutItem[]=>{const preset=getDashboardPreset(id);if(!preset)return createDefaultPanelLayout();return AURORA_PANEL_REGISTRY.map(x=>({id:x.id,visible:preset.panelIds.includes(x.id),pinned:preset.pinnedPanelIds.includes(x.id),order:x.defaultOrder}));};
 export const sortPanelLayout=(layout:AuroraPanelLayoutItem[])=>[...layout].sort((a,b)=>a.pinned===b.pinned?a.order-b.order:a.pinned?-1:1);
+
+/** Move a panel without mutating Zustand's current state. Pinned and unpinned
+ * panels are separate ordering groups, so an arrow action never appears to do
+ * nothing by swapping across the pinned boundary. */
+export function movePanelLayoutItem(
+  layout: AuroraPanelLayoutItem[],
+  id: AuroraPanelId,
+  direction: -1 | 1
+): AuroraPanelLayoutItem[] {
+  const copied = layout.map((item) => ({ ...item }));
+  const current = copied.find((item) => item.id === id);
+  if (!current) return sortPanelLayout(copied);
+
+  const group = sortPanelLayout(copied).filter(
+    (item) => item.pinned === current.pinned
+  );
+  const index = group.findIndex((item) => item.id === id);
+  const target = group[index + direction];
+  if (!target) return sortPanelLayout(copied);
+
+  const currentOrder = current.order;
+  current.order = target.order;
+  target.order = currentOrder;
+  return sortPanelLayout(copied);
+}

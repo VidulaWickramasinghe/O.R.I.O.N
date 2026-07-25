@@ -65,10 +65,10 @@ def research_web_page(url: str) -> str:
         return f"""
 Title: {page['title']}
 URL: {page['final_url']}
-Captured: {page['captured_at']}
+Captured: {page['created_at']}
 
 Readable Text Preview:
-{page['text'][:6000]}
+{page['content_preview'][:6000]}
 """.strip()
 
     except Exception as error:
