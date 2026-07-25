@@ -45,6 +45,10 @@ backend/data/*.sqlite
 backend/data/*.sqlite3
 backend/data/*.db
 backend/data/sidecar/
+backend/data/quality_gate_reports/
+backend/data/public_release/
+backend/data/github_polish/
+backend/data/portfolio_showcase/
 
 # Archives and generated media
 *.zip

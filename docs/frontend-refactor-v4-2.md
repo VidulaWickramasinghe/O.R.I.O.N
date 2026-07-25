@@ -26,3 +26,6 @@ frontend/src/types
 
 The refactor is structural and preserves Aurora OS styling. It does not redesign
 the interface or perform destructive cleanup.
+
+Architecture reports reuse one scan snapshot and are saved atomically under the
+frontend-refactor report directory with collision-safe filenames.
