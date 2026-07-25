@@ -160,6 +160,12 @@ type DeveloperInspectResult = {
 
 
 export function DashboardWorkspace() {
+  const loadDemoWalkthroughStateFromStore = useAuroraStore(
+    (state) => state.loadDemoWalkthroughStateFromStore,
+  );
+  const loadRecordingModeStateFromStore = useAuroraStore(
+    (state) => state.loadRecordingModeStateFromStore,
+  );
   const [widgets, setWidgets] = useState([
     "Hero",
     "Metrics",
@@ -284,7 +290,11 @@ export function DashboardWorkspace() {
   useEffect(() => {
     void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
     void loadWorkspaces(); void loadDeveloperReports();
-    restoreDashboardPreferences();
+    const store = useAuroraStore.getState();
+    void store.loadPanelLayout();
+    loadDemoWalkthroughStateFromStore();
+    loadRecordingModeStateFromStore();
+    void store.loadActiveDashboardView();
     void useAuroraStore.getState().refreshAll();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();

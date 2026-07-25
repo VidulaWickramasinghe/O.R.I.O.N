@@ -120,9 +120,13 @@ class FrontendRefactorTests(unittest.TestCase):
             / "dashboard-workspace.tsx"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("restoreDashboardPreferences();", dashboard)
-        self.assertIn("const store = useAuroraStore.getState();", dashboard)
-        self.assertNotIn(
+        self.assertIn(
+            "const loadDemoWalkthroughStateFromStore = useAuroraStore(", dashboard
+        )
+        self.assertIn(
+            "const loadRecordingModeStateFromStore = useAuroraStore(", dashboard
+        )
+        self.assertIn(
             "[loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore]",
             dashboard,
         )

@@ -209,7 +209,7 @@ export function AnalyticsOverview() {
               <path d={chart.path} fill="none" stroke="#67e8f9" strokeWidth="3" strokeLinecap="round" filter="url(#analyticsGlow)" />
               {chart.points.map((point, index) => (
                 <g key={`${data[index].label}-${point.value}`}>
-                  <circle cx={point.x} cy={point.y} r="9" fill="transparent"><title>{data[index].label}: {series === "latency" ? `${point.value} ms` : `${point.value} executions`}</title></circle>
+                  <circle cx={point.x} cy={point.y} r="9" fill="transparent"><title>{`${data[index].label}: ${series === "latency" ? `${point.value} ms` : `${point.value} executions`}`}</title></circle>
                   <circle cx={point.x} cy={point.y} r={index === chart.points.length - 1 ? 4.5 : 3} fill="#071018" stroke="#67e8f9" strokeWidth="2" />
                 </g>
               ))}
