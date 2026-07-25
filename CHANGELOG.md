@@ -1,33 +1,16 @@
-## v6.5 — Safety Review Board + Feature Approval Workflow
+## v6.2 — Production Hardening + Knowledge Validation
 
 ### Added
 
-- Local feature risk scoring, review decisions, required controls, development eligibility, reports, and approval packages.
-- Rebuilt Aurora OS shell, mission-first dashboard, responsive navigation, context rail, assistant dock, operational workspaces, central version configuration, and shared UI states.
+- One-command setup, diagnostics, and combined startup scripts.
+- Comprehensive System Doctor checks for environment, dependencies, repository layout, backend compilation, frontend build configuration, `.gitignore` safety, and backend state.
+- Live `/api/system/doctor` endpoint and upgraded Aurora OS Production Health module.
+- Release hardening checklist documenting the local validation workflow.
 
-### Safety
+### Verified
 
-- Governance decisions only; no implementation, GitHub issue changes, pushes, publishing, deletion, or approval bypass.
-
-## v6.4 — Roadmap Planner + Future Feature Governance
-
-### Added
-
-- Local future-feature registry, classification, priority scoring, safety review, release buckets, and roadmap packages.
-
-### Safety
-
-- Planning only; no automatic feature implementation, GitHub issue changes, pushes, releases, deletions, or approval bypasses.
-
-## v6.3 — Changelog Intelligence + Release Notes Composer
-
-### Added
-
-- Local changelog, patch-note, GitHub-release-draft, public-summary, and communication-pack composition.
-
-### Safety
-
-- Local drafts only; no GitHub push, publishing, release or issue modification, deletion, or approval bypass.
+- Local Knowledge Base indexing, search, API routes, dashboard panel, and context-engine integration remain enabled in the v6.2 release line.
+- System Doctor reports never expose the configured API key value.
 
 ## v6.2 — Patch Release Manager + Hotfix Workflow
 

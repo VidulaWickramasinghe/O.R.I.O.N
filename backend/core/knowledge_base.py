@@ -84,11 +84,13 @@ def _chunk_text(text: str, chunk_size: int = 1800, overlap: int = 200) -> List[s
     start = 0
 
     while start < len(clean):
-        end = start + chunk_size
+        end = min(start + chunk_size, len(clean))
         chunk = clean[start:end].strip()
         if chunk:
             chunks.append(chunk)
-        start = max(end - overlap, end)
+        if end == len(clean):
+            break
+        start = end - overlap
 
     return chunks
 
