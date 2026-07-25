@@ -1,3 +1,27 @@
+## v6.2 — Semantic, Workflow, and Developer Safety Hardening
+
+### Improved
+
+- Vector embeddings now resolve credentials at call time and rebuilds report partial or failed indexing accurately.
+- Workflow missions reject unknown workspace identifiers instead of creating unusable plans.
+- Developer patch paths use path-aware containment checks, validate payload sizes and reasons, and write atomically.
+- Approved file patches preserve uniquely timestamped backups and cannot be replayed after processing.
+- Backend regression tests now cover semantic configuration, rebuild status, workflow validation, and patch safety.
+
+## v6.2 — Production Hardening + Knowledge Validation
+
+### Added
+
+- One-command setup, diagnostics, and combined startup scripts.
+- Comprehensive System Doctor checks for environment, dependencies, repository layout, backend compilation, frontend build configuration, `.gitignore` safety, and backend state.
+- Live `/api/system/doctor` endpoint and upgraded Aurora OS Production Health module.
+- Release hardening checklist documenting the local validation workflow.
+
+### Verified
+
+- Local Knowledge Base indexing, search, API routes, dashboard panel, and context-engine integration remain enabled in the v6.2 release line.
+- System Doctor reports never expose the configured API key value.
+
 ## v6.2 — Patch Release Manager + Hotfix Workflow
 
 ### Added
