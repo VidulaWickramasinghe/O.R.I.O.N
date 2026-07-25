@@ -1,32 +1,3 @@
 "use client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Bot, ChevronLeft, ChevronRight } from "lucide-react";
-import { navItems } from "@/lib/aurora-data";
-import { cn } from "@/lib/utils";
-import { useUiStore } from "@/store/ui-store";
-
-export function Sidebar() {
-  const pathname = usePathname();
-  const collapsed = useUiStore((state) => state.sidebarCollapsed);
-  const toggleSidebar = useUiStore((state) => state.toggleSidebar);
-  return (
-    <aside className={cn("flex h-screen shrink-0 flex-col border-r border-white/10 bg-[#05070B]/80 backdrop-blur-2xl transition-all duration-150", collapsed ? "w-[82px]" : "w-[260px]")}> 
-      <div className="flex h-20 items-center gap-3 border-b border-white/10 px-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[#61DFFF]/30 bg-[#4F8BFF]/15 text-[#61DFFF]"><Bot /></div>
-        {!collapsed && <div><p className="font-black tracking-[0.28em] text-white">O.R.I.O.N.</p><p className="text-xs text-slate-500">Aurora OS v2.0</p></div>}
-        <button aria-label="Toggle sidebar" onClick={toggleSidebar} className="ml-auto rounded-xl border border-white/10 p-2 text-slate-400 hover:text-white">{collapsed ? <ChevronRight size={16}/> : <ChevronLeft size={16}/>}</button>
-      </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {navItems.map((item) => {
-          const active = pathname === item.href;
-          const Icon = item.icon;
-          return <Link key={item.href} href={item.href} className={cn("flex items-center gap-3 rounded-[14px] px-3 py-3 text-sm font-semibold transition duration-150", collapsed && "justify-center", active ? "border border-[#4F8BFF]/45 bg-[#4F8BFF]/15 text-white shadow-[0_0_24px_rgba(79,139,255,0.16)]" : "text-slate-400 hover:bg-white/[0.05] hover:text-white")}><Icon size={18}/>{!collapsed && item.label}</Link>;
-        })}
-      </nav>
-      <div className="space-y-3 border-t border-white/10 p-3 text-xs text-slate-400">
-        {!collapsed && <><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><p className="font-bold text-white">Wichel Mercer</p><p>System Architect</p></div><div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-3 text-emerald-200">API Status: Operational</div><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3">Models: GPT-5.5 · Claude · Gemini</div><p>v2.0.0 · Build 2026.07.04</p></>}
-      </div>
-    </aside>
-  );
-}
+import Link from "next/link"; import { usePathname } from "next/navigation"; import { Bot, ChevronLeft, ChevronRight, X } from "lucide-react"; import { navigationGroups } from "@/lib/aurora-data"; import { ORION_BUILD } from "@/lib/orion-build"; import { cn } from "@/lib/utils"; import { useUiStore } from "@/store/ui-store";
+export function Sidebar(){const path=usePathname();const collapsed=useUiStore(s=>s.sidebarCollapsed);const mobileOpen=useUiStore(s=>s.mobileNavOpen);const toggle=useUiStore(s=>s.toggleSidebar);const close=useUiStore(s=>s.setMobileNavOpen);return <><button aria-label="Close navigation" onClick={()=>close(false)} className={cn("fixed inset-0 z-40 bg-black/65 lg:hidden",mobileOpen?"block":"hidden")}/><aside className={cn("fixed inset-y-0 left-0 z-50 flex max-w-[calc(100vw-2rem)] flex-col border-r border-white/10 bg-slate-950/95 backdrop-blur-2xl transition-[width,transform] duration-200 lg:static lg:z-auto",collapsed?"lg:w-20":"lg:w-64",mobileOpen?"w-72 translate-x-0":"w-72 -translate-x-full lg:translate-x-0")}><div className="flex h-[72px] shrink-0 items-center gap-3 border-b border-white/10 px-4"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-200"><Bot/></div>{!collapsed&&<div className="min-w-0"><p className="truncate font-bold tracking-[0.2em]">{ORION_BUILD.product}</p><p className="text-xs text-slate-500">{ORION_BUILD.interface}</p></div>}<button aria-label="Close navigation" onClick={()=>close(false)} className="ml-auto rounded-lg p-2 text-slate-400 lg:hidden"><X/></button><button aria-label={collapsed?"Expand sidebar":"Collapse sidebar"} aria-expanded={!collapsed} onClick={toggle} className="ml-auto hidden rounded-lg border border-white/10 p-2 text-slate-400 hover:text-white lg:block">{collapsed?<ChevronRight size={16}/>:<ChevronLeft size={16}/>}</button></div><nav aria-label="Main navigation" className="min-h-0 flex-1 overflow-y-auto px-3 py-4">{navigationGroups.map(group=><div key={group.label} className="mb-5"><p className={cn("mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-600",collapsed&&"sr-only")}>{group.label}</p><div className="space-y-1">{group.items.map(item=>{const Icon=item.icon;const active=path===item.href;return <Link key={item.href} href={item.href} title={collapsed?item.label:undefined} aria-current={active?"page":undefined} onClick={()=>close(false)} className={cn("flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition",collapsed&&"lg:justify-center",active?"border border-cyan-300/20 bg-cyan-300/10 text-cyan-100":"text-slate-400 hover:bg-white/[0.05] hover:text-white")}><Icon size={18} className="shrink-0"/>{!collapsed&&<span className="truncate">{item.label}</span>}</Link>})}</div></div>)}</nav>{!collapsed&&<footer className="border-t border-white/10 p-4 text-xs text-slate-500"><p>{ORION_BUILD.channel} · v{ORION_BUILD.version}</p><p className="mt-1">Build {ORION_BUILD.build}</p></footer>}</aside></>}
