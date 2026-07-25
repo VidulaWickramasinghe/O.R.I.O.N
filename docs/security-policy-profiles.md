@@ -22,6 +22,10 @@ Development-focused mode. Enables advanced developer modules while preserving ap
 
 - Approval gates remain active.
 - Protected plugins cannot be disabled by policy profiles.
+- Strict Mode disables newly registered, non-protected plugins by default until
+  they are explicitly classified in the profile.
+- A failed policy audit restores the previous plugin states, safety setting, and
+  active policy rather than leaving a partially applied profile.
 - Security Policy changes are logged in policy events.
 - Security Policy changes also create audit events.
 - v3.9 does not execute third-party plugin code.

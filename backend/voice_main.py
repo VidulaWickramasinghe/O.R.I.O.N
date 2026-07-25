@@ -199,6 +199,47 @@ from tools.demo_recording_tools import (
     get_demo_recording_report,
     save_demo_recording_report,
 )
+
+from tools.final_launch_tools import (
+    get_final_launch_report as get_final_launch_report_tool,
+    save_final_launch_report as save_final_launch_report_tool,
+    freeze_final_launch as freeze_final_launch_tool,
+    unfreeze_final_launch as unfreeze_final_launch_tool,
+    generate_final_launch_package as generate_final_launch_package_tool,
+)
+from tools.github_launch_tools import (
+    get_github_launch_report as get_github_launch_report_tool,
+    save_github_launch_artifacts as save_github_launch_artifacts_tool,
+)
+
+from tools.public_landing_tools import (
+    get_public_landing_report as get_public_landing_report_tool,
+    save_public_landing_report as save_public_landing_report_tool,
+)
+from tools.ui_polish_tools import (
+    get_ui_polish_report as get_ui_polish_report_tool,
+    save_ui_polish_report as save_ui_polish_report_tool,
+)
+
+from tools.production_readiness_tools import (
+    get_production_readiness_report as get_production_readiness_report_tool,
+    save_production_readiness_report as save_production_readiness_report_tool,
+    generate_final_release_candidate_v2 as generate_final_release_candidate_v2_tool,
+)
+from tools.stable_release_tools import (
+    get_stable_release_report as get_stable_release_report_tool,
+    save_stable_release_report as save_stable_release_report_tool,
+    lock_stable_release as lock_stable_release_tool,
+    unlock_stable_release as unlock_stable_release_tool,
+    generate_stable_release_package as generate_stable_release_package_tool,
+)
+
+from tools.post_release_maintenance_tools import (
+    get_post_release_maintenance_report as get_post_release_maintenance_report_tool,
+    save_post_release_maintenance_report as save_post_release_maintenance_report_tool,
+    add_known_issue as add_known_issue_tool,
+    get_patch_plan as get_patch_plan_tool,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -290,6 +331,29 @@ orion = Agent(
         save_demo_walkthrough_report,
         get_demo_recording_report,
         save_demo_recording_report,
+        get_final_launch_report_tool,
+        save_final_launch_report_tool,
+        freeze_final_launch_tool,
+        unfreeze_final_launch_tool,
+        generate_final_launch_package_tool,
+        get_github_launch_report_tool,
+        save_github_launch_artifacts_tool,
+        get_public_landing_report_tool,
+        save_public_landing_report_tool,
+        get_ui_polish_report_tool,
+        save_ui_polish_report_tool,
+        get_production_readiness_report_tool,
+        save_production_readiness_report_tool,
+        generate_final_release_candidate_v2_tool,
+        get_stable_release_report_tool,
+        save_stable_release_report_tool,
+        lock_stable_release_tool,
+        unlock_stable_release_tool,
+        generate_stable_release_package_tool,
+        get_post_release_maintenance_report_tool,
+        save_post_release_maintenance_report_tool,
+        add_known_issue_tool,
+        get_patch_plan_tool,
     ],
 )
 

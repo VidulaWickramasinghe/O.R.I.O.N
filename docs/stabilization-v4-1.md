@@ -12,6 +12,10 @@ build health.
 The Stabilization Manager only scans and reports. It never deletes or rewrites
 files; any cleanup edit remains subject to O.R.I.O.N.'s existing approval flow.
 
+Scans reuse a single diagnostic snapshot for their checklist, API response, and
+report. Saved reports use atomic writes and unique timestamps. Import checks
+inspect Python syntax rather than flagging matching words in documentation.
+
 ## API
 
 ```text

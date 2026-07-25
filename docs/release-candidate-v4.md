@@ -12,6 +12,10 @@ System Freeze marks O.R.I.O.N. as being in release-candidate mode. It does
 not push to GitHub, delete files, publish releases, disable approval gates, or
 execute uncontrolled commands.
 
+A release-candidate diagnostics package can only be generated while System
+Freeze is active. Package artifacts are written atomically with unique local
+timestamps to prevent partial or same-second overwrites.
+
 ## Release Package Contents
 
 Packages are written locally to `backend/data/release_candidates/` and include:

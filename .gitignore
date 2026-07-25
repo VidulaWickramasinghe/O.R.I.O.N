@@ -45,6 +45,14 @@ backend/data/*.sqlite
 backend/data/*.sqlite3
 backend/data/*.db
 backend/data/sidecar/
+backend/data/quality_gate_reports/
+backend/data/public_release/
+backend/data/github_polish/
+backend/data/portfolio_showcase/
+backend/data/demo_walkthrough/
+backend/data/demo_recording/
+backend/data/final_launch/
+backend/data/github_launch/
 
 # Archives and generated media
 *.zip
@@ -81,3 +89,11 @@ Thumbs.db
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+backend/data/public_landing/
+backend/data/ui_polish/
+
+backend/data/production_readiness/
+backend/data/stable_release/
+
+backend/data/post_release_maintenance/
+backend/data/patch_release/

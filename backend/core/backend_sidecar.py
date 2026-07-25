@@ -4,6 +4,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -40,22 +41,47 @@ def load_sidecar_state() -> Dict[str, Any]:
         save_sidecar_state(DEFAULT_STATE.copy())
 
     try:
-        return json.loads(SIDECAR_STATE_FILE.read_text(encoding="utf-8"))
-    except json.JSONDecodeError:
+        loaded = json.loads(SIDECAR_STATE_FILE.read_text(encoding="utf-8"))
+        if not isinstance(loaded, dict):
+            raise TypeError("Sidecar state must be a JSON object.")
+        return {**DEFAULT_STATE, **loaded}
+    except (json.JSONDecodeError, OSError, TypeError):
         save_sidecar_state(DEFAULT_STATE.copy())
         return DEFAULT_STATE.copy()
 
 
 def save_sidecar_state(state: Dict[str, Any]) -> None:
-    state["updated_at"] = _now()
-    SIDECAR_STATE_FILE.write_text(json.dumps(state, indent=2), encoding="utf-8")
+    SIDECAR_DIR.mkdir(parents=True, exist_ok=True)
+    payload = {
+        key: state.get(key, default)
+        for key, default in DEFAULT_STATE.items()
+    }
+    payload["updated_at"] = _now()
+    state.update(payload)
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=SIDECAR_DIR, delete=False
+    ) as handle:
+        json.dump(payload, handle, indent=2)
+        handle.write("\n")
+        temporary_path = Path(handle.name)
+    temporary_path.replace(SIDECAR_STATE_FILE)
+
+
+def _validate_endpoint(host: str, port: int) -> tuple[str, int]:
+    clean_host = str(host).strip()
+    if clean_host not in {"127.0.0.1", "localhost", "::1"}:
+        raise ValueError("Backend sidecar must bind to a loopback host.")
+    clean_port = int(port)
+    if not 1 <= clean_port <= 65535:
+        raise ValueError("Backend sidecar port must be between 1 and 65535.")
+    return clean_host, clean_port
 
 
 def is_port_open(host: str = "127.0.0.1", port: int = 8000, timeout: float = 0.5) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
-    except OSError:
+    except (OSError, TypeError, ValueError):
         return False
 
 
@@ -65,19 +91,40 @@ def is_pid_running(pid: Optional[int]) -> bool:
     try:
         os.kill(int(pid), 0)
         return True
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+def is_managed_backend_process(pid: Optional[int]) -> bool:
+    """Return true only when a live PID matches this sidecar's uvicorn command."""
+    if not is_pid_running(pid):
+        return False
+    proc_cmdline = Path(f"/proc/{int(pid)}/cmdline")
+    if not proc_cmdline.exists():
+        return False
+    try:
+        command = proc_cmdline.read_bytes().replace(b"\0", b" ").decode(errors="ignore")
     except OSError:
         return False
+    return "uvicorn" in command and "backend.api_main:app" in command
 
 
 def get_sidecar_status() -> Dict[str, Any]:
     state = load_sidecar_state()
+    try:
+        host, port = _validate_endpoint(
+            state.get("host", "127.0.0.1"), state.get("port", 8000)
+        )
+    except (TypeError, ValueError):
+        host, port = "127.0.0.1", 8000
+        state.update(
+            {"host": host, "port": port, "backend_url": f"http://{host}:{port}"}
+        )
     pid_running = is_pid_running(state.get("pid"))
-    port_open = is_port_open(
-        host=state.get("host", "127.0.0.1"),
-        port=int(state.get("port", 8000)),
-    )
+    managed_process = is_managed_backend_process(state.get("pid"))
+    port_open = is_port_open(host=host, port=port)
 
-    if pid_running and port_open:
+    if managed_process and port_open:
         status = "running"
     elif port_open:
         status = "external_backend_detected"
@@ -92,6 +139,7 @@ def get_sidecar_status() -> Dict[str, Any]:
     return {
         **state,
         "pid_running": pid_running,
+        "managed_process": managed_process,
         "port_open": port_open,
         "log_file": str(SIDECAR_LOG_FILE),
         "state_file": str(SIDECAR_STATE_FILE),
@@ -99,10 +147,16 @@ def get_sidecar_status() -> Dict[str, Any]:
 
 
 def start_backend_sidecar(host: str = "127.0.0.1", port: int = 8000) -> Dict[str, Any]:
+    host, port = _validate_endpoint(host, port)
     current = get_sidecar_status()
-    if current["port_open"]:
+    requested_port_open = is_port_open(host, port)
+    if current.get("managed_process") or requested_port_open:
         current["status"] = "already_running"
         current["last_error"] = ""
+        if requested_port_open:
+            current.update(
+                {"host": host, "port": port, "backend_url": f"http://{host}:{port}"}
+            )
         save_sidecar_state(current)
         return current
 
@@ -118,15 +172,16 @@ def start_backend_sidecar(host: str = "127.0.0.1", port: int = 8000) -> Dict[str
     ]
 
     try:
-        log_file = SIDECAR_LOG_FILE.open("a", encoding="utf-8")
-        process = subprocess.Popen(
-            command,
-            cwd=PROJECT_ROOT,
-            stdout=log_file,
-            stderr=log_file,
-            stdin=subprocess.DEVNULL,
-            start_new_session=True,
-        )
+        SIDECAR_DIR.mkdir(parents=True, exist_ok=True)
+        with SIDECAR_LOG_FILE.open("a", encoding="utf-8") as log_file:
+            process = subprocess.Popen(
+                command,
+                cwd=PROJECT_ROOT,
+                stdout=log_file,
+                stderr=log_file,
+                stdin=subprocess.DEVNULL,
+                start_new_session=True,
+            )
         state = load_sidecar_state()
         state.update(
             {
@@ -164,6 +219,27 @@ def stop_backend_sidecar() -> Dict[str, Any]:
         return get_sidecar_status()
 
     try:
+        if is_pid_running(pid) and not is_managed_backend_process(pid):
+            state["status"] = "stop_blocked"
+            state["last_error"] = (
+                "Stored PID is not a verified O.R.I.O.N. backend process."
+            )
+            save_sidecar_state(state)
+            result = get_sidecar_status()
+            return {
+                **result,
+                "status": "stop_blocked",
+                "last_error": state["last_error"],
+            }
+        if int(pid) == os.getpid():
+            state["status"] = "stop_blocked"
+            state["last_error"] = "The backend cannot stop itself through its own API response."
+            save_sidecar_state(state)
+            return {
+                **get_sidecar_status(),
+                "status": "stop_blocked",
+                "last_error": state["last_error"],
+            }
         if is_pid_running(pid):
             os.killpg(os.getpgid(int(pid)), signal.SIGTERM)
         state["status"] = "stopped"
@@ -178,12 +254,14 @@ def stop_backend_sidecar() -> Dict[str, Any]:
 
 
 def restart_backend_sidecar() -> Dict[str, Any]:
-    stop_backend_sidecar()
+    stopped = stop_backend_sidecar()
+    if stopped.get("status") == "stop_blocked":
+        return stopped
     return start_backend_sidecar()
 
 
-def render_sidecar_report() -> str:
-    status = get_sidecar_status()
+def render_sidecar_report(status: Optional[Dict[str, Any]] = None) -> str:
+    status = status or get_sidecar_status()
     return f"""# O.R.I.O.N. Backend Sidecar Report
 
 ## Status
