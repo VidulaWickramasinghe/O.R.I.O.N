@@ -238,7 +238,7 @@ from core.patch_release import (
     start_patch_release,
 )
 from core.github_polish import generate_github_polish_checklist, render_github_polish_report, save_github_polish_artifacts
-from core.public_release import generate_public_release_package, render_public_release_report
+from core.public_release import generate_public_release_package, get_latest_public_release_package, render_public_release_report
 from core.release_verification import run_quality_gate_snapshot, render_release_verification_report, save_release_verification_report
 from core.frontend_refactor import (
     inspect_frontend_architecture,
@@ -3452,13 +3452,16 @@ def desktop_shell_status():
 @app.post("/api/quality-gate/run", response_model=QualityGateResponse)
 def quality_gate_run(request: QualityGateRequest):
     result = run_quality_gate_snapshot(request.run_builds)
-    return QualityGateResponse(**result, report=render_release_verification_report())
+    return QualityGateResponse(
+        **result,
+        report=render_release_verification_report(result["verification"]),
+    )
 
 
 @app.post("/api/quality-gate/report/save", response_model=QualityGateResponse)
 def quality_gate_report_save():
     saved = save_release_verification_report()
-    result = run_quality_gate_snapshot(False)
+    result = run_quality_gate_snapshot(False, verification=saved["snapshot"])
     return QualityGateResponse(**result, report=saved["report"], path=saved["path"])
 
 
@@ -3466,12 +3469,16 @@ def quality_gate_report_save():
 @app.post("/api/public-release/package", response_model=PublicReleasePackageResponse)
 def public_release_package():
     result = generate_public_release_package()
-    return PublicReleasePackageResponse(**result, report=render_public_release_report())
+    return PublicReleasePackageResponse(
+        **result, report=render_public_release_report(result)
+    )
 
 @app.get("/api/public-release/report", response_model=PublicReleasePackageResponse)
 def public_release_report():
-    result = generate_public_release_package()
-    return PublicReleasePackageResponse(**result, report=render_public_release_report())
+    result = get_latest_public_release_package()
+    return PublicReleasePackageResponse(
+        **result, report=render_public_release_report(result)
+    )
 
 
 

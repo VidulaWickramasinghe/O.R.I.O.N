@@ -14,7 +14,9 @@ from core import (
     frontend_refactor,
     notification_engine,
     plugin_registry,
+    public_release,
     release_candidate,
+    release_verification,
     security_policy,
     stabilization_manager,
     tool_audit,
@@ -155,6 +157,67 @@ class FrontendRefactorTests(unittest.TestCase):
         self.assertTrue(
             report.startswith("# O.R.I.O.N. v6.2 Frontend Service Architecture Report")
         )
+
+
+class ReleaseVerificationTests(unittest.TestCase):
+    def test_quality_gate_runs_both_scripts_when_requested(self) -> None:
+        verification = {
+            "status": "passed",
+            "generated_at": "now",
+            "passed": 1,
+            "failed": 0,
+            "checks": [],
+        }
+        with patch.object(
+            release_verification,
+            "generate_release_verification_snapshot",
+            return_value=verification,
+        ), patch.object(
+            release_verification,
+            "_run_script",
+            side_effect=[
+                {"ok": True, "command": "backend"},
+                {"ok": False, "command": "frontend"},
+            ],
+        ) as run:
+            result = release_verification.run_quality_gate_snapshot(True)
+
+        self.assertEqual(run.call_count, 2)
+        self.assertEqual(result["status"], "failed")
+        self.assertTrue(result["backend_check"]["ok"])
+        self.assertFalse(result["frontend_check"]["ok"])
+
+    def test_public_release_report_is_read_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            with patch.object(public_release, "OUT", output):
+                report = public_release.render_public_release_report()
+
+            self.assertIn("Status: not_generated", report)
+            self.assertEqual(list(output.glob("*")), [])
+
+    def test_public_release_package_uses_unique_atomic_artifacts(self) -> None:
+        verification = {
+            "status": "passed",
+            "generated_at": "now",
+            "passed": 0,
+            "failed": 0,
+            "checks": [],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            with patch.object(public_release, "OUT", output), patch.object(
+                public_release,
+                "generate_release_verification_snapshot",
+                return_value=verification,
+            ):
+                first = public_release.generate_public_release_package()
+                second = public_release.generate_public_release_package()
+
+            self.assertNotEqual(first["summary_path"], second["summary_path"])
+            self.assertTrue(Path(first["summary_path"]).is_file())
+            self.assertTrue(Path(second["summary_path"]).is_file())
+            self.assertFalse(any(path.name.startswith("tmp") for path in output.iterdir()))
 
 
 class SecurityPolicyTests(unittest.TestCase):
