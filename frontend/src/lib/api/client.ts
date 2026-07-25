@@ -1,4 +1,4 @@
-import { runtimeConfig } from "@/lib/config/runtime";
+import { getBrowserApiBaseUrl, RuntimeConfigurationError, runtimeConfig } from "@/lib/config/runtime";
 
 export const ORION_API_BASE = runtimeConfig.apiBaseUrl;
 
@@ -39,7 +39,7 @@ function apiUrl(path: string, query?: ApiRequestOptions["query"]): string {
   if (!path.startsWith("/") || path.startsWith("//")) {
     throw new Error("O.R.I.O.N. API paths must be root-relative.");
   }
-  const url = new URL(`${ORION_API_BASE}${path}`);
+  const url = new URL(`${getBrowserApiBaseUrl()}${path}`);
   Object.entries(query ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
   });
@@ -112,6 +112,9 @@ export async function apiRequest<T>(method: string, path: string, options: ApiRe
     return payload as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
+    if (error instanceof RuntimeConfigurationError) {
+      throw new ApiError({ status: 0, code: error.code, message: error.message, details: error, retryable: false });
+    }
     if (controller.signal.aborted) {
       throw new ApiError({ status: 0, code: "REQUEST_ABORTED", message: "The request was cancelled or timed out.", details: error, retryable: true });
     }

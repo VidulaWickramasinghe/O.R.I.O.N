@@ -31,3 +31,10 @@ The backend currently configures CORS in `backend/api_main.py`; production and
 desktop origins must remain explicit rather than using credentialed wildcard
 CORS. Tauri should use the same configured API origin and tolerate the sidecar
 startup window through the existing sidecar status workflow.
+
+For HTTPS deployments, `NEXT_PUBLIC_ORION_API_URL` must also use HTTPS; browsers
+block an HTTPS page from calling an HTTP API as mixed content. Aurora OS
+automatically maps a GitHub Codespaces `-3000.app.github.dev` frontend to its
+forwarded `-8000.app.github.dev` HTTPS backend. Other deployments should set the
+public API URL explicitly and add their comma-separated frontend origins to
+`ORION_ALLOWED_ORIGINS` in the backend environment.

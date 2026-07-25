@@ -53,11 +53,12 @@ export function OperationalAnalytics() {
     return { completed, pending, successRate, active: snapshot.missions.filter((item) => ["running", "active", "in_progress"].includes(item.status.toLowerCase())).length };
   }, [snapshot]);
   const filteredActivity = useMemo(() => { const cutoff = Date.now() - (range === "24h" ? 1 : range === "7d" ? 7 : 30) * 86_400_000; return snapshot.activity.filter((event) => { const timestamp = Date.parse(event.created_at ?? event.timestamp ?? ""); return Number.isNaN(timestamp) || timestamp >= cutoff; }); }, [range, snapshot.activity]);
-  const activitySeries = useMemo(() => { const days = range === "24h" ? 1 : range === "7d" ? 7 : 30; return Array.from({ length: days }, (_, index) => {
-    const date = new Date(); date.setUTCDate(date.getUTCDate() - (days - 1 - index));
+  const activitySeries = useMemo(() => { if (!updatedAt) return []; const days = range === "24h" ? 1 : range === "7d" ? 7 : 30; const reference = new Date(updatedAt); return Array.from({ length: days }, (_, index) => {
+    const date = new Date(reference); date.setUTCDate(date.getUTCDate() - (days - 1 - index));
     const key = date.toISOString().slice(0, 10);
-    return { label: days > 7 ? String(date.getUTCDate()) : date.toLocaleDateString(undefined, { weekday: "short" }), value: filteredActivity.filter((event) => (event.created_at ?? event.timestamp ?? "").startsWith(key)).length };
-  })}, [filteredActivity, range]);
+    const weekday = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][date.getUTCDay()];
+    return { label: days > 7 ? String(date.getUTCDate()) : weekday, value: filteredActivity.filter((event) => (event.created_at ?? event.timestamp ?? "").startsWith(key)).length };
+  })}, [filteredActivity, range, updatedAt]);
   const max = Math.max(1, ...activitySeries.map((item) => item.value));
 
   return <div className="mx-auto w-full max-w-[1600px] space-y-5">
