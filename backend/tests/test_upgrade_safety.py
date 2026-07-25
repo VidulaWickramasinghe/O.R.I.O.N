@@ -12,10 +12,78 @@ from core import (
     developer_agent,
     notification_engine,
     plugin_registry,
+    tool_audit,
+    tool_permissions,
     user_settings,
     vector_memory,
     workflow_blueprints,
 )
+
+
+class ToolPermissionTests(unittest.TestCase):
+    def test_unmapped_tools_are_denied_by_default(self) -> None:
+        decision = tool_permissions.is_tool_allowed("unknown_dynamic_tool")
+        self.assertFalse(decision["allowed"])
+        self.assertIn("Denied by default", decision["reason"])
+
+    def test_audit_failure_blocks_tool_execution(self) -> None:
+        called = Mock(return_value="executed")
+        wrapped = tool_permissions.enforce_tool_permission("run_safe_command")(called)
+        decision = {
+            "allowed": True,
+            "tool_name": "run_safe_command",
+            "plugin_key": "developer_tools",
+            "risk_level": "high",
+            "category": "developer",
+            "reason": "enabled",
+        }
+        with patch.object(tool_permissions, "is_tool_allowed", return_value=decision):
+            with patch.object(
+                tool_permissions,
+                "record_tool_audit_event",
+                side_effect=OSError("database unavailable"),
+            ):
+                with patch.object(
+                    tool_permissions, "log_activity", side_effect=OSError("activity unavailable")
+                ):
+                    result = wrapped("status")
+
+        called.assert_not_called()
+        self.assertIn("audit event could not be recorded", result)
+
+
+class ToolAuditTests(unittest.TestCase):
+    def test_audit_inputs_and_filters_are_validated(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(tool_audit, "DB_PATH", Path(temp_dir) / "audit.sqlite"):
+                with self.assertRaisesRegex(ValueError, "decision must"):
+                    tool_audit.record_tool_audit_event("tool", "plugin", "maybe", "")
+                with self.assertRaisesRegex(ValueError, "decision filter"):
+                    tool_audit.list_tool_audit_events(decision="maybe")
+
+    def test_metrics_count_all_events_not_only_recent_window(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(tool_audit, "DB_PATH", Path(temp_dir) / "audit.sqlite"):
+                tool_audit.init_tool_audit_db()
+                rows = [
+                    ("tool", "plugin", "allowed", "ok", "low", "test", "test", "now")
+                    for _ in range(1005)
+                ]
+                with tool_audit.get_connection() as connection:
+                    connection.executemany(
+                        """
+                        INSERT INTO tool_audit_events
+                        (tool_name, plugin_key, decision, reason, risk_level, category, source, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        rows,
+                    )
+                    connection.commit()
+
+                metrics = tool_audit.get_tool_audit_metrics()
+
+        self.assertEqual(metrics["total_audit_events"], 1005)
+        self.assertEqual(metrics["allowed_events"], 1005)
 
 
 class PluginRegistryTests(unittest.TestCase):

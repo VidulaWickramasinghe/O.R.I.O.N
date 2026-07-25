@@ -184,16 +184,14 @@ from core.backend_sidecar import (
 )
 
 from core.tool_permissions import (
-    get_tool_permission_matrix,
-    get_tool_permission_metrics,
+    get_tool_permission_snapshot,
     is_tool_allowed,
     render_tool_permission_report,
 )
 
 from core.tool_audit import (
-    get_tool_audit_metrics,
+    get_tool_audit_snapshot,
     init_tool_audit_db,
-    list_tool_audit_events,
     render_tool_audit_report,
 )
 
@@ -2171,9 +2169,6 @@ Rules:
             output=final_output,
         )
 
-    next_step = get_next_actionable_step(mission_record)
-
-    if not next_step:
         log_activity(
             "MISSION_STEP_COMPLETE",
             f"Mission {mission_id}, step {step_id} cycle completed.",
@@ -3305,10 +3300,11 @@ def tool_permissions():
         "Aurora OS requested tool permission matrix.",
         "Aurora OS",
     )
+    snapshot = get_tool_permission_snapshot()
     return ToolPermissionResponse(
-        metrics=get_tool_permission_metrics(),
-        matrix=get_tool_permission_matrix(),
-        report=render_tool_permission_report(),
+        metrics=snapshot["metrics"],
+        matrix=snapshot["matrix"],
+        report=render_tool_permission_report(snapshot),
     )
 
 
@@ -3330,10 +3326,11 @@ def tool_audit():
         "Aurora OS requested Tool Audit Center.",
         "Aurora OS",
     )
+    snapshot = get_tool_audit_snapshot(limit=120)
     return ToolAuditResponse(
-        metrics=get_tool_audit_metrics(),
-        events=list_tool_audit_events(limit=120),
-        report=render_tool_audit_report(),
+        metrics=snapshot["metrics"],
+        events=snapshot["events"],
+        report=render_tool_audit_report(snapshot),
     )
 
 

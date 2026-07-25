@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from core.activity import log_activity
 from core.plugin_registry import get_plugin, list_plugins
@@ -178,21 +178,29 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
 }
 
 
+def _log_permission_activity(event_type: str, message: str) -> None:
+    """Keep secondary activity logging from changing an enforcement decision."""
+    try:
+        log_activity(event_type, message, "O.R.I.O.N.")
+    except Exception:
+        pass
+
+
 def get_plugin_for_tool(tool_name: str) -> str:
-    return TOOL_PLUGIN_MAP.get(tool_name, "")
+    return TOOL_PLUGIN_MAP.get(str(tool_name).strip(), "")
 
 
 def is_tool_allowed(tool_name: str) -> Dict[str, Any]:
     plugin_key = get_plugin_for_tool(tool_name)
     if not plugin_key:
         return {
-            "allowed": True,
-            "tool_name": tool_name,
+            "allowed": False,
+            "tool_name": str(tool_name).strip(),
             "plugin_key": "",
             "plugin_name": "Unmapped",
             "risk_level": "unknown",
             "category": "unknown",
-            "reason": "Tool is not mapped to a plugin. Allowed by default.",
+            "reason": "Tool is not mapped to a plugin. Denied by default.",
         }
     plugin = get_plugin(plugin_key)
     if plugin_key in ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS:
@@ -244,15 +252,26 @@ def enforce_tool_permission(tool_name: str) -> Callable:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             decision = is_tool_allowed(tool_name)
-            record_tool_audit_event(
-                tool_name=tool_name,
-                plugin_key=decision.get("plugin_key", ""),
-                decision="allowed" if decision["allowed"] else "blocked",
-                reason=decision.get("reason", ""),
-                risk_level=decision.get("risk_level", "unknown"),
-                category=decision.get("category", "unknown"),
-                source="Tool Permission Enforcement",
-            )
+            try:
+                record_tool_audit_event(
+                    tool_name=tool_name,
+                    plugin_key=decision.get("plugin_key", ""),
+                    decision="allowed" if decision["allowed"] else "blocked",
+                    reason=decision.get("reason", ""),
+                    risk_level=decision.get("risk_level", "unknown"),
+                    category=decision.get("category", "unknown"),
+                    source="Tool Permission Enforcement",
+                )
+            except Exception as error:
+                _log_permission_activity(
+                    "TOOL_AUDIT_FAILED",
+                    f"{tool_name} blocked because its audit event could not be recorded: {error}",
+                )
+                return (
+                    "Tool blocked by Plugin Permission Enforcement.\n\n"
+                    f"Tool: {tool_name}\n"
+                    "Reason: The required audit event could not be recorded."
+                )
             if not decision["allowed"]:
                 message = (
                     "Tool blocked by Plugin Permission Enforcement.\n\n"
@@ -261,16 +280,14 @@ def enforce_tool_permission(tool_name: str) -> Callable:
                     f"Reason: {decision['reason']}\n\n"
                     "Enable the plugin in Aurora OS Plugin System if you want to use this tool."
                 )
-                log_activity(
+                _log_permission_activity(
                     "TOOL_PERMISSION_BLOCKED",
                     f"{tool_name} blocked. {decision['reason']}",
-                    "O.R.I.O.N.",
                 )
                 return message
-            log_activity(
+            _log_permission_activity(
                 "TOOL_PERMISSION_ALLOWED",
                 f"{tool_name} allowed. {decision['reason']}",
-                "O.R.I.O.N.",
             )
             return func(*args, **kwargs)
 
@@ -300,28 +317,32 @@ def get_tool_permission_matrix() -> List[Dict[str, Any]]:
 
 
 def get_tool_permission_metrics() -> Dict[str, Any]:
+    return get_tool_permission_snapshot()["metrics"]
+
+
+def get_tool_permission_snapshot() -> Dict[str, Any]:
     matrix = get_tool_permission_matrix()
     total_tools = len(matrix)
     allowed_tools = sum(1 for item in matrix if item["enabled"] or item["protected"])
-    blocked_tools = total_tools - allowed_tools
     high_risk_tools = sum(1 for item in matrix if item["risk_level"] == "high")
-    high_risk_allowed = sum(
-        1
-        for item in matrix
-        if item["risk_level"] == "high" and (item["enabled"] or item["protected"])
-    )
-    return {
+    metrics = {
         "total_mapped_tools": total_tools,
         "allowed_tools": allowed_tools,
-        "blocked_tools": blocked_tools,
+        "blocked_tools": total_tools - allowed_tools,
         "high_risk_tools": high_risk_tools,
-        "high_risk_allowed": high_risk_allowed,
+        "high_risk_allowed": sum(
+            1
+            for item in matrix
+            if item["risk_level"] == "high" and (item["enabled"] or item["protected"])
+        ),
     }
+    return {"metrics": metrics, "matrix": matrix}
 
 
-def render_tool_permission_report() -> str:
-    metrics = get_tool_permission_metrics()
-    matrix = get_tool_permission_matrix()
+def render_tool_permission_report(snapshot: Optional[Dict[str, Any]] = None) -> str:
+    snapshot = snapshot or get_tool_permission_snapshot()
+    metrics = snapshot["metrics"]
+    matrix = snapshot["matrix"]
     lines = [
         "# O.R.I.O.N. Tool Permission Enforcement Report",
         "",

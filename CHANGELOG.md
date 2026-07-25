@@ -1,3 +1,21 @@
+## v6.2 — Tool Enforcement and Audit Integrity
+
+### Improved
+
+- Unmapped tool names are denied by default instead of being reported as allowed.
+- Protected tool execution now fails closed when its required audit event cannot
+  be persisted.
+- Tool audit inputs, decision filters, and query limits are validated and bounded.
+- Audit metrics use database aggregates across the complete event history rather
+  than silently counting only the newest 1,000 records.
+- Permission and audit API responses render metrics, rows, and reports from one
+  consistent snapshot.
+
+### Tests
+
+- Added regression coverage for fail-closed unmapped tools, audit-storage failure,
+  invalid audit decisions, and complete-history audit totals.
+
 ## v6.2 — Plugin Registry and Desktop Sidecar Safety
 
 ### Improved
