@@ -14,7 +14,6 @@ type Intelligence = { intelligence_score: number; readiness_label: string; recom
 type Snapshot = { missions: Mission[]; approvals: Approval[]; audit: AuditEvent[]; activity: ActivityEvent[]; intelligence: Intelligence | null };
 
 const empty: Snapshot = { missions: [], approvals: [], audit: [], activity: [], intelligence: null };
-const number = (value: unknown) => typeof value === "number" ? value : 0;
 
 export function OperationalAnalytics() {
   const [snapshot, setSnapshot] = useState<Snapshot>(empty);

@@ -101,11 +101,11 @@ export async function apiRequest<T>(method: string, path: string, options: ApiRe
     delete requestInit.query;
     delete requestInit.timeoutMs;
     const response = await fetch(apiUrl(path, options.query), {
-      ...requestInit as RequestInit,
+      ...(requestInit as RequestInit),
       method,
       headers,
       signal: controller.signal,
-      body: body === undefined ? undefined : isFormData ? body as FormData : JSON.stringify(body),
+      body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
     });
     const payload = await responsePayload(response);
     if (!response.ok) throw errorFromResponse(response, payload);
