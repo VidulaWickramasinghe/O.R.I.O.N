@@ -52,7 +52,7 @@ export function OperationalAnalytics() {
     const successRate = snapshot.audit.length ? Math.round((allowed / snapshot.audit.length) * 100) : null;
     return { completed, pending, successRate, active: snapshot.missions.filter((item) => ["running", "active", "in_progress"].includes(item.status.toLowerCase())).length };
   }, [snapshot]);
-  const filteredActivity = useMemo(() => { const cutoff = Date.now() - (range === "24h" ? 1 : range === "7d" ? 7 : 30) * 86_400_000; return snapshot.activity.filter((event) => { const timestamp = Date.parse(event.created_at ?? event.timestamp ?? ""); return Number.isNaN(timestamp) || timestamp >= cutoff; }); }, [range, snapshot.activity]);
+  const filteredActivity = useMemo(() => { const referenceTime = updatedAt ? Date.parse(updatedAt) : 0; const cutoff = referenceTime - (range === "24h" ? 1 : range === "7d" ? 7 : 30) * 86_400_000; return snapshot.activity.filter((event) => { const timestamp = Date.parse(event.created_at ?? event.timestamp ?? ""); return Number.isNaN(timestamp) || timestamp >= cutoff; }); }, [range, snapshot.activity, updatedAt]);
   const activitySeries = useMemo(() => { if (!updatedAt) return []; const days = range === "24h" ? 1 : range === "7d" ? 7 : 30; const reference = new Date(updatedAt); return Array.from({ length: days }, (_, index) => {
     const date = new Date(reference); date.setUTCDate(date.getUTCDate() - (days - 1 - index));
     const key = date.toISOString().slice(0, 10);
