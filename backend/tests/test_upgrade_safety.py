@@ -110,6 +110,23 @@ class StabilizationManagerTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_dashboard_restores_preferences_without_stale_hook_references(self) -> None:
+        dashboard = (
+            Path(__file__).resolve().parents[2]
+            / "frontend"
+            / "src"
+            / "components"
+            / "aurora"
+            / "dashboard-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("restoreDashboardPreferences();", dashboard)
+        self.assertIn("const store = useAuroraStore.getState();", dashboard)
+        self.assertNotIn(
+            "[loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore]",
+            dashboard,
+        )
+
     def test_active_aurora_components_use_shared_api_services(self) -> None:
         frontend_root = Path(__file__).resolve().parents[2] / "frontend" / "src"
         violations = []

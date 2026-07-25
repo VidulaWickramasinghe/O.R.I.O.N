@@ -72,6 +72,14 @@ import { DashboardIntelligencePanel } from "@/components/aurora/panels/Dashboard
 import { ReleaseCandidatePanel } from "@/components/aurora/panels/ReleaseCandidatePanel";
 import { StabilizationPanel } from "@/components/aurora/panels/StabilizationPanel";
 
+function restoreDashboardPreferences() {
+  const store = useAuroraStore.getState();
+  void store.loadPanelLayout();
+  store.loadDemoWalkthroughStateFromStore();
+  store.loadRecordingModeStateFromStore();
+  void store.loadActiveDashboardView();
+}
+
 type KnowledgeDocumentItem = {
   id: number;
   title: string;
@@ -276,10 +284,7 @@ export function DashboardWorkspace() {
   useEffect(() => {
     void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
     void loadWorkspaces(); void loadDeveloperReports();
-    void useAuroraStore.getState().loadPanelLayout();
-    useAuroraStore.getState().loadDemoWalkthroughStateFromStore();
-    useAuroraStore.getState().loadRecordingModeStateFromStore();
-    void useAuroraStore.getState().loadActiveDashboardView();
+    restoreDashboardPreferences();
     void useAuroraStore.getState().refreshAll();
     const timer = window.setInterval(() => {
       void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
