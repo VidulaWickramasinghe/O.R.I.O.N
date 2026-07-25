@@ -1,3 +1,24 @@
+## v6.2 — Stabilization and Frontend Scanner Accuracy
+
+### Fixed
+
+- Stabilization scans reuse their collected checks when building cleanup
+  checklists and reports instead of repeating filesystem scans or frontend builds.
+- Cached stabilization results are synchronized and defensively copied so API
+  consumers cannot mutate later diagnostic responses.
+- Backend compilation uses the active Python interpreter, and import-style checks
+  use the Python AST instead of matching documentation strings.
+- Corrected two inconsistent `backend.core` imports to the runtime `core` style.
+- Stabilization and frontend-refactor reports now use collision-safe filenames and
+  atomic writes, and saved-report API responses reuse the exact saved scan.
+- Corrected the Frontend Refactor report title and artifact prefix, which
+  incorrectly identified the report as unrelated v5.x launch output.
+
+### Tests
+
+- Added regression coverage for cache isolation, single-snapshot report rendering,
+  syntax-aware import scanning, and Frontend Refactor report identity.
+
 ## v6.2 — Security Policy and Release Freeze Integrity
 
 ### Improved

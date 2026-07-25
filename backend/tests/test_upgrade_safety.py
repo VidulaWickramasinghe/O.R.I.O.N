@@ -3,6 +3,7 @@
 import os
 import tempfile
 import unittest
+from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
@@ -10,16 +11,112 @@ from unittest.mock import Mock, patch
 from core import (
     backend_sidecar,
     developer_agent,
+    frontend_refactor,
     notification_engine,
     plugin_registry,
     release_candidate,
     security_policy,
+    stabilization_manager,
     tool_audit,
     tool_permissions,
     user_settings,
     vector_memory,
     workflow_blueprints,
 )
+
+
+class StabilizationManagerTests(unittest.TestCase):
+    def test_cached_scan_is_defensively_copied(self) -> None:
+        cached = {"status": "stable", "required_files": {"missing": []}}
+        with stabilization_manager._SCAN_CACHE_LOCK:
+            stabilization_manager._SCAN_CACHE.update(
+                {"created_at": datetime.now(), "scan": cached}
+            )
+
+        first = stabilization_manager.run_stabilization_scan(run_build=False)
+        first["required_files"]["missing"].append("mutated")
+        second = stabilization_manager.run_stabilization_scan(run_build=False)
+
+        self.assertEqual(second["required_files"]["missing"], [])
+
+    def test_render_uses_supplied_scan_without_rescanning(self) -> None:
+        scan = {
+            "generated_at": "now",
+            "status": "stable",
+            "cleanup_checklist": {"passed": 0, "failed": 0, "items": []},
+            "required_files": {"present_count": 1, "missing_count": 0, "missing": []},
+            "import_risks": {"risk_count": 0, "risks": []},
+            "code_risks": {"scanned_files": 1, "finding_count": 0, "findings": []},
+            "duplicate_risk_zones": {"duplicate_group_count": 0, "duplicate_groups": []},
+            "backend_compile": {"ok": True, "command": "compile", "stderr": "", "stdout": ""},
+            "frontend_build": {"ok": None, "command": "build", "stderr": "skip", "stdout": ""},
+        }
+        with patch.object(stabilization_manager, "run_stabilization_scan") as run:
+            report = stabilization_manager.render_stabilization_report(scan=scan)
+
+        run.assert_not_called()
+        self.assertIn("Status: stable", report)
+
+    def test_import_scan_uses_syntax_not_string_literals(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            (root / "safe.py").write_text(
+                'MESSAGE = "from backend.core is documentation"\n', encoding="utf-8"
+            )
+            (root / "unsafe.py").write_text(
+                "from backend.core.activity import log_activity\n", encoding="utf-8"
+            )
+            with patch.object(stabilization_manager, "PROJECT_ROOT", root):
+                with patch.object(stabilization_manager, "BACKEND_DIR", root):
+                    result = stabilization_manager.check_import_style_risks()
+
+        self.assertEqual(result["risk_count"], 1)
+        self.assertEqual(result["risks"][0]["file"], "unsafe.py")
+
+
+class FrontendRefactorTests(unittest.TestCase):
+    def test_report_has_refactor_identity_and_uses_supplied_scan(self) -> None:
+        scan = {
+            "generated_at": "now",
+            "status": "healthy",
+            "page_lines": 3,
+            "page_size": 20,
+            "dashboard_workspace_lines": 10,
+            "dashboard_workspace_size": 100,
+            "directories": [],
+            "files": [],
+            "resilience_file_count": 0,
+            "resilience_ready": False,
+            "github_polish_panel_exists": False,
+            "github_polish_service_exists": False,
+            "final_launch_panel_exists": False,
+            "final_launch_service_exists": False,
+            "recording_types_exists": False,
+            "recording_registry_exists": False,
+            "recording_storage_exists": False,
+            "presenter_controls_panel_exists": False,
+            "recording_overlay_exists": False,
+            "demo_types_exists": False,
+            "demo_registry_exists": False,
+            "demo_storage_exists": False,
+            "guided_walkthrough_panel_exists": False,
+            "demo_callout_overlay_exists": False,
+            "dashboard_view_selector_exists": False,
+            "workspace_view_storage_exists": False,
+            "panel_registry_exists": False,
+            "panel_storage_exists": False,
+            "panel_types_exists": False,
+            "store_exists": False,
+            "service_file_count": 0,
+            "service_files": [],
+            "component_count": 0,
+            "components": [],
+        }
+        with patch.object(frontend_refactor, "inspect_frontend_architecture") as inspect:
+            report = frontend_refactor.render_frontend_refactor_report(scan)
+
+        inspect.assert_not_called()
+        self.assertTrue(report.startswith("# O.R.I.O.N. v4.2 Frontend Refactor Report"))
 
 
 class SecurityPolicyTests(unittest.TestCase):

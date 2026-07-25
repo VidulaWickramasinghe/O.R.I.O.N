@@ -1919,6 +1919,7 @@ def approve_request(approval_id: int):
             "result": str(error),
         }
 
+    step_id = int(next_step["id"])
 
 @app.post("/api/approvals/{approval_id}/reject")
 def reject_request(approval_id: int):
@@ -1940,6 +1941,8 @@ def reject_request(approval_id: int):
         "result": "Rejected by user.",
     }
 
+    internal_prompt = f"""
+You are O.R.I.O.N. running a controlled mission execution cycle.
 
 @app.post("/api/missions/{mission_id}/run-next", response_model=MissionRunResponse)
 async def run_next_mission_step(mission_id: int):
@@ -2093,8 +2096,6 @@ Rules:
             result=output,
         )
 
-    except Exception as error:
-        error_message = str(error)
 
 @app.post("/api/missions/{mission_id}/run-batch", response_model=MultiStepMissionRunResponse)
 async def run_mission_batch(mission_id: int, request: MultiStepMissionRunRequest):
@@ -2469,11 +2470,6 @@ def desktop_open_vscode(workspace_id: int):
             message=str(error),
         )
 
-        log_activity(
-            "DESKTOP_APPROVAL_CREATED",
-            f"Approval created to open workspace folder {workspace_id}.",
-            "O.R.I.O.N.",
-        )
 
 @app.post("/api/desktop/workspaces/{workspace_id}/open-folder", response_model=DesktopActionResponse)
 def desktop_open_folder(workspace_id: int):
@@ -2498,6 +2494,11 @@ def desktop_open_folder(workspace_id: int):
             message=str(error),
         )
 
+        return DesktopActionResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to start dev server for workspace {workspace_id}.",
+        )
 
 @app.post("/api/desktop/workspaces/{workspace_id}/start-dev", response_model=DesktopActionResponse)
 def desktop_start_dev(workspace_id: int):
@@ -2522,11 +2523,6 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
-        log_activity(
-            "DESKTOP_APPROVAL_CREATED",
-            f"Approval created to open URL: {request.url}",
-            "O.R.I.O.N.",
-        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):
@@ -3317,7 +3313,7 @@ def release_candidate_package():
 @app.post("/api/stabilization/scan", response_model=StabilizationActionResponse)
 def stabilization_scan(request: StabilizationRunRequest):
     scan = run_stabilization_scan(run_build=request.run_build)
-    report = render_stabilization_report(run_build=request.run_build)
+    report = render_stabilization_report(run_build=request.run_build, scan=scan)
     log_activity(
         "STABILIZATION_SCAN",
         f"v4.1 stabilization scan completed. Status: {scan['status']}.",
@@ -3331,10 +3327,9 @@ def stabilization_scan(request: StabilizationRunRequest):
 @app.post("/api/stabilization/report/save", response_model=StabilizationActionResponse)
 def stabilization_report_save(request: StabilizationRunRequest):
     result = save_stabilization_report(run_build=request.run_build)
-    scan = run_stabilization_scan(run_build=False)
     log_activity("STABILIZATION_REPORT_SAVED", f"v4.1 stabilization report saved: {result['path']}", "O.R.I.O.N.")
     return StabilizationActionResponse(
-        status=result["status"], generated_at=result["generated_at"], scan=scan,
+        status=result["status"], generated_at=result["generated_at"], scan=result["scan"],
         report=result["report"], path=result["path"],
     )
 
@@ -3342,7 +3337,7 @@ def stabilization_report_save(request: StabilizationRunRequest):
 @app.get("/api/frontend/refactor", response_model=FrontendRefactorResponse)
 def frontend_refactor_status():
     scan = inspect_frontend_architecture()
-    report = render_frontend_refactor_report()
+    report = render_frontend_refactor_report(scan)
     log_activity("FRONTEND_REFACTOR_SCAN", f"Frontend refactor scan completed. Status: {scan['status']}.", "O.R.I.O.N.")
     return FrontendRefactorResponse(
         status=scan["status"], generated_at=scan["generated_at"], scan=scan, report=report
@@ -3352,10 +3347,9 @@ def frontend_refactor_status():
 @app.post("/api/frontend/refactor/report/save", response_model=FrontendRefactorResponse)
 def frontend_refactor_report_save():
     result = save_frontend_refactor_report()
-    scan = inspect_frontend_architecture()
     log_activity("FRONTEND_REFACTOR_REPORT_SAVED", f"Frontend refactor report saved: {result['path']}", "O.R.I.O.N.")
     return FrontendRefactorResponse(
-        status=result["status"], generated_at=result["generated_at"], scan=scan,
+        status=result["status"], generated_at=result["generated_at"], scan=result["scan"],
         report=result["report"], path=result["path"],
     )
 
