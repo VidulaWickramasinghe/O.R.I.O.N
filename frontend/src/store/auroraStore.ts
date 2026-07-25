@@ -7,7 +7,7 @@ import { loadRecordingModeState, resetRecordingModeState, saveRecordingModeState
 import { loadDemoWalkthroughState, resetDemoWalkthroughState, saveDemoWalkthroughState } from "@/lib/demoWalkthroughStorage";
 import { ORION_DEMO_WALKTHROUGH_STEPS } from "@/lib/demoWalkthroughRegistry";
 import { loadActiveDashboardView, loadPanelLayoutFromStorage, resetPanelLayoutStorage, saveActiveDashboardView, savePanelLayoutToStorage } from "@/lib/panelLayoutStorage";
-import { createLayoutFromPreset, sortPanelLayout } from "@/lib/panelRegistry";
+import { createLayoutFromPreset, movePanelLayoutItem, sortPanelLayout } from "@/lib/panelRegistry";
 
 import type {
   SystemStatus,
@@ -75,8 +75,8 @@ export const useAuroraStore = create<Store>((set, get) => ({
   loadPanelLayout: () => set({ panelLayout: sortPanelLayout(loadPanelLayoutFromStorage()) }),
   togglePanelVisibility: (id) => { const layout = sortPanelLayout(get().panelLayout.map((item) => item.id === id ? { ...item, visible: !item.visible } : item)); savePanelLayoutToStorage(layout); set({ panelLayout: layout }); },
   togglePanelPinned: (id) => { const layout = sortPanelLayout(get().panelLayout.map((item) => item.id === id ? { ...item, pinned: !item.pinned } : item)); savePanelLayoutToStorage(layout); set({ panelLayout: layout }); },
-  movePanelUp: (id) => { const layout = sortPanelLayout(get().panelLayout.map((item) => ({ ...item }))); const index = layout.findIndex((item) => item.id === id); if (index <= 0) return; [layout[index].order, layout[index - 1].order] = [layout[index - 1].order, layout[index].order]; const next = sortPanelLayout(layout); savePanelLayoutToStorage(next); set({ panelLayout: next }); },
-  movePanelDown: (id) => { const layout = sortPanelLayout(get().panelLayout.map((item) => ({ ...item }))); const index = layout.findIndex((item) => item.id === id); if (index < 0 || index >= layout.length - 1) return; [layout[index].order, layout[index + 1].order] = [layout[index + 1].order, layout[index].order]; const next = sortPanelLayout(layout); savePanelLayoutToStorage(next); set({ panelLayout: next }); },
+  movePanelUp: (id) => { const next = movePanelLayoutItem(get().panelLayout, id, -1); savePanelLayoutToStorage(next); set({ panelLayout: next }); },
+  movePanelDown: (id) => { const next = movePanelLayoutItem(get().panelLayout, id, 1); savePanelLayoutToStorage(next); set({ panelLayout: next }); },
   resetPanelLayout: () => { const panelLayout = sortPanelLayout(resetPanelLayoutStorage()); saveActiveDashboardView("full-mission-control"); set({ activeDashboardView: "full-mission-control", panelLayout }); },
   getVisiblePanelLayout: () => sortPanelLayout(get().panelLayout).filter((item) => item.visible),
   setReminderTitle: (reminderTitle) => set({ reminderTitle }), setReminderDueAt: (reminderDueAt) => set({ reminderDueAt }),

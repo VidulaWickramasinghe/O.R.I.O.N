@@ -91,6 +91,14 @@ class FrontendRefactorTests(unittest.TestCase):
         scan = frontend_refactor.inspect_frontend_architecture()
         self.assertEqual(scan["missing_service_files"], [])
 
+    def test_global_store_health_has_no_transport_leaks(self) -> None:
+        scan = frontend_refactor.inspect_frontend_architecture()
+
+        self.assertTrue(scan["store_healthy"])
+        self.assertEqual(scan["missing_store_actions"], [])
+        self.assertEqual(scan["store_direct_fetch_count"], 0)
+        self.assertEqual(scan["store_hardcoded_api_count"], 0)
+
     def test_report_has_refactor_identity_and_uses_supplied_scan(self) -> None:
         scan = {
             "generated_at": "now",
@@ -123,6 +131,11 @@ class FrontendRefactorTests(unittest.TestCase):
             "panel_storage_exists": False,
             "panel_types_exists": False,
             "store_exists": False,
+            "store_healthy": False,
+            "store_line_count": 0,
+            "missing_store_actions": [],
+            "store_direct_fetch_count": 0,
+            "store_hardcoded_api_count": 0,
             "service_file_count": 0,
             "service_files": [],
             "component_count": 0,

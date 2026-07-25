@@ -61,6 +61,16 @@ EXPECTED_SERVICE_FILES = [
     "src/lib/api/voice.ts",
 ]
 
+EXPECTED_STORE_ACTIONS = (
+    "refreshAll:",
+    "loadPanelLayout:",
+    "togglePanelVisibility:",
+    "togglePanelPinned:",
+    "movePanelUp:",
+    "movePanelDown:",
+    "resetPanelLayout:",
+)
+
 
 def _now() -> str:
     return datetime.now().isoformat(timespec="seconds")
@@ -74,6 +84,8 @@ def inspect_frontend_architecture() -> Dict[str, Any]:
     dashboard_path = FRONTEND_DIR / "src" / "components" / "aurora" / "dashboard-workspace.tsx"
     page_text = page_path.read_text(encoding="utf-8", errors="ignore") if page_path.exists() else ""
     dashboard_text = dashboard_path.read_text(encoding="utf-8", errors="ignore") if dashboard_path.exists() else ""
+    store_path = FRONTEND_DIR / "src" / "store" / "auroraStore.ts"
+    store_text = store_path.read_text(encoding="utf-8", errors="ignore") if store_path.exists() else ""
     component_root = FRONTEND_DIR / "src" / "components"
     components = sorted(str(path.relative_to(FRONTEND_DIR)) for path in component_root.rglob("*.tsx")) if component_root.exists() else []
     missing_dirs = [item for item in directories if not item["exists"]]
@@ -96,8 +108,12 @@ def inspect_frontend_architecture() -> Dict[str, Any]:
     page_lines = len(page_text.splitlines())
     dashboard_lines = len(dashboard_text.splitlines())
     orchestrator_lines = max(page_lines, dashboard_lines)
-    status = "needs_refactor" if missing_dirs or missing_files or missing_service_files else "page_too_large" if orchestrator_lines > 1600 else "improving" if orchestrator_lines > 900 else "healthy"
-    return {"status": status, "generated_at": _now(), "directories": directories, "files": files, "store_exists": (FRONTEND_DIR / "src/store/auroraStore.ts").is_file(), "panel_registry_exists": (FRONTEND_DIR / "src/lib/panelRegistry.ts").is_file(), "panel_storage_exists": (FRONTEND_DIR / "src/lib/panelLayoutStorage.ts").is_file(), "panel_types_exists": (FRONTEND_DIR / "src/types/panels.ts").is_file(), "dashboard_view_selector_exists": (FRONTEND_DIR / "src/components/aurora/panels/DashboardViewSelectorPanel.tsx").is_file(), "github_polish_panel_exists": (FRONTEND_DIR / "src/components/aurora/panels/GitHubPolishPanel.tsx").is_file(), "github_polish_service_exists": (FRONTEND_DIR / "src/lib/api/github-polish.ts").is_file(), "workspace_view_storage_exists": (FRONTEND_DIR / "src/lib/workspaceViewStorage.ts").is_file(), "resilience_file_count": sum((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]), "resilience_ready": all((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]),
+    missing_store_actions = [action for action in EXPECTED_STORE_ACTIONS if action not in store_text]
+    store_direct_fetch_count = store_text.count("fetch(")
+    store_hardcoded_api_count = store_text.count("http://127.0.0.1:8000")
+    store_healthy = bool(store_text) and not missing_store_actions and not store_direct_fetch_count and not store_hardcoded_api_count
+    status = "needs_refactor" if missing_dirs or missing_files or missing_service_files or not store_healthy else "page_too_large" if orchestrator_lines > 1600 else "improving" if orchestrator_lines > 900 else "healthy"
+    return {"status": status, "generated_at": _now(), "directories": directories, "files": files, "store_exists": store_path.is_file(), "store_healthy": store_healthy, "store_line_count": len(store_text.splitlines()), "missing_store_actions": missing_store_actions, "store_direct_fetch_count": store_direct_fetch_count, "store_hardcoded_api_count": store_hardcoded_api_count, "panel_registry_exists": (FRONTEND_DIR / "src/lib/panelRegistry.ts").is_file(), "panel_storage_exists": (FRONTEND_DIR / "src/lib/panelLayoutStorage.ts").is_file(), "panel_types_exists": (FRONTEND_DIR / "src/types/panels.ts").is_file(), "dashboard_view_selector_exists": (FRONTEND_DIR / "src/components/aurora/panels/DashboardViewSelectorPanel.tsx").is_file(), "github_polish_panel_exists": (FRONTEND_DIR / "src/components/aurora/panels/GitHubPolishPanel.tsx").is_file(), "github_polish_service_exists": (FRONTEND_DIR / "src/lib/api/github-polish.ts").is_file(), "workspace_view_storage_exists": (FRONTEND_DIR / "src/lib/workspaceViewStorage.ts").is_file(), "resilience_file_count": sum((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]), "resilience_ready": all((FRONTEND_DIR / path).is_file() for path in ["src/components/aurora/resilience/PanelErrorBoundary.tsx", "src/components/aurora/resilience/OfflineBanner.tsx", "src/components/aurora/resilience/LoadingSkeleton.tsx", "src/components/aurora/resilience/PanelFallback.tsx"]),
             "missing_directories": missing_dirs, "missing_files": missing_files, "service_files": service_files, "missing_service_files": missing_service_files, "service_file_count": sum(item["exists"] for item in service_files), "page_lines": page_lines,
             "page_size": len(page_text), "dashboard_workspace_lines": dashboard_lines,
             "dashboard_workspace_size": len(dashboard_text), "component_count": len(components), "components": components, "github_launch_panel_exists": github_launch_panel_exists, "github_launch_service_exists": github_launch_service_exists, "final_launch_panel_exists": final_launch_panel_exists, "final_launch_service_exists": final_launch_service_exists, "recording_types_exists": recording_types_exists, "recording_registry_exists": recording_registry_exists, "recording_storage_exists": recording_storage_exists, "presenter_controls_panel_exists": presenter_controls_panel_exists, "recording_overlay_exists": recording_overlay_exists, "demo_types_exists": demo_types_exists, "demo_registry_exists": demo_registry_exists, "demo_storage_exists": demo_storage_exists, "guided_walkthrough_panel_exists": guided_walkthrough_panel_exists, "demo_callout_overlay_exists": demo_callout_overlay_exists}
@@ -174,6 +190,11 @@ Status: {scan['status']}
 ## Global Store
 
 - Store Exists: {scan['store_exists']}
+- Store Healthy: {scan['store_healthy']}
+- Store Lines: {scan['store_line_count']}
+- Missing Store Actions: {len(scan['missing_store_actions'])}
+- Direct Fetch Calls: {scan['store_direct_fetch_count']}
+- Hardcoded API URLs: {scan['store_hardcoded_api_count']}
 
 ## API Service Layer
 
