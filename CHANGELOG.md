@@ -1,3 +1,136 @@
+## v6.2 — Frontend Service Layer Completion
+
+### Improved
+
+- Centralized the remaining active Demo, Browser Research, Memory, Context Preview,
+  Voice, and Workspace Desktop requests under `frontend/src/lib/api`.
+- Removed the second hardcoded Aurora API client and made legacy module consumers
+  delegate to the shared configurable client.
+- Added root-relative path validation, bounded backend error details, trailing-slash
+  normalization, and HTTP 204 handling to the shared API client.
+- Expanded Frontend Refactor service checks to cover the newly centralized modules
+  and corrected the report identity to the current v6.2 architecture line.
+
+### Safety
+
+- UI behavior and backend routes are unchanged; this is a frontend communication
+  and maintainability hardening pass.
+
+## v6.2 — Stabilization and Frontend Scanner Accuracy
+
+### Fixed
+
+- Stabilization scans reuse their collected checks when building cleanup
+  checklists and reports instead of repeating filesystem scans or frontend builds.
+- Cached stabilization results are synchronized and defensively copied so API
+  consumers cannot mutate later diagnostic responses.
+- Backend compilation uses the active Python interpreter, and import-style checks
+  use the Python AST instead of matching documentation strings.
+- Corrected two inconsistent `backend.core` imports to the runtime `core` style.
+- Stabilization and frontend-refactor reports now use collision-safe filenames and
+  atomic writes, and saved-report API responses reuse the exact saved scan.
+- Corrected the Frontend Refactor report title and artifact prefix, which
+  incorrectly identified the report as unrelated v5.x launch output.
+
+### Tests
+
+- Added regression coverage for cache isolation, single-snapshot report rendering,
+  syntax-aware import scanning, and Frontend Refactor report identity.
+
+## v6.2 — Security Policy and Release Freeze Integrity
+
+### Improved
+
+- Strict security profiles now fail closed for newly registered, non-protected
+  plugins instead of leaving unknown capabilities enabled.
+- Security profile application validates inputs and compensates plugin, setting,
+  policy-state, and policy-event changes when audit persistence fails.
+- New policy databases default to Strict Mode, matching the default user safety
+  setting instead of reporting a contradictory Balanced Mode state.
+- Security policy and release candidate API reports now share the same snapshots
+  as their returned state, event, and checklist data.
+- Release candidate packages require an active system freeze, use collision-safe
+  microsecond timestamps, and write artifacts atomically.
+- Release freeze metadata and locally stored release events are validated and
+  bounded, and missing security profile routes now return HTTP 404.
+
+### Tests
+
+- Added regression coverage for strict-mode handling of future plugins, failed
+  policy-audit rollback, freeze-gated packaging, and release metadata bounds.
+
+## v6.2 — Tool Enforcement and Audit Integrity
+
+### Improved
+
+- Unmapped tool names are denied by default instead of being reported as allowed.
+- Protected tool execution now fails closed when its required audit event cannot
+  be persisted.
+- Tool audit inputs, decision filters, and query limits are validated and bounded.
+- Audit metrics use database aggregates across the complete event history rather
+  than silently counting only the newest 1,000 records.
+- Permission and audit API responses render metrics, rows, and reports from one
+  consistent snapshot.
+
+### Tests
+
+- Added regression coverage for fail-closed unmapped tools, audit-storage failure,
+  invalid audit decisions, and complete-history audit totals.
+
+## v6.2 — Plugin Registry and Desktop Sidecar Safety
+
+### Improved
+
+- Added the missing built-in Plugin Registry metadata entry and prevented core
+  approval, registry, enforcement, audit, and security-policy plugins from being
+  disabled through metadata controls.
+- Hardened backend sidecar state persistence with atomic writes and recovery from
+  malformed state files.
+- Restricted sidecar startup to loopback interfaces and valid TCP ports.
+- Added process identity verification before stopping a stored PID, preventing a
+  stale or altered state file from terminating an unrelated process.
+- Prevented sidecar restart from continuing after a blocked stop operation and
+  avoided attempting to stop the API process before its own response is returned.
+
+### Tests
+
+- Added regression coverage for plugin state preservation, protected safety
+  plugins, loopback-only sidecar startup, and stale-PID termination protection.
+
+## v6.2 — Dashboard, Reminder, and Profile Safety Hardening
+
+### Improved
+
+- Dashboard Intelligence now renders one consistent analytics snapshot and tolerates invalid mission/workspace metadata.
+- Reminder timestamps are normalized to UTC, relative times must be positive, due refreshes are idempotent, and completed/cancelled reminders are terminal.
+- Reminder and settings API payloads now have explicit size and value constraints, with missing reminders returning HTTP 404.
+- Default workspace preferences must reference a registered workspace, while display names reject multiline and secret-like values.
+- Installation documentation now uses `~/O.R.I.O.N/` and the canonical `VidulaWickramasinghe/O.R.I.O.N` GitHub repository.
+
+## v6.2 — Semantic, Workflow, and Developer Safety Hardening
+
+### Improved
+
+- Vector embeddings now resolve credentials at call time and rebuilds report partial or failed indexing accurately.
+- Workflow missions reject unknown workspace identifiers instead of creating unusable plans.
+- Developer patch paths use path-aware containment checks, validate payload sizes and reasons, and write atomically.
+- Approved file patches preserve uniquely timestamped backups and cannot be replayed after processing.
+- Backend regression tests now cover semantic configuration, rebuild status, workflow validation, and patch safety.
+
+## v6.2 — Production Hardening + Knowledge Validation
+
+### Added
+
+- One-command setup, diagnostics, and combined startup scripts.
+- Comprehensive System Doctor checks for environment, dependencies, repository layout, backend compilation, frontend build configuration, `.gitignore` safety, and backend state.
+- Live `/api/system/doctor` endpoint and upgraded Aurora OS Production Health module.
+- Release hardening checklist documenting the local validation workflow.
+
+### Verified
+
+- Local Knowledge Base indexing, search, API routes, dashboard panel, and context-engine integration remain enabled in the v6.2 release line.
+- System Doctor reports never expose the configured API key value.
+
 ## v6.2 — Patch Release Manager + Hotfix Workflow
 
 ### Added
@@ -959,3 +1092,17 @@
 - Safe notes
 - Activity log
 - SQLite session memory
+
+## Public demo and responsive showcase hardening
+
+### Added
+
+- Responsive, static-export-compatible `/public-demo` portfolio experience.
+- Reusable hero, section, feature, and screenshot presentation components.
+- Public landing and UI polish API checks, local report tools, and Aurora panels.
+- Atomic, collision-safe readiness report generation.
+
+### Safety
+
+- Public presentation remains local until manually published.
+- Readiness checks do not push, publish, expose credentials, or alter tool behavior.

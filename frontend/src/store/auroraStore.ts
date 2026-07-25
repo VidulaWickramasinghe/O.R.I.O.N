@@ -7,7 +7,7 @@ import { loadRecordingModeState, resetRecordingModeState, saveRecordingModeState
 import { loadDemoWalkthroughState, resetDemoWalkthroughState, saveDemoWalkthroughState } from "@/lib/demoWalkthroughStorage";
 import { ORION_DEMO_WALKTHROUGH_STEPS } from "@/lib/demoWalkthroughRegistry";
 import { loadActiveDashboardView, loadPanelLayoutFromStorage, resetPanelLayoutStorage, saveActiveDashboardView, savePanelLayoutToStorage } from "@/lib/panelLayoutStorage";
-import { createLayoutFromPreset, sortPanelLayout } from "@/lib/panelRegistry";
+import { createLayoutFromPreset, movePanelLayoutItem, sortPanelLayout } from "@/lib/panelRegistry";
 
 import type {
   SystemStatus,
@@ -16,6 +16,7 @@ import type {
   ReleaseCandidatePackage, ReleaseCandidateStatus, ReminderItem,
   SecurityPolicyEventItem, SecurityProfileItem, StabilizationResult,
   StartupBriefing, ToolAuditEventItem, ToolPermissionItem, UserSettingsProfile,
+  PublicLandingResult, UIPolishResult,
 } from "@/types/orion";
 import { getSystemStatus } from "@/lib/api/status";
 import { getDashboardIntelligence } from "@/lib/api/dashboard";
@@ -29,6 +30,8 @@ import { getUserSettingsProfile, resetUserSettings, updateUserSetting } from "@/
 import { getBackendSidecarStatus, runBackendSidecarAction } from "@/lib/api/sidecar";
 import { runStabilizationScan, saveStabilizationReport } from "@/lib/api/stabilization";
 import { getToolAudit, getToolPermissions } from "@/lib/api/tools";
+import { getPublicLandingStatus, savePublicLandingReport } from "@/lib/api/public-landing";
+import { getUIPolishStatus, saveUIPolishReport } from "@/lib/api/ui-polish";
 
 type SidecarAction = "start" | "stop" | "restart";
 type Store = {
@@ -40,6 +43,7 @@ type Store = {
   releaseCandidateStatus: ReleaseCandidateStatus | null; releaseCandidatePackage: ReleaseCandidatePackage | null; releaseCandidateLoading: boolean;
   stabilizationResult: StabilizationResult | null; stabilizationLoading: boolean;
   frontendRefactorResult: FrontendRefactorResult | null; frontendRefactorLoading: boolean;
+  publicLandingResult: PublicLandingResult | null; publicLandingLoading: boolean; uiPolishResult: UIPolishResult | null; uiPolishLoading: boolean;
   desktopShellStatus: DesktopShellStatus | null; desktopShellLoading: boolean;
   backendSidecarStatus: BackendSidecarStatus | null; backendSidecarLoading: boolean;
   reminders: ReminderItem[]; notificationEvents: NotificationEventItem[]; startupBriefing: StartupBriefing | null; reminderTitle: string; reminderDueAt: string; reminderLoading: boolean;
@@ -48,12 +52,13 @@ type Store = {
   demoWalkthroughState: DemoWalkthroughState; loadDemoWalkthroughStateFromStore: () => void; startDemoWalkthroughFromStore: () => void; stopDemoWalkthroughFromStore: () => void; nextDemoWalkthroughStepFromStore: () => void; previousDemoWalkthroughStepFromStore: () => void; resetDemoWalkthroughFromStore: () => void;
   loadActiveDashboardView: () => void; applyDashboardViewPreset: (id: AuroraDashboardViewId) => void; loadPanelLayout: () => void; togglePanelVisibility: (id: AuroraPanelId) => void; togglePanelPinned: (id: AuroraPanelId) => void; movePanelUp: (id: AuroraPanelId) => void; movePanelDown: (id: AuroraPanelId) => void; resetPanelLayout: () => void; getVisiblePanelLayout: () => AuroraPanelLayoutItem[];
   setReminderTitle: (value: string) => void; setReminderDueAt: (value: string) => void; patchLocalSettingValue: (key: string, value: string) => void;
-  loadDashboardIntelligence: () => Promise<void>; loadPlugins: () => Promise<void>; loadToolPermissions: () => Promise<void>; loadToolAudit: () => Promise<void>; loadSecurityPolicy: () => Promise<void>; loadReleaseCandidateStatus: () => Promise<void>; loadFrontendRefactorStatus: () => Promise<void>; loadDesktopShellStatus: () => Promise<void>; loadBackendSidecarStatus: () => Promise<void>; loadReminders: () => Promise<void>; loadNotificationEvents: () => Promise<void>; loadStartupBriefing: () => Promise<void>; loadUserSettingsProfile: () => Promise<void>;
+  loadPublicLandingStatusFromStore: () => Promise<void>; savePublicLandingReportFromStore: () => Promise<void>; loadUIPolishStatusFromStore: () => Promise<void>; saveUIPolishReportFromStore: () => Promise<void>;
+    loadDashboardIntelligence: () => Promise<void>; loadPlugins: () => Promise<void>; loadToolPermissions: () => Promise<void>; loadToolAudit: () => Promise<void>; loadSecurityPolicy: () => Promise<void>; loadReleaseCandidateStatus: () => Promise<void>; loadFrontendRefactorStatus: () => Promise<void>; loadDesktopShellStatus: () => Promise<void>; loadBackendSidecarStatus: () => Promise<void>; loadReminders: () => Promise<void>; loadNotificationEvents: () => Promise<void>; loadStartupBriefing: () => Promise<void>; loadUserSettingsProfile: () => Promise<void>;
   refreshAll: () => Promise<void>; updatePluginStatusFromStore: (key: string, enabled: boolean) => Promise<void>; applySecurityProfileFromStore: (key: string) => Promise<void>; freezeReleaseCandidateFromStore: () => Promise<void>; unfreezeReleaseCandidateFromStore: () => Promise<void>; generateReleaseCandidatePackageFromStore: () => Promise<void>; runStabilizationScanFromStore: (build?: boolean) => Promise<void>; saveStabilizationReportFromStore: (build?: boolean) => Promise<void>; runFrontendRefactorScanFromStore: () => Promise<void>; saveFrontendRefactorReportFromStore: () => Promise<void>; runBackendSidecarActionFromStore: (action: SidecarAction) => Promise<void>; createReminderFromStore: () => Promise<void>; updateReminderStatusFromStore: (id: number, status: string) => Promise<void>; updateUserSettingFromStore: (key: string, value: string) => Promise<void>; resetUserSettingsFromStore: () => Promise<void>;
 };
 const fail = (set: (state: Partial<Store>) => void, message: string) => set({ lastError: message });
 export const useAuroraStore = create<Store>((set, get) => ({
-  dashboardIntelligence: null, dashboardIntelligenceLoading: false, plugins: [], pluginMetrics: {}, pluginRegistryReport: "", pluginLoadingKey: null, toolPermissionMatrix: [], toolPermissionMetrics: {}, toolPermissionReport: "", toolAuditEvents: [], toolAuditMetrics: {}, toolAuditReport: "", securityProfiles: [], securityPolicyEvents: [], securityPolicyActive: {}, securityPolicyReport: "", securityPolicyLoadingKey: null, releaseCandidateStatus: null, releaseCandidatePackage: null, releaseCandidateLoading: false, stabilizationResult: null, stabilizationLoading: false, frontendRefactorResult: null, frontendRefactorLoading: false, desktopShellStatus: null, desktopShellLoading: false, backendSidecarStatus: null, backendSidecarLoading: false, reminders: [], notificationEvents: [], startupBriefing: null, reminderTitle: "", reminderDueAt: "tomorrow", reminderLoading: false, userSettingsProfile: null, settingsLoadingKey: null, status: null, backendOnline: false, backendLastCheckedAt: "", backendLastError: "", lastError: "", activeDashboardView: "full-mission-control", panelLayout: [], demoWalkthroughState: { enabled: false, currentStepIndex: 0, completed: false }, recordingModeState: { enabled: false, sceneId: "opening", startedAt: "", showLargeCallout: true, hideNoisyPanels: false, showTimer: true, checklistOpen: true },
+  dashboardIntelligence: null, dashboardIntelligenceLoading: false, plugins: [], pluginMetrics: {}, pluginRegistryReport: "", pluginLoadingKey: null, toolPermissionMatrix: [], toolPermissionMetrics: {}, toolPermissionReport: "", toolAuditEvents: [], toolAuditMetrics: {}, toolAuditReport: "", securityProfiles: [], securityPolicyEvents: [], securityPolicyActive: {}, securityPolicyReport: "", securityPolicyLoadingKey: null, releaseCandidateStatus: null, releaseCandidatePackage: null, releaseCandidateLoading: false, stabilizationResult: null, stabilizationLoading: false, frontendRefactorResult: null, frontendRefactorLoading: false, publicLandingResult: null, publicLandingLoading: false, uiPolishResult: null, uiPolishLoading: false, desktopShellStatus: null, desktopShellLoading: false, backendSidecarStatus: null, backendSidecarLoading: false, reminders: [], notificationEvents: [], startupBriefing: null, reminderTitle: "", reminderDueAt: "tomorrow", reminderLoading: false, userSettingsProfile: null, settingsLoadingKey: null, status: null, backendOnline: false, backendLastCheckedAt: "", backendLastError: "", lastError: "", activeDashboardView: "full-mission-control", panelLayout: [], demoWalkthroughState: { enabled: false, currentStepIndex: 0, completed: false }, recordingModeState: { enabled: false, sceneId: "opening", startedAt: "", showLargeCallout: true, hideNoisyPanels: false, showTimer: true, checklistOpen: true },
   loadRecordingModeStateFromStore: () => set({ recordingModeState: loadRecordingModeState() }),
   startRecordingModeFromStore: () => { const current = get().recordingModeState; const state: RecordingModeState = { ...current, enabled: true, startedAt: new Date().toISOString() }; saveRecordingModeState(state); set({ recordingModeState: state }); get().applyDashboardViewPreset(getRecordingScene(state.sceneId).viewId); },
   stopRecordingModeFromStore: () => { const state = { ...get().recordingModeState, enabled: false }; saveRecordingModeState(state); set({ recordingModeState: state }); },
@@ -75,12 +80,16 @@ export const useAuroraStore = create<Store>((set, get) => ({
   loadPanelLayout: () => set({ panelLayout: sortPanelLayout(loadPanelLayoutFromStorage()) }),
   togglePanelVisibility: (id) => { const layout = sortPanelLayout(get().panelLayout.map((item) => item.id === id ? { ...item, visible: !item.visible } : item)); savePanelLayoutToStorage(layout); set({ panelLayout: layout }); },
   togglePanelPinned: (id) => { const layout = sortPanelLayout(get().panelLayout.map((item) => item.id === id ? { ...item, pinned: !item.pinned } : item)); savePanelLayoutToStorage(layout); set({ panelLayout: layout }); },
-  movePanelUp: (id) => { const layout = sortPanelLayout(get().panelLayout.map((item) => ({ ...item }))); const index = layout.findIndex((item) => item.id === id); if (index <= 0) return; [layout[index].order, layout[index - 1].order] = [layout[index - 1].order, layout[index].order]; const next = sortPanelLayout(layout); savePanelLayoutToStorage(next); set({ panelLayout: next }); },
-  movePanelDown: (id) => { const layout = sortPanelLayout(get().panelLayout.map((item) => ({ ...item }))); const index = layout.findIndex((item) => item.id === id); if (index < 0 || index >= layout.length - 1) return; [layout[index].order, layout[index + 1].order] = [layout[index + 1].order, layout[index].order]; const next = sortPanelLayout(layout); savePanelLayoutToStorage(next); set({ panelLayout: next }); },
+  movePanelUp: (id) => { const next = movePanelLayoutItem(get().panelLayout, id, -1); savePanelLayoutToStorage(next); set({ panelLayout: next }); },
+  movePanelDown: (id) => { const next = movePanelLayoutItem(get().panelLayout, id, 1); savePanelLayoutToStorage(next); set({ panelLayout: next }); },
   resetPanelLayout: () => { const panelLayout = sortPanelLayout(resetPanelLayoutStorage()); saveActiveDashboardView("full-mission-control"); set({ activeDashboardView: "full-mission-control", panelLayout }); },
   getVisiblePanelLayout: () => sortPanelLayout(get().panelLayout).filter((item) => item.visible),
   setReminderTitle: (reminderTitle) => set({ reminderTitle }), setReminderDueAt: (reminderDueAt) => set({ reminderDueAt }),
   patchLocalSettingValue: (key, value) => set((s) => !s.userSettingsProfile ? s : { userSettingsProfile: { ...s.userSettingsProfile, settings: s.userSettingsProfile.settings.map((item) => item.key === key ? { ...item, value } : item) } }),
+  loadPublicLandingStatusFromStore: async () => { set({ publicLandingLoading: true }); try { set({ publicLandingResult: await getPublicLandingStatus(), lastError: "" }); } catch { fail(set, "Failed to load public landing status."); } finally { set({ publicLandingLoading: false }); } },
+  savePublicLandingReportFromStore: async () => { set({ publicLandingLoading: true }); try { set({ publicLandingResult: await savePublicLandingReport(), lastError: "" }); } catch { fail(set, "Failed to save public landing report."); } finally { set({ publicLandingLoading: false }); } },
+  loadUIPolishStatusFromStore: async () => { set({ uiPolishLoading: true }); try { set({ uiPolishResult: await getUIPolishStatus(), lastError: "" }); } catch { fail(set, "Failed to load UI polish status."); } finally { set({ uiPolishLoading: false }); } },
+  saveUIPolishReportFromStore: async () => { set({ uiPolishLoading: true }); try { set({ uiPolishResult: await saveUIPolishReport(), lastError: "" }); } catch { fail(set, "Failed to save UI polish report."); } finally { set({ uiPolishLoading: false }); } },
   loadDashboardIntelligence: async () => { set({ dashboardIntelligenceLoading: true }); try { set({ dashboardIntelligence: await getDashboardIntelligence(), lastError: "" }); } catch { fail(set, "Failed to load dashboard intelligence."); } finally { set({ dashboardIntelligenceLoading: false }); } },
   loadPlugins: async () => { try { const d = await getPlugins(); set({ plugins: d.plugins || [], pluginMetrics: d.metrics || {}, pluginRegistryReport: d.report || "" }); } catch { fail(set, "Failed to load plugins."); } },
   loadToolPermissions: async () => { try { const d = await getToolPermissions(); set({ toolPermissionMatrix: d.matrix || [], toolPermissionMetrics: d.metrics || {}, toolPermissionReport: d.report || "" }); } catch { fail(set, "Failed to load tool permissions."); } },

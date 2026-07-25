@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { BrowserResearchResult } from "../aurora-types";
+import { researchBrowserPage } from "@/lib/api/browser";
 import { ModuleShell } from "./module-shell";
 
 type BrowserModuleProps = {
@@ -18,15 +19,7 @@ export function BrowserModule({ onAssistantMessage }: BrowserModuleProps) {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/browser/research", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url }),
-      });
-
-      const data = await response.json();
+      const data = await researchBrowserPage(url);
       setResult(data);
 
       onAssistantMessage(

@@ -1,9 +1,9 @@
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from core.user_settings import get_user_settings_map
+from .user_settings import get_user_settings_map
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -53,7 +53,13 @@ def init_notification_db() -> None:
 
 
 def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat(timespec="seconds")
+
+
+def _normalize_datetime(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value
+    return value.astimezone(timezone.utc).replace(tzinfo=None)
 
 
 def _parse_due_at(due_at: str) -> str:
@@ -62,16 +68,16 @@ def _parse_due_at(due_at: str) -> str:
         raise ValueError("due_at cannot be empty.")
 
     try:
-        parsed = datetime.fromisoformat(clean)
+        parsed = _normalize_datetime(datetime.fromisoformat(clean))
         return parsed.isoformat(timespec="seconds")
     except ValueError:
         pass
 
     lowered = clean.lower()
     if lowered in ["today", "tonight"]:
-        return datetime.now().replace(hour=19, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
+        return datetime.now(timezone.utc).replace(tzinfo=None, hour=19, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
     if lowered == "tomorrow":
-        return (datetime.now() + timedelta(days=1)).replace(hour=9, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
+        return (datetime.now(timezone.utc) + timedelta(days=1)).replace(tzinfo=None, hour=9, minute=0, second=0, microsecond=0).isoformat(timespec="seconds")
 
     parts = lowered.split()
     if len(parts) == 2:
@@ -80,13 +86,16 @@ def _parse_due_at(due_at: str) -> str:
         except ValueError as error:
             raise ValueError("Relative due_at phrases must start with a number.") from error
 
+        if number <= 0:
+            raise ValueError("Relative due_at values must be greater than zero.")
+
         unit = parts[1]
         if unit in ["minute", "minutes"]:
-            return (datetime.now() + timedelta(minutes=number)).isoformat(timespec="seconds")
+            return (datetime.now(timezone.utc) + timedelta(minutes=number)).replace(tzinfo=None).isoformat(timespec="seconds")
         if unit in ["hour", "hours"]:
-            return (datetime.now() + timedelta(hours=number)).isoformat(timespec="seconds")
+            return (datetime.now(timezone.utc) + timedelta(hours=number)).replace(tzinfo=None).isoformat(timespec="seconds")
         if unit in ["day", "days"]:
-            return (datetime.now() + timedelta(days=number)).isoformat(timespec="seconds")
+            return (datetime.now(timezone.utc) + timedelta(days=number)).replace(tzinfo=None).isoformat(timespec="seconds")
 
     raise ValueError(
         "Unsupported due_at format. Use ISO format like 2026-07-05T18:00:00, "
@@ -136,10 +145,15 @@ def create_reminder_record(
     clean_title = title.strip()
     if not clean_title:
         raise ValueError("Reminder title cannot be empty.")
+    if len(clean_title) > 200:
+        raise ValueError("Reminder title must be 200 characters or fewer.")
+    clean_description = description.strip()
+    if len(clean_description) > 4000:
+        raise ValueError("Reminder description must be 4000 characters or fewer.")
 
     clean_priority = priority.lower().strip()
     if clean_priority not in REMINDER_PRIORITIES:
-        clean_priority = "medium"
+        raise ValueError(f"Invalid reminder priority: {priority}")
 
     parsed_due_at = _parse_due_at(due_at)
     now = _now()
@@ -151,7 +165,7 @@ def create_reminder_record(
             (title, description, due_at, status, priority, source, created_at, updated_at)
             VALUES (?, ?, ?, 'pending', ?, ?, ?, ?)
             """,
-            (clean_title, description.strip(), parsed_due_at, clean_priority, source, now, now),
+            (clean_title, clean_description, parsed_due_at, clean_priority, source, now, now),
         )
         conn.commit()
         reminder_id = int(cursor.lastrowid)
@@ -166,7 +180,7 @@ def create_reminder_record(
     return {
         "id": reminder_id,
         "title": clean_title,
-        "description": description.strip(),
+        "description": clean_description,
         "due_at": parsed_due_at,
         "status": "pending",
         "priority": clean_priority,
@@ -229,18 +243,45 @@ def update_reminder_status(reminder_id: int, status: str) -> bool:
     if clean_status not in REMINDER_STATUSES:
         raise ValueError(f"Invalid reminder status: {status}")
 
+    reminder = get_reminder(reminder_id)
+    if not reminder:
+        return False
+
+    current_status = reminder["status"]
+    if current_status in {"completed", "cancelled"}:
+        if current_status == clean_status:
+            return True
+        raise ValueError(f"Reminder {reminder_id} is already {current_status}.")
+    allowed_transitions = {
+        "pending": {"due", "completed", "cancelled"},
+        "due": {"completed", "cancelled"},
+    }
+    if clean_status not in allowed_transitions.get(current_status, set()):
+        raise ValueError(
+            f"Cannot change reminder status from {current_status} to {clean_status}."
+        )
+
     now = _now()
     with get_connection() as conn:
         cursor = conn.execute(
             """
             UPDATE reminders
             SET status = ?, updated_at = ?
-            WHERE id = ?
+            WHERE id = ? AND status = ?
             """,
-            (clean_status, now, reminder_id),
+            (clean_status, now, reminder_id, current_status),
         )
         conn.commit()
         updated = cursor.rowcount > 0
+
+    if not updated:
+        latest = get_reminder(reminder_id)
+        if latest and latest["status"] == clean_status:
+            return True
+        latest_status = latest["status"] if latest else "missing"
+        raise ValueError(
+            f"Reminder {reminder_id} changed concurrently and is now {latest_status}."
+        )
 
     if updated:
         create_notification_event(
@@ -258,6 +299,7 @@ def refresh_due_reminders() -> List[Dict[str, Any]]:
     now_text = _now()
 
     with get_connection() as conn:
+        conn.execute("BEGIN IMMEDIATE")
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             """
@@ -269,17 +311,22 @@ def refresh_due_reminders() -> List[Dict[str, Any]]:
             """,
             (now_text,),
         ).fetchall()
-        due_items = [dict(row) for row in rows]
+        due_items = []
 
-        for reminder in due_items:
-            conn.execute(
+        for row in rows:
+            reminder = dict(row)
+            cursor = conn.execute(
                 """
                 UPDATE reminders
                 SET status = 'due', updated_at = ?
-                WHERE id = ?
+                WHERE id = ? AND status = 'pending'
                 """,
                 (now_text, reminder["id"]),
             )
+            if cursor.rowcount:
+                reminder["status"] = "due"
+                reminder["updated_at"] = now_text
+                due_items.append(reminder)
         conn.commit()
 
     for reminder in due_items:

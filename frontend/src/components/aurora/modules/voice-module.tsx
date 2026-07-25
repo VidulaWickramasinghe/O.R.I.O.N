@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { VoiceStatus } from "../aurora-types";
+import { getVoiceStatus, resetVoiceStatus } from "@/lib/api/voice";
 import { ModuleShell } from "./module-shell";
 
 export function VoiceModule() {
@@ -10,8 +11,7 @@ export function VoiceModule() {
 
   async function loadVoiceStatus() {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/voice/status");
-      const data = await response.json();
+      const data = await getVoiceStatus();
       setVoiceStatus(data);
     } catch {
       setVoiceStatus(null);
@@ -19,9 +19,7 @@ export function VoiceModule() {
   }
 
   async function resetVoice() {
-    await fetch("http://127.0.0.1:8000/api/voice/reset", {
-      method: "POST",
-    });
+    await resetVoiceStatus();
     await loadVoiceStatus();
   }
 

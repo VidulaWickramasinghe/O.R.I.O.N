@@ -208,6 +208,27 @@ from tools.demo_recording_tools import (
     save_demo_recording_report,
 )
 
+from tools.final_launch_tools import (
+    get_final_launch_report as get_final_launch_report_tool,
+    save_final_launch_report as save_final_launch_report_tool,
+    freeze_final_launch as freeze_final_launch_tool,
+    unfreeze_final_launch as unfreeze_final_launch_tool,
+    generate_final_launch_package as generate_final_launch_package_tool,
+)
+from tools.github_launch_tools import (
+    get_github_launch_report as get_github_launch_report_tool,
+    save_github_launch_artifacts as save_github_launch_artifacts_tool,
+)
+
+from tools.public_landing_tools import (
+    get_public_landing_report as get_public_landing_report_tool,
+    save_public_landing_report as save_public_landing_report_tool,
+)
+from tools.ui_polish_tools import (
+    get_ui_polish_report as get_ui_polish_report_tool,
+    save_ui_polish_report as save_ui_polish_report_tool,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -304,6 +325,17 @@ orion = Agent(
         save_demo_walkthrough_report,
         get_demo_recording_report,
         save_demo_recording_report,
+        get_final_launch_report_tool,
+        save_final_launch_report_tool,
+        freeze_final_launch_tool,
+        unfreeze_final_launch_tool,
+        generate_final_launch_package_tool,
+        get_github_launch_report_tool,
+        save_github_launch_artifacts_tool,
+        get_public_landing_report_tool,
+        save_public_landing_report_tool,
+        get_ui_polish_report_tool,
+        save_ui_polish_report_tool,
     ],
 )
 
