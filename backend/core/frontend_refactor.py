@@ -57,6 +57,8 @@ EXPECTED_SERVICE_FILES = [
     "src/lib/api/desktop.ts", "src/lib/api/sidecar.ts", "src/lib/api/notifications.ts",
     "src/lib/api/settings.ts", "src/lib/api/workspaces.ts", "src/lib/api/knowledge.ts",
     "src/lib/api/vector.ts", "src/lib/api/workflows.ts", "src/lib/api/developer.ts", "src/lib/api/github-polish.ts",
+    "src/lib/api/demo.ts", "src/lib/api/browser.ts", "src/lib/api/memory.ts",
+    "src/lib/api/voice.ts",
 ]
 
 
@@ -107,7 +109,7 @@ def render_frontend_refactor_report(scan: Dict[str, Any] | None = None) -> str:
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v4.2 Frontend Refactor Report
+    return f"""# O.R.I.O.N. v6.2 Frontend Service Architecture Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}

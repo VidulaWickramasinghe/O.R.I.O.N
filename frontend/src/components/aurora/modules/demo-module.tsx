@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 
 import { DemoStatus } from "../aurora-types";
+import {
+  generateDemoReleasePack,
+  getDemoStatus,
+  setDemoMode,
+} from "@/lib/api/demo";
 import { ModuleShell } from "./module-shell";
 
 export function DemoModule() {
@@ -12,8 +17,7 @@ export function DemoModule() {
 
   async function loadDemoStatus() {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/demo/status");
-      const data = await response.json();
+      const data = await getDemoStatus();
       setDemoStatus(data);
     } catch {
       setDemoStatus(null);
@@ -24,15 +28,7 @@ export function DemoModule() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/demo/mode", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ enabled }),
-      });
-
-      const data = await response.json();
+      const data = await setDemoMode(enabled);
       setDemoStatus(data);
     } finally {
       setLoading(false);
@@ -43,11 +39,7 @@ export function DemoModule() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/demo/release-pack", {
-        method: "POST",
-      });
-
-      const data = await response.json();
+      const data = await generateDemoReleasePack();
       setFiles(data.files || []);
       await loadDemoStatus();
     } finally {

@@ -75,6 +75,22 @@ class StabilizationManagerTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_active_aurora_components_use_shared_api_services(self) -> None:
+        frontend_root = Path(__file__).resolve().parents[2] / "frontend" / "src"
+        violations = []
+        for path in (frontend_root / "components").rglob("*.tsx"):
+            if "legacy" in path.parts:
+                continue
+            text = path.read_text(encoding="utf-8")
+            if "fetch(" in text or "http://127.0.0.1:8000" in text:
+                violations.append(str(path.relative_to(frontend_root)))
+
+        self.assertEqual(violations, [])
+
+    def test_frontend_service_inventory_is_complete(self) -> None:
+        scan = frontend_refactor.inspect_frontend_architecture()
+        self.assertEqual(scan["missing_service_files"], [])
+
     def test_report_has_refactor_identity_and_uses_supplied_scan(self) -> None:
         scan = {
             "generated_at": "now",
@@ -116,7 +132,9 @@ class FrontendRefactorTests(unittest.TestCase):
             report = frontend_refactor.render_frontend_refactor_report(scan)
 
         inspect.assert_not_called()
-        self.assertTrue(report.startswith("# O.R.I.O.N. v4.2 Frontend Refactor Report"))
+        self.assertTrue(
+            report.startswith("# O.R.I.O.N. v6.2 Frontend Service Architecture Report")
+        )
 
 
 class SecurityPolicyTests(unittest.TestCase):

@@ -1,3 +1,21 @@
+## v6.2 — Frontend Service Layer Completion
+
+### Improved
+
+- Centralized the remaining active Demo, Browser Research, Memory, Context Preview,
+  Voice, and Workspace Desktop requests under `frontend/src/lib/api`.
+- Removed the second hardcoded Aurora API client and made legacy module consumers
+  delegate to the shared configurable client.
+- Added root-relative path validation, bounded backend error details, trailing-slash
+  normalization, and HTTP 204 handling to the shared API client.
+- Expanded Frontend Refactor service checks to cover the newly centralized modules
+  and corrected the report identity to the current v6.2 architecture line.
+
+### Safety
+
+- UI behavior and backend routes are unchanged; this is a frontend communication
+  and maintainability hardening pass.
+
 ## v6.2 — Stabilization and Frontend Scanner Accuracy
 
 ### Fixed
