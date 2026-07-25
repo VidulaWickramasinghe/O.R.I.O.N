@@ -126,6 +126,9 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "get_post_release_maintenance_report": "post_release_maintenance", "save_post_release_maintenance_report": "post_release_maintenance", "add_known_issue": "post_release_maintenance", "get_patch_plan": "post_release_maintenance",
     # Patch release
     "get_patch_release_report": "patch_release", "save_patch_release_report": "patch_release", "start_patch_release": "patch_release", "complete_patch_release": "patch_release", "generate_patch_release_package": "patch_release",
+    "get_changelog_intelligence_report": "changelog_intelligence", "save_changelog_intelligence_artifacts": "changelog_intelligence",
+    "get_roadmap_report": "roadmap_planner", "save_roadmap_report": "roadmap_planner", "add_future_feature": "roadmap_planner", "generate_roadmap_package": "roadmap_planner",
+    "get_safety_review_report": "safety_review_board", "save_safety_review_report": "safety_review_board", "create_feature_review": "safety_review_board", "generate_safety_review_package": "safety_review_board",
     # Stable release
     "get_stable_release_report": "stable_release", "save_stable_release_report": "stable_release", "lock_stable_release": "stable_release", "unlock_stable_release": "stable_release", "generate_stable_release_package": "stable_release",
     # Production readiness
@@ -160,6 +163,9 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "stable_release",
     "post_release_maintenance",
     "patch_release",
+    "changelog_intelligence",
+    "roadmap_planner",
+    "safety_review_board",
     "github_polish",
     "approval_system",
     "plugin_registry",

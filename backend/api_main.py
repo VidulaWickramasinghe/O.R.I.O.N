@@ -2802,6 +2802,11 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
+    except Exception as error:
+        return DesktopActionResponse(
+            status="failed",
+            message=str(error),
+        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):
