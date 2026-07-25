@@ -136,6 +136,69 @@ def read_portfolio_demo_file(relative_path: str) -> str:
         return f"Could not read portfolio demo file: {error}"
 
 
+@function_tool
+def get_demo_readiness_report() -> str:
+    """Generate the current portfolio-demo readiness report."""
+    portfolio_demo = _safe_import_portfolio_demo()
+    if not portfolio_demo:
+        return "Portfolio demo core is unavailable."
+    return portfolio_demo.generate_demo_readiness_report()
+
+
+@function_tool
+def generate_portfolio_case_study_tool() -> str:
+    """Generate the portfolio summary used as a concise case study."""
+    portfolio_demo = _safe_import_portfolio_demo()
+    if not portfolio_demo:
+        return "Portfolio demo core is unavailable."
+    return portfolio_demo.generate_portfolio_summary()
+
+
+@function_tool
+def generate_demo_script_tool() -> str:
+    """Generate the local portfolio-demo presentation script."""
+    portfolio_demo = _safe_import_portfolio_demo()
+    if not portfolio_demo:
+        return "Portfolio demo core is unavailable."
+    return portfolio_demo.generate_demo_script()
+
+
+@function_tool
+def generate_screenshot_checklist_tool() -> str:
+    """Generate a concise screenshot checklist from the readiness report."""
+    portfolio_demo = _safe_import_portfolio_demo()
+    if not portfolio_demo:
+        return "Portfolio demo core is unavailable."
+    return "\n".join(
+        [
+            "# O.R.I.O.N. Screenshot Checklist",
+            "- [ ] Aurora OS dashboard online status",
+            "- [ ] Mission and approval controls",
+            "- [ ] Workspace and browser research panels",
+            "- [ ] Portfolio demo readiness report",
+            "- [ ] Generated release pack artifacts",
+        ]
+    )
+
+
+@function_tool
+def generate_portfolio_release_pack() -> str:
+    """Generate the local-only portfolio release pack."""
+    portfolio_demo = _safe_import_portfolio_demo()
+    if not portfolio_demo:
+        return "Portfolio demo core is unavailable."
+    return str(portfolio_demo.generate_release_pack())
+
+
+@function_tool
+def set_demo_mode(enabled: bool) -> str:
+    """Enable or disable local portfolio-demo mode."""
+    portfolio_demo = _safe_import_portfolio_demo()
+    if not portfolio_demo:
+        return "Portfolio demo core is unavailable."
+    return str(portfolio_demo.update_demo_mode(enabled))
+
+
 # Friendly aliases in case future code imports these names.
 get_demo_status = get_portfolio_demo_status
 generate_demo_pack = generate_portfolio_demo_pack

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { MemoryItem } from "../aurora-types";
+import { getMemory, previewContext as getContextPreview } from "@/lib/api/memory";
 import { ModuleShell } from "./module-shell";
 
 type MemoryModuleProps = {
@@ -16,8 +17,7 @@ export function MemoryModule({ onAsk }: MemoryModuleProps) {
 
   async function loadMemory() {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/memory");
-      const data = await response.json();
+      const data = await getMemory();
       setMemoryItems(data.items || []);
     } catch {
       setMemoryItems([]);
@@ -28,15 +28,7 @@ export function MemoryModule({ onAsk }: MemoryModuleProps) {
     if (!query.trim()) return;
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/context/preview", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ message: query }),
-      });
-
-      const data = await response.json();
+      const data = await getContextPreview(query);
       setContextPreview(data.context || "");
     } catch {
       setContextPreview("Context preview failed.");

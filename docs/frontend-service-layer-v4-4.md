@@ -30,3 +30,8 @@ The dashboard workspace focuses on state orchestration and visual composition ra
 ## Safety
 
 This phase does not change backend behavior. It only centralizes frontend API calls.
+
+The v6.2 hardening pass also routes Demo, Browser Research, Memory, Context Preview,
+Voice, and approval-gated Workspace Desktop actions through the shared client.
+API paths must be root-relative, and backend error details are bounded before they
+are surfaced to callers.
