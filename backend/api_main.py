@@ -2093,6 +2093,8 @@ Rules:
             result=output,
         )
 
+    except Exception as error:
+        error_message = str(error)
 
 @app.post("/api/missions/{mission_id}/run-batch", response_model=MultiStepMissionRunResponse)
 async def run_mission_batch(mission_id: int, request: MultiStepMissionRunRequest):
@@ -2467,6 +2469,11 @@ def desktop_open_vscode(workspace_id: int):
             message=str(error),
         )
 
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open workspace folder {workspace_id}.",
+            "O.R.I.O.N.",
+        )
 
 @app.post("/api/desktop/workspaces/{workspace_id}/open-folder", response_model=DesktopActionResponse)
 def desktop_open_folder(workspace_id: int):
@@ -2515,6 +2522,11 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open URL: {request.url}",
+            "O.R.I.O.N.",
+        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):

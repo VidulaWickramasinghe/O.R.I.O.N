@@ -1,0 +1,3 @@
+import { AppShell } from "@/components/aurora/app-shell";
+import { DashboardWorkspace } from "@/components/aurora/dashboard-workspace";
+export default function GovernancePage(){return <AppShell><div className="mx-auto w-full max-w-[1600px]"><header className="mb-5"><p className="text-xs font-bold uppercase tracking-[.2em] text-cyan-300">Release & Governance Centre</p><h1 className="mt-2 text-3xl font-semibold">Specialist operations</h1><p className="mt-2 text-sm text-slate-400">Quality, release, maintenance, demo, roadmap, and security governance modules remain available here.</p></header><DashboardWorkspace/></div></AppShell>}

@@ -1,27 +1,5 @@
-export const ORION_API_BASE =
-  process.env.NEXT_PUBLIC_ORION_API_BASE || "http://127.0.0.1:8000";
-
-export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${ORION_API_BASE}${path}`);
-
-  if (!response.ok) {
-    throw new Error(`GET ${path} failed with ${response.status}`);
-  }
-
-  return response.json() as Promise<T>;
-}
-
-export async function apiPost<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${ORION_API_BASE}${path}`, {
-    method: "POST",
-    headers:
-      body === undefined ? undefined : { "Content-Type": "application/json" },
-    body: body === undefined ? undefined : JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    throw new Error(`POST ${path} failed with ${response.status}`);
-  }
-
-  return response.json() as Promise<T>;
-}
+export const ORION_API_BASE = process.env.NEXT_PUBLIC_ORION_API_BASE || "http://127.0.0.1:8000";
+const DEFAULT_TIMEOUT_MS = 12_000;
+async function request<T>(path:string, init:RequestInit={}, timeoutMs=DEFAULT_TIMEOUT_MS):Promise<T>{const controller=new AbortController();const timer=globalThis.setTimeout(()=>controller.abort(),timeoutMs);try{const response=await fetch(`${ORION_API_BASE}${path}`,{...init,signal:controller.signal,headers:{Accept:"application/json",...(init.body?{"Content-Type":"application/json"}:{}),...init.headers}});if(!response.ok)throw new Error(`${init.method??"GET"} ${path} failed with ${response.status}`);return await response.json() as T}catch(error){if(error instanceof DOMException&&error.name==="AbortError")throw new Error(`${path} timed out after ${timeoutMs}ms`);throw error}finally{globalThis.clearTimeout(timer)}}
+export function apiGet<T>(path:string):Promise<T>{return request<T>(path)}
+export function apiPost<T>(path:string,body?:unknown):Promise<T>{return request<T>(path,{method:"POST",body:body===undefined?undefined:JSON.stringify(body)})}
