@@ -77,11 +77,3 @@ def listen_for_wake_phrase() -> str:
             command_text = transcribe_voice(command_audio)
 
             return command_text.strip()
-
-
-	def listen_for_wake_phrase(*args, **kwargs):
-    		"""
-    		Compatibility wrapper used by wake_main.py.
-    		It maps listen_for_wake_phrase() to the existing wake-word listener.
-    		"""
-    		return listen_for_wake_word(*args, **kwargs)
