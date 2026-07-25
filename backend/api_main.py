@@ -1197,8 +1197,8 @@ class VectorItemsResponse(BaseModel):
 
 
 class SemanticSearchRequest(BaseModel):
-    query: str
-    limit: int = 8
+    query: str = Field(min_length=1, max_length=8000)
+    limit: int = Field(default=8, ge=1, le=100)
 
 
 class SemanticSearchItem(BaseModel):
@@ -1239,9 +1239,9 @@ class WorkflowBlueprintDetailResponse(BaseModel):
 
 
 class CreateMissionFromBlueprintRequest(BaseModel):
-    mission_title: str = ""
-    custom_goal: str = ""
-    workspace_id: Optional[int] = None
+    mission_title: str = Field(default="", max_length=200)
+    custom_goal: str = Field(default="", max_length=4000)
+    workspace_id: Optional[int] = Field(default=None, ge=1)
 
 
 class CreateMissionFromBlueprintResponse(BaseModel):
@@ -1262,14 +1262,14 @@ class DeveloperInspectResponse(BaseModel):
 
 
 class DeveloperIssueRequest(BaseModel):
-    issue_description: str
-    target_files: List[str] = Field(default_factory=list)
+    issue_description: str = Field(min_length=1, max_length=8000)
+    target_files: List[str] = Field(default_factory=list, max_length=20)
 
 
 class DeveloperPatchRequest(BaseModel):
-    relative_path: str
-    new_content: str
-    reason: str
+    relative_path: str = Field(min_length=1, max_length=500)
+    new_content: str = Field(max_length=1_000_000)
+    reason: str = Field(min_length=1, max_length=2000)
 
 
 class DeveloperPatchResponse(BaseModel):
@@ -1807,6 +1807,7 @@ def mission_runs_for_mission(mission_id: int):
             limit=50,
         )
     )
+    return MissionRunsResponse(runs=list_mission_runs(limit=30))
 
 
 @app.post("/api/missions/{mission_id}/report", response_model=MissionReportResponse)
@@ -1839,6 +1840,7 @@ def mission_report(mission_id: int):
         report_path=report_path,
         status="created",
     )
+    return ApprovalsResponse(approvals=list_approval_requests(limit=30))
 
 
 @app.get("/api/approvals", response_model=ApprovalsResponse)
@@ -1853,12 +1855,6 @@ def approvals():
 
 @app.post("/api/approvals/{approval_id}/approve")
 def approve_request(approval_id: int):
-    log_activity(
-        "APPROVAL_APPROVE",
-        f"Approval request approved: {approval_id}",
-        "Aurora OS",
-    )
-
     try:
         approval = next(
             (
@@ -1869,9 +1865,28 @@ def approve_request(approval_id: int):
             None,
         )
 
-        if approval and approval["action_type"] in ALLOWED_DESKTOP_ACTIONS:
+        if not approval:
+            return {
+                "status": "not_found",
+                "approval_id": approval_id,
+                "result": "Approval request not found.",
+            }
+        if approval["status"] != "pending":
+            return {
+                "status": approval["status"],
+                "approval_id": approval_id,
+                "result": "Approval request has already been processed.",
+            }
+
+        log_activity(
+            "APPROVAL_APPROVE",
+            f"Approval request execution started: {approval_id}",
+            "Aurora OS",
+        )
+
+        if approval["action_type"] in ALLOWED_DESKTOP_ACTIONS:
             result = execute_approved_desktop_action(approval_id)
-        elif approval and approval["action_type"] == "APPLY_WORKSPACE_FILE_PATCH":
+        elif approval["action_type"] == "APPLY_WORKSPACE_FILE_PATCH":
             result = execute_approved_workspace_patch(approval)
         else:
             result = execute_approved_dev_action(approval_id)
@@ -2696,12 +2711,12 @@ def vector_rebuild():
     try:
         result = rebuild_vector_index()
         log_activity(
-            "VECTOR_INDEX_REBUILT",
-            "Vector memory index rebuilt.",
+            "VECTOR_INDEX_REBUILT" if result["status"] == "rebuilt" else "VECTOR_INDEX_INCOMPLETE",
+            f"Vector memory rebuild completed with status: {result['status']}.",
             "O.R.I.O.N.",
         )
         return VectorRebuildResponse(
-            status="rebuilt",
+            status=result["status"],
             data=result,
         )
     except Exception as error:

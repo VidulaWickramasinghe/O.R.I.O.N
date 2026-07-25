@@ -1,3 +1,13 @@
+## v6.2 — Semantic, Workflow, and Developer Safety Hardening
+
+### Improved
+
+- Vector embeddings now resolve credentials at call time and rebuilds report partial or failed indexing accurately.
+- Workflow missions reject unknown workspace identifiers instead of creating unusable plans.
+- Developer patch paths use path-aware containment checks, validate payload sizes and reasons, and write atomically.
+- Approved file patches preserve uniquely timestamped backups and cannot be replayed after processing.
+- Backend regression tests now cover semantic configuration, rebuild status, workflow validation, and patch safety.
+
 ## v6.2 — Production Hardening + Knowledge Validation
 
 ### Added

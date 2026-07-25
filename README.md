@@ -31,6 +31,26 @@ services:
 Aurora OS is available at `http://localhost:3000`; the local API is available
 at `http://127.0.0.1:8000`.
 
+## Quick Setup
+
+Install backend and frontend dependencies, prepare the local environment file,
+and run the backend compile gate with one command:
+
+```bash
+./scripts/setup_orion.sh
+```
+
+Then set `OPENAI_API_KEY` in `backend/.env`, run diagnostics, and launch both
+services:
+
+```bash
+./scripts/doctor.sh
+./scripts/start_orion.sh
+```
+
+Aurora OS is available at `http://localhost:3000`; the local API is available
+at `http://127.0.0.1:8000`.
+
 ## Core Capabilities
 
 - Production Health panel
