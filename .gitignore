@@ -51,6 +51,8 @@ backend/data/github_polish/
 backend/data/portfolio_showcase/
 backend/data/demo_walkthrough/
 backend/data/demo_recording/
+backend/data/final_launch/
+backend/data/github_launch/
 
 # Archives and generated media
 *.zip

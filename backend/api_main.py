@@ -240,6 +240,19 @@ from core.patch_release import (
 from core.github_polish import generate_github_polish_checklist, render_github_polish_report, save_github_polish_artifacts
 from core.public_release import generate_public_release_package, get_latest_public_release_package, render_public_release_report
 from core.release_verification import run_quality_gate_snapshot, render_release_verification_report, save_release_verification_report
+from core.final_launch import (
+    freeze_final_launch,
+    generate_final_launch_checklist,
+    generate_final_launch_package,
+    render_final_launch_report,
+    save_final_launch_report,
+    unfreeze_final_launch,
+)
+from core.github_launch import (
+    generate_github_launch_checklist,
+    render_github_launch_report,
+    save_github_launch_artifacts,
+)
 from core.frontend_refactor import (
     inspect_frontend_architecture,
     render_frontend_refactor_report,
@@ -411,6 +424,18 @@ from tools.patch_release_tools import (
     start_patch_release as start_patch_release_tool,
 )
 
+from tools.final_launch_tools import (
+    get_final_launch_report as get_final_launch_report_tool,
+    save_final_launch_report as save_final_launch_report_tool,
+    freeze_final_launch as freeze_final_launch_tool,
+    unfreeze_final_launch as unfreeze_final_launch_tool,
+    generate_final_launch_package as generate_final_launch_package_tool,
+)
+from tools.github_launch_tools import (
+    get_github_launch_report as get_github_launch_report_tool,
+    save_github_launch_artifacts as save_github_launch_artifacts_tool,
+)
+
 
 class QualityGateRequest(BaseModel):
     run_builds: bool = False
@@ -484,6 +509,61 @@ class DemoRecordingResponse(BaseModel):
     safety: Dict[str, Any]
     report: str
     path: str = ""
+
+
+class FinalLaunchFreezeRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class FinalLaunchStatusResponse(BaseModel):
+    status: str
+    generated_at: str
+    passed: int
+    failed: int
+    checks: List[Dict[str, Any]]
+    final_freeze: Dict[str, Any]
+    report: str
+    path: str = ""
+
+
+class FinalLaunchFreezeResponse(BaseModel):
+    status: Literal["frozen", "unfrozen"]
+    freeze_state: Dict[str, Any]
+    report: str
+
+
+class FinalLaunchPackageResponse(BaseModel):
+    status: str
+    generated_at: str
+    release_version: str
+    release_name: str
+    passed: int
+    failed: int
+    report_path: str
+    summary_path: str
+    safety: Dict[str, Any]
+
+
+class GitHubLaunchSaveRequest(BaseModel):
+    write_templates: bool = True
+
+
+class GitHubLaunchResponse(BaseModel):
+    status: str
+    generated_at: str
+    passed: int
+    failed: int
+    checks: List[Dict[str, Any]]
+    description: str
+    topics: List[str]
+    badges: str
+    release_draft: str
+    safe_push_checklist: str
+    report: str
+    artifacts: Dict[str, str] = Field(default_factory=dict)
+    templates: Dict[str, str] = Field(default_factory=dict)
+    summary_path: str = ""
+    safety: Dict[str, Any] = Field(default_factory=dict)
 
 
 class SystemDoctorCheck(BaseModel):
@@ -657,6 +737,13 @@ orion = Agent(
         save_demo_walkthrough_report,
         get_demo_recording_report,
         save_demo_recording_report,
+        get_final_launch_report_tool,
+        save_final_launch_report_tool,
+        freeze_final_launch_tool,
+        unfreeze_final_launch_tool,
+        generate_final_launch_package_tool,
+        get_github_launch_report_tool,
+        save_github_launch_artifacts_tool,
     ],
 )
 
@@ -1919,7 +2006,6 @@ def approve_request(approval_id: int):
             "result": str(error),
         }
 
-    step_id = int(next_step["id"])
 
 @app.post("/api/approvals/{approval_id}/reject")
 def reject_request(approval_id: int):
@@ -2273,6 +2359,12 @@ def github_release_checklist(workspace_id: int, request: GitHubReleaseRequest):
         artifact_path=result["artifact_path"],
     )
 
+    return GitHubReleaseResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=result["content"],
+        artifact_path=result["artifact_path"],
+    )
 
 @app.post("/api/workspaces/{workspace_id}/github-release/commit-message", response_model=GitHubReleaseResponse)
 def github_release_commit_message(workspace_id: int, request: GitHubReleaseRequest):
@@ -2494,11 +2586,6 @@ def desktop_open_folder(workspace_id: int):
             message=str(error),
         )
 
-        return DesktopActionResponse(
-            status="approval_required",
-            approval_id=approval_id,
-            message=f"Approval required to start dev server for workspace {workspace_id}.",
-        )
 
 @app.post("/api/desktop/workspaces/{workspace_id}/start-dev", response_model=DesktopActionResponse)
 def desktop_start_dev(workspace_id: int):
@@ -3546,6 +3633,77 @@ def demo_recording_report_save():
     scan = saved["scan"]
     log_activity("DEMO_RECORDING_REPORT", f"Demo recording report saved: {saved['path']}", "O.R.I.O.N.")
     return DemoRecordingResponse(**scan, report=saved["report"], path=saved["path"])
+
+
+@app.get("/api/final-launch/status", response_model=FinalLaunchStatusResponse)
+def final_launch_status():
+    checklist = generate_final_launch_checklist()
+    return FinalLaunchStatusResponse(
+        **checklist,
+        report=render_final_launch_report(checklist),
+    )
+
+
+@app.post("/api/final-launch/freeze", response_model=FinalLaunchFreezeResponse)
+def final_launch_freeze(request: FinalLaunchFreezeRequest):
+    state = freeze_final_launch(request.reason)
+    checklist = generate_final_launch_checklist()
+    log_activity("FINAL_LAUNCH_FREEZE", state["freeze_reason"], "O.R.I.O.N.")
+    return FinalLaunchFreezeResponse(
+        status="frozen",
+        freeze_state=state,
+        report=render_final_launch_report(checklist),
+    )
+
+
+@app.post("/api/final-launch/unfreeze", response_model=FinalLaunchFreezeResponse)
+def final_launch_unfreeze(request: FinalLaunchFreezeRequest):
+    state = unfreeze_final_launch(request.reason)
+    checklist = generate_final_launch_checklist()
+    log_activity("FINAL_LAUNCH_UNFREEZE", state["freeze_reason"], "O.R.I.O.N.")
+    return FinalLaunchFreezeResponse(
+        status="unfrozen",
+        freeze_state=state,
+        report=render_final_launch_report(checklist),
+    )
+
+
+@app.post("/api/final-launch/report/save", response_model=FinalLaunchStatusResponse)
+def final_launch_report_save():
+    saved = save_final_launch_report()
+    checklist = saved["checklist"]
+    log_activity("FINAL_LAUNCH_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
+    return FinalLaunchStatusResponse(
+        **checklist,
+        report=saved["report"],
+        path=saved["path"],
+    )
+
+
+@app.post("/api/final-launch/package", response_model=FinalLaunchPackageResponse)
+def final_launch_package():
+    try:
+        result = generate_final_launch_package()
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    log_activity("FINAL_LAUNCH_PACKAGE", f"Generated: {result['summary_path']}", "O.R.I.O.N.")
+    return FinalLaunchPackageResponse(**result)
+
+
+@app.get("/api/github-launch/status", response_model=GitHubLaunchResponse)
+def github_launch_status():
+    checklist = generate_github_launch_checklist()
+    return GitHubLaunchResponse(
+        **checklist,
+        report=render_github_launch_report(checklist),
+    )
+
+
+@app.post("/api/github-launch/artifacts/save", response_model=GitHubLaunchResponse)
+def github_launch_artifacts_save(request: GitHubLaunchSaveRequest):
+    result = save_github_launch_artifacts(write_templates=request.write_templates)
+    log_activity("GITHUB_LAUNCH_ARTIFACTS", "Saved local launch drafts.", "O.R.I.O.N.")
+    return GitHubLaunchResponse(**result)
 
 
 @app.get("/api/system/doctor", response_model=SystemDoctorResponse)

@@ -14,6 +14,8 @@ from core import (
     demo_recording,
     demo_walkthrough,
     frontend_refactor,
+    final_launch,
+    github_launch,
     github_polish,
     notification_engine,
     plugin_registry,
@@ -339,6 +341,85 @@ class DemoPresentationTests(unittest.TestCase):
 
         self.assertEqual(scan["status"], "review_needed")
         self.assertEqual(scan["failed"], 1)
+
+
+class FinalLaunchTests(unittest.TestCase):
+    def test_missing_freeze_state_read_has_no_write_side_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_path = Path(temp_dir) / "freeze.json"
+            with patch.object(final_launch, "FREEZE_STATE_FILE", state_path):
+                state = final_launch.load_final_launch_freeze_state()
+
+            self.assertFalse(state["frozen"])
+            self.assertFalse(state_path.exists())
+
+    def test_freeze_state_is_atomic_and_reason_is_bounded(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            state_path = root / "freeze.json"
+            with patch.object(final_launch, "FINAL_LAUNCH_DIR", root), patch.object(
+                final_launch, "FREEZE_STATE_FILE", state_path
+            ):
+                state = final_launch.freeze_final_launch("ready for review")
+                loaded = final_launch.load_final_launch_freeze_state()
+                with self.assertRaises(ValueError):
+                    final_launch.freeze_final_launch("x" * 501)
+
+            self.assertTrue(state["frozen"])
+            self.assertEqual(loaded, state)
+            self.assertEqual(list(root.iterdir()), [state_path])
+
+    def test_final_package_requires_freeze(self) -> None:
+        checklist = {
+            "status": "review_needed",
+            "generated_at": "now",
+            "passed": 0,
+            "failed": 1,
+            "checks": [],
+            "final_freeze": {"frozen": False},
+        }
+        with patch.object(
+            final_launch, "generate_final_launch_checklist", return_value=checklist
+        ), patch.object(final_launch, "generate_public_release_package") as package:
+            with self.assertRaises(ValueError):
+                final_launch.generate_final_launch_package()
+
+        package.assert_not_called()
+
+    def test_github_template_generation_stays_in_artifact_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            destination = Path(temp_dir) / "proposals"
+            paths = github_launch.write_github_templates(destination)
+
+            self.assertEqual(len(paths), 3)
+            self.assertTrue(all(Path(path).is_relative_to(destination) for path in paths.values()))
+            self.assertTrue(all(Path(path).is_file() for path in paths.values()))
+
+    def test_github_artifacts_reuse_one_checklist(self) -> None:
+        checklist = {
+            "status": "review_needed",
+            "generated_at": "now",
+            "passed": 0,
+            "failed": 1,
+            "checks": [],
+            "description": "description",
+            "topics": [],
+            "badges": "badges",
+            "release_draft": "draft",
+            "safe_push_checklist": "checklist",
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            with patch.object(github_launch, "OUT", output), patch.object(
+                github_launch,
+                "generate_github_launch_checklist",
+                return_value=checklist,
+            ) as generate:
+                result = github_launch.save_github_launch_artifacts(False)
+
+            self.assertTrue(Path(result["summary_path"]).is_file())
+            self.assertEqual(result["templates"], {})
+        generate.assert_called_once_with()
 
 
 class SecurityPolicyTests(unittest.TestCase):
