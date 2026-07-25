@@ -42,6 +42,8 @@ import { SecurityPolicyPanel } from "@/components/aurora/panels/SecurityPolicyPa
 import { ToolAuditPanel } from "@/components/aurora/panels/ToolAuditPanel";
 import { ToolPermissionPanel } from "@/components/aurora/panels/ToolPermissionPanel";
 import { PublicLandingPanel } from "@/components/aurora/panels/PublicLandingPanel";
+import { ProductionReadinessPanel } from "@/components/aurora/panels/ProductionReadinessPanel";
+import { StableReleasePanel } from "@/components/aurora/panels/StableReleasePanel";
 import { UIPolishPanel } from "@/components/aurora/panels/UIPolishPanel";
 import { UserSettingsPanel } from "@/components/aurora/panels/UserSettingsPanel";
 import { GlassPanel } from "./glass-panel";
@@ -212,6 +214,8 @@ export function DashboardWorkspace() {
     "Presenter Controls",
     "Public Landing Page",
     "UI Polish",
+    "Production Readiness",
+    "Stable Public Release",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -257,7 +261,8 @@ export function DashboardWorkspace() {
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
     recordingModeState, loadRecordingModeStateFromStore, startRecordingModeFromStore, stopRecordingModeFromStore, setRecordingSceneFromStore, toggleRecordingLargeCalloutFromStore, toggleRecordingHideNoisyPanelsFromStore, toggleRecordingTimerFromStore, toggleRecordingChecklistFromStore, resetRecordingModeFromStore,
     demoWalkthroughState, loadDemoWalkthroughStateFromStore, startDemoWalkthroughFromStore, stopDemoWalkthroughFromStore, nextDemoWalkthroughStepFromStore, previousDemoWalkthroughStepFromStore, resetDemoWalkthroughFromStore,
-    publicLandingResult, publicLandingLoading, loadPublicLandingStatusFromStore, savePublicLandingReportFromStore, uiPolishResult, uiPolishLoading, loadUIPolishStatusFromStore, saveUIPolishReportFromStore,
+    productionReadinessResult, finalReleaseCandidateV2, productionReadinessLoading, loadProductionReadinessStatusFromStore, saveProductionReadinessReportFromStore, generateFinalReleaseCandidateV2FromStore, stableReleaseStatus, stableReleasePackage, stableReleaseLoading, loadStableReleaseStatusFromStore, lockStableReleaseFromStore, unlockStableReleaseFromStore, saveStableReleaseReportFromStore, generateStableReleasePackageFromStore,
+        publicLandingResult, publicLandingLoading, loadPublicLandingStatusFromStore, savePublicLandingReportFromStore, uiPolishResult, uiPolishLoading, loadUIPolishStatusFromStore, saveUIPolishReportFromStore,
         panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
   } = useAuroraStore();
   const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
@@ -478,6 +483,13 @@ export function DashboardWorkspace() {
               onMoveDown={movePanelDown}
               onReset={resetPanelLayout}
             />
+          )}
+
+          {widgets.includes("Stable Public Release") && panelVisible("stable-release") && (
+            <SafePanel panelId="stable-release"><StableReleasePanel status={stableReleaseStatus} pkg={stableReleasePackage} loading={stableReleaseLoading} onCheck={loadStableReleaseStatusFromStore} onLock={lockStableReleaseFromStore} onUnlock={unlockStableReleaseFromStore} onSave={saveStableReleaseReportFromStore} onPackage={generateStableReleasePackageFromStore}/></SafePanel>
+          )}
+          {widgets.includes("Production Readiness") && panelVisible("production-readiness") && (
+            <SafePanel panelId="production-readiness"><ProductionReadinessPanel result={productionReadinessResult} candidate={finalReleaseCandidateV2} loading={productionReadinessLoading} onCheck={loadProductionReadinessStatusFromStore} onSave={saveProductionReadinessReportFromStore} onGenerate={generateFinalReleaseCandidateV2FromStore}/></SafePanel>
           )}
 
           {widgets.includes("Public Landing Page") && panelVisible("public-landing") && (

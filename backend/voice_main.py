@@ -220,6 +220,19 @@ from tools.ui_polish_tools import (
     get_ui_polish_report as get_ui_polish_report_tool,
     save_ui_polish_report as save_ui_polish_report_tool,
 )
+
+from tools.production_readiness_tools import (
+    get_production_readiness_report as get_production_readiness_report_tool,
+    save_production_readiness_report as save_production_readiness_report_tool,
+    generate_final_release_candidate_v2 as generate_final_release_candidate_v2_tool,
+)
+from tools.stable_release_tools import (
+    get_stable_release_report as get_stable_release_report_tool,
+    save_stable_release_report as save_stable_release_report_tool,
+    lock_stable_release as lock_stable_release_tool,
+    unlock_stable_release as unlock_stable_release_tool,
+    generate_stable_release_package as generate_stable_release_package_tool,
+)
 from voice.voice_io import record_voice, transcribe_voice, speak_text
 
 
@@ -322,6 +335,14 @@ orion = Agent(
         save_public_landing_report_tool,
         get_ui_polish_report_tool,
         save_ui_polish_report_tool,
+        get_production_readiness_report_tool,
+        save_production_readiness_report_tool,
+        generate_final_release_candidate_v2_tool,
+        get_stable_release_report_tool,
+        save_stable_release_report_tool,
+        lock_stable_release_tool,
+        unlock_stable_release_tool,
+        generate_stable_release_package_tool,
     ],
 )
 

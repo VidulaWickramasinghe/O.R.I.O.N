@@ -1106,3 +1106,10 @@
 
 - Public presentation remains local until manually published.
 - Readiness checks do not push, publish, expose credentials, or alter tool behavior.
+
+## Production readiness and stable-release hardening
+
+- Added side-effect-free aggregate readiness snapshots and Final Release Candidate v2 artifacts.
+- Added a validated, atomic local stable-version marker and gated release packaging.
+- Added Production Readiness and Stable Release APIs, agent tools, Aurora panels, and frontend services.
+- Kept all GitHub publishing and generated release artifacts manual and local-only.

@@ -851,5 +851,48 @@ class PublicPresentationTests(unittest.TestCase):
             self.assertEqual(scan["status"], "ready")
 
 
+class ProductionReleaseTests(unittest.TestCase):
+    def test_production_snapshot_reads_latest_package_without_generating(self) -> None:
+        from core import production_readiness
+        healthy = {"status": "ready", "failed": 0, "frozen": True, "resilience_ready": True, "store_healthy": True, "mobile_ready": True}
+        patches = [
+            patch.object(production_readiness, "run_stabilization_scan", return_value={"status": "stable"}),
+            patch.object(production_readiness, "inspect_frontend_architecture", return_value=healthy),
+            patch.object(production_readiness, "generate_release_verification_snapshot", return_value={"status": "passed"}),
+            patch.object(production_readiness, "generate_release_checklist", return_value={"failed": 0}),
+            patch.object(production_readiness, "get_freeze_state", return_value={"frozen": True}),
+            patch.object(production_readiness, "generate_final_launch_checklist", return_value={"failed": 0}),
+            patch.object(production_readiness, "load_final_launch_freeze_state", return_value={"frozen": True}),
+            patch.object(production_readiness, "generate_github_launch_checklist", return_value={"failed": 0}),
+            patch.object(production_readiness, "generate_github_polish_checklist", return_value={"failed": 0}),
+            patch.object(production_readiness, "inspect_public_landing", return_value={"status": "ready"}),
+            patch.object(production_readiness, "inspect_ui_polish", return_value=healthy),
+            patch.object(production_readiness, "inspect_demo_recording_readiness", return_value={"status": "ready"}),
+            patch.object(production_readiness, "inspect_demo_walkthrough", return_value={"status": "ready"}),
+            patch.object(production_readiness, "inspect_portfolio_showcase", return_value={"status": "ready"}),
+            patch.object(production_readiness, "get_latest_public_release_package", return_value={"status": "generated"}),
+        ]
+        with patches[0], patches[1], patches[2], patches[3], patches[4], patches[5], patches[6], patches[7], patches[8], patches[9], patches[10], patches[11], patches[12], patches[13], patches[14]:
+            snapshot = production_readiness.generate_production_readiness_snapshot()
+        self.assertEqual(snapshot["status"], "production_ready")
+        self.assertEqual(snapshot["readiness_score"], 100)
+
+    def test_stable_lock_read_is_side_effect_free_and_package_requires_lock(self) -> None:
+        from core import stable_release
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir); lock = root / "lock.json"
+            with patch.object(stable_release, "OUT", root), patch.object(stable_release, "LOCK", lock):
+                self.assertFalse(stable_release.load_version_lock()["locked"])
+                self.assertFalse(lock.exists())
+                with patch.object(stable_release, "generate_stable_release_checklist", return_value={"version_lock": {"locked": False}}):
+                    with self.assertRaises(ValueError):
+                        stable_release.generate_stable_release_package()
+
+    def test_stable_lock_reason_is_bounded(self) -> None:
+        from core import stable_release
+        with self.assertRaises(ValueError):
+            stable_release.lock_stable_release("x" * 501)
+
+
 if __name__ == "__main__":
     unittest.main()

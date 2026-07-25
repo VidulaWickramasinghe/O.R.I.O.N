@@ -91,3 +91,6 @@ Thumbs.db
 !.yarn/versions
 backend/data/public_landing/
 backend/data/ui_polish/
+
+backend/data/production_readiness/
+backend/data/stable_release/

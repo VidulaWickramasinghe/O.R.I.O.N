@@ -166,3 +166,8 @@ export type UIPolishResult = {
   responsive_marker_count: number; mobile_ready: boolean;
   safety: Record<string, unknown>; report: string; path: string;
 };
+export type ProductionReadinessCheck={name:string;ok:boolean;details:string};
+export type ProductionReadinessResult={status:string;generated_at:string;release_version:string;release_name:string;readiness_score:number;passed:number;failed:number;checks:ProductionReadinessCheck[];stabilization:Record<string,unknown>;frontend:Record<string,unknown>;release:Record<string,unknown>;launch:Record<string,unknown>;presentation:Record<string,unknown>;public_release:Record<string,unknown>;safety:Record<string,unknown>;report:string;path:string};
+export type FinalReleaseCandidateV2={status:string;generated_at:string;release_version:string;release_name:string;readiness_score:number;passed:number;failed:number;report_path:string;summary_path:string;safety:Record<string,unknown>};
+export type StableReleaseStatus={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;checks:ProductionReadinessCheck[];version_lock:Record<string,unknown>;production:Record<string,unknown>;verification:Record<string,unknown>;github_launch:Record<string,unknown>;safety:Record<string,unknown>;report:string;path:string};
+export type StableReleasePackage={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;report_path:string;changelog_path:string;workflow_path:string;release_draft_path:string;summary_path:string;safety:Record<string,unknown>};

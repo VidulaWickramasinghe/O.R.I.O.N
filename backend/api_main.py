@@ -259,6 +259,20 @@ from core.public_landing import (
     save_public_landing_report,
 )
 from core.ui_polish import inspect_ui_polish, render_ui_polish_report, save_ui_polish_report
+from core.production_readiness import (
+    generate_final_release_candidate_v2,
+    generate_production_readiness_snapshot,
+    render_production_readiness_report,
+    save_production_readiness_report,
+)
+from core.stable_release import (
+    generate_stable_release_checklist,
+    generate_stable_release_package,
+    lock_stable_release,
+    render_stable_release_report,
+    save_stable_release_report,
+    unlock_stable_release,
+)
 from core.frontend_refactor import (
     inspect_frontend_architecture,
     render_frontend_refactor_report,
@@ -451,6 +465,19 @@ from tools.ui_polish_tools import (
     save_ui_polish_report as save_ui_polish_report_tool,
 )
 
+from tools.production_readiness_tools import (
+    get_production_readiness_report as get_production_readiness_report_tool,
+    save_production_readiness_report as save_production_readiness_report_tool,
+    generate_final_release_candidate_v2 as generate_final_release_candidate_v2_tool,
+)
+from tools.stable_release_tools import (
+    get_stable_release_report as get_stable_release_report_tool,
+    save_stable_release_report as save_stable_release_report_tool,
+    lock_stable_release as lock_stable_release_tool,
+    unlock_stable_release as unlock_stable_release_tool,
+    generate_stable_release_package as generate_stable_release_package_tool,
+)
+
 
 class QualityGateRequest(BaseModel):
     run_builds: bool = False
@@ -609,6 +636,43 @@ class UIPolishResponse(BaseModel):
     safety: Dict[str, Any]
     report: str
     path: str = ""
+
+
+class ProductionReadinessResponse(BaseModel):
+    status: str; generated_at: str; release_version: str; release_name: str
+    readiness_score: int; passed: int; failed: int; checks: List[Dict[str, Any]]
+    stabilization: Dict[str, Any]; frontend: Dict[str, Any]; release: Dict[str, Any]
+    launch: Dict[str, Any]; presentation: Dict[str, Any]; public_release: Dict[str, Any]
+    safety: Dict[str, Any]; report: str; path: str = ""
+
+
+class FinalReleaseCandidateV2Response(BaseModel):
+    status: str; generated_at: str; release_version: str; release_name: str
+    readiness_score: int; passed: int; failed: int; report_path: str
+    summary_path: str; safety: Dict[str, Any]
+
+
+class StableReleaseLockRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class StableReleaseStatusResponse(BaseModel):
+    status: str; generated_at: str; release_version: str; release_name: str
+    passed: int; failed: int; checks: List[Dict[str, Any]]; version_lock: Dict[str, Any]
+    production: Dict[str, Any]; verification: Dict[str, Any]; github_launch: Dict[str, Any]
+    safety: Dict[str, Any]; report: str; path: str = ""
+
+
+class StableReleaseLockResponse(BaseModel):
+    status: Literal["locked", "unlocked"]
+    version_lock: Dict[str, Any]
+    report: str
+
+
+class StableReleasePackageResponse(BaseModel):
+    status: str; generated_at: str; release_version: str; release_name: str
+    passed: int; failed: int; report_path: str; changelog_path: str
+    workflow_path: str; release_draft_path: str; summary_path: str; safety: Dict[str, Any]
 
 
 class SystemDoctorCheck(BaseModel):
@@ -793,6 +857,14 @@ orion = Agent(
         save_public_landing_report_tool,
         get_ui_polish_report_tool,
         save_ui_polish_report_tool,
+        get_production_readiness_report_tool,
+        save_production_readiness_report_tool,
+        generate_final_release_candidate_v2_tool,
+        get_stable_release_report_tool,
+        save_stable_release_report_tool,
+        lock_stable_release_tool,
+        unlock_stable_release_tool,
+        generate_stable_release_package_tool,
     ],
 )
 
@@ -1698,6 +1770,11 @@ def health():
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
+        return MissionReportResponse(
+            mission_id=mission_id,
+            report_path="",
+            status="mission_not_found",
+        )
 
 @app.get("/api/mission")
 def mission():
@@ -2385,12 +2462,6 @@ def github_release_notes(workspace_id: int, request: GitHubReleaseRequest):
         artifact_path=result["artifact_path"],
     )
 
-    return GitHubReleaseResponse(
-        workspace_id=workspace_id,
-        status="generated",
-        content=result["content"],
-        artifact_path=result["artifact_path"],
-    )
 
 @app.post("/api/workspaces/{workspace_id}/github-release/checklist", response_model=GitHubReleaseResponse)
 def github_release_checklist(workspace_id: int, request: GitHubReleaseRequest):
@@ -2686,10 +2757,6 @@ def desktop_open_url(request: DesktopUrlRequest):
             message=str(error),
         )
 
-@app.get("/api/demo/status", response_model=DemoStatusResponse)
-def demo_status():
-    state = load_demo_state()
-    readiness_report = generate_demo_readiness_report()
 
 @app.get("/api/demo/status", response_model=DemoStatusResponse)
 def demo_status():
@@ -3788,6 +3855,61 @@ def ui_polish_report_save():
     scan = saved["scan"]
     log_activity("UI_POLISH_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
     return UIPolishResponse(**scan, report=saved["report"], path=saved["path"])
+
+
+@app.get("/api/production-readiness/status", response_model=ProductionReadinessResponse)
+def production_readiness_status():
+    snapshot = generate_production_readiness_snapshot()
+    return ProductionReadinessResponse(**snapshot, report=render_production_readiness_report(snapshot))
+
+
+@app.post("/api/production-readiness/report/save", response_model=ProductionReadinessResponse)
+def production_readiness_report_save():
+    saved = save_production_readiness_report(); snapshot = saved["snapshot"]
+    log_activity("PRODUCTION_READINESS_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
+    return ProductionReadinessResponse(**snapshot, report=saved["report"], path=saved["path"])
+
+
+@app.post("/api/production-readiness/release-candidate-v2", response_model=FinalReleaseCandidateV2Response)
+def production_readiness_release_candidate_v2():
+    result = generate_final_release_candidate_v2()
+    log_activity("FINAL_RELEASE_CANDIDATE_V2", f"Generated: {result['summary_path']}", "O.R.I.O.N.")
+    return FinalReleaseCandidateV2Response(**result)
+
+
+@app.get("/api/stable-release/status", response_model=StableReleaseStatusResponse)
+def stable_release_status():
+    checklist = generate_stable_release_checklist()
+    return StableReleaseStatusResponse(**checklist, report=render_stable_release_report(checklist))
+
+
+@app.post("/api/stable-release/lock", response_model=StableReleaseLockResponse)
+def stable_release_lock(request: StableReleaseLockRequest):
+    state = lock_stable_release(request.reason); checklist = generate_stable_release_checklist()
+    log_activity("STABLE_RELEASE_LOCK", state["lock_reason"], "O.R.I.O.N.")
+    return StableReleaseLockResponse(status="locked", version_lock=state, report=render_stable_release_report(checklist))
+
+
+@app.post("/api/stable-release/unlock", response_model=StableReleaseLockResponse)
+def stable_release_unlock(request: StableReleaseLockRequest):
+    state = unlock_stable_release(request.reason); checklist = generate_stable_release_checklist()
+    log_activity("STABLE_RELEASE_UNLOCK", state["lock_reason"], "O.R.I.O.N.")
+    return StableReleaseLockResponse(status="unlocked", version_lock=state, report=render_stable_release_report(checklist))
+
+
+@app.post("/api/stable-release/report/save", response_model=StableReleaseStatusResponse)
+def stable_release_report_save():
+    saved = save_stable_release_report(); checklist = saved["checklist"]
+    log_activity("STABLE_RELEASE_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
+    return StableReleaseStatusResponse(**checklist, report=saved["report"], path=saved["path"])
+
+
+@app.post("/api/stable-release/package", response_model=StableReleasePackageResponse)
+def stable_release_package():
+    try: result = generate_stable_release_package()
+    except ValueError as error: raise HTTPException(status_code=409, detail=str(error)) from error
+    log_activity("STABLE_RELEASE_PACKAGE", f"Generated: {result['summary_path']}", "O.R.I.O.N.")
+    return StableReleasePackageResponse(**result)
 
 
 @app.get("/api/system/doctor", response_model=SystemDoctorResponse)

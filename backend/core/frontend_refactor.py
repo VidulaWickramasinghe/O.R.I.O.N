@@ -47,6 +47,8 @@ EXPECTED_FILES = [
     "src/components/public-demo/PublicFeatureCard.tsx", "src/components/public-demo/PublicScreenshotCard.tsx",
     "src/lib/api/public-landing.ts", "src/components/aurora/panels/PublicLandingPanel.tsx",
     "src/lib/api/ui-polish.ts", "src/components/aurora/panels/UIPolishPanel.tsx",
+    "src/lib/api/production-readiness.ts", "src/components/aurora/panels/ProductionReadinessPanel.tsx",
+    "src/lib/api/stable-release.ts", "src/components/aurora/panels/StableReleasePanel.tsx",
     "src/lib/api/github-launch.ts", "src/components/aurora/panels/GitHubLaunchPanel.tsx",
     "src/lib/api/final-launch.ts", "src/components/aurora/panels/FinalLaunchPanel.tsx",
     "src/types/recording.ts", "src/lib/recordingRegistry.ts", "src/lib/recordingModeStorage.ts", "src/components/aurora/panels/PresenterControlsPanel.tsx", "src/components/aurora/resilience/RecordingModeOverlay.tsx",
