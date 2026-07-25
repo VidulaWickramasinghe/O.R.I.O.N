@@ -12,6 +12,16 @@ type ToolsModuleProps = {
   onAssistantMessage: (message: string) => void;
 };
 
+type Approval = {
+  id: number;
+  status: string;
+  action_type: string;
+  title: string;
+  description: string;
+  risk_level: string;
+  result?: string;
+};
+
 export function ToolsModule({
   title = "Tools",
   description = "Command approvals, safety gates, tool execution, and security workflow.",
@@ -19,7 +29,7 @@ export function ToolsModule({
 }: ToolsModuleProps) {
   const queryClient = useQueryClient();
   const approvalsQuery = useAuroraApprovals();
-  const approvals = approvalsQuery.data?.approvals || [];
+  const approvals = (approvalsQuery.data?.approvals || []) as Approval[];
 
   async function approve(id: number) {
     const data = await api.post<{ result: string }>(

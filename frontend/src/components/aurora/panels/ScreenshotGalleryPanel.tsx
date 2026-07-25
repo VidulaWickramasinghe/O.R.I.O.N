@@ -1,4 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import { ORION_SCREENSHOTS } from "@/lib/portfolioRegistry";
 import { GlassPanel } from "@/components/aurora/ui/GlassPanel";
-export function ScreenshotGalleryPanel() { return <GlassPanel><div className="space-y-3 p-4"><h2 className="font-bold text-cyan-200">Screenshot Gallery · v5.2</h2><div className="grid gap-3">{ORION_SCREENSHOTS.map(item => <article key={item.id} className="overflow-hidden rounded-xl border border-white/10"><div className="relative aspect-video bg-black/40"><Image src={item.imagePath} alt={item.title} fill sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" /></div><div className="p-3"><p className="font-semibold text-slate-100">{item.title}</p><p className="text-xs text-slate-400">{item.description}</p><p className="mt-1 text-xs text-cyan-300">{item.recommendedFileName}</p></div></article>)}</div><p className="text-xs text-slate-500">Presentation assets only; add images in frontend/public/screenshots.</p></div></GlassPanel>; }
+
+export function ScreenshotGalleryPanel() {
+  return <GlassPanel><div className="space-y-3 p-4"><h2 className="font-bold text-cyan-200">Screenshot Gallery · v5.2</h2><div className="grid gap-3">{ORION_SCREENSHOTS.map((item) => <article key={item.id} className="overflow-hidden rounded-xl border border-white/10"><div className="relative aspect-video bg-black/40"><Image src={item.imagePath} alt={item.title} fill unoptimized className="object-cover" onError={(event) => { event.currentTarget.style.display = "none"; }} /></div><div className="p-3"><p className="font-semibold text-slate-100">{item.title}</p><p className="text-xs text-slate-400">{item.description}</p><p className="mt-1 text-xs text-cyan-300">{item.recommendedFileName}</p></div></article>)}</div><p className="text-xs text-slate-500">Presentation assets only; add images in frontend/public/screenshots.</p></div></GlassPanel>;
+}
