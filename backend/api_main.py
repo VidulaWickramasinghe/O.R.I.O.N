@@ -1919,6 +1919,7 @@ def approve_request(approval_id: int):
             "result": str(error),
         }
 
+    step_id = int(next_step["id"])
 
 @app.post("/api/approvals/{approval_id}/reject")
 def reject_request(approval_id: int):
@@ -1940,6 +1941,8 @@ def reject_request(approval_id: int):
         "result": "Rejected by user.",
     }
 
+    internal_prompt = f"""
+You are O.R.I.O.N. running a controlled mission execution cycle.
 
 @app.post("/api/missions/{mission_id}/run-next", response_model=MissionRunResponse)
 async def run_next_mission_step(mission_id: int):
@@ -2491,6 +2494,11 @@ def desktop_open_folder(workspace_id: int):
             message=str(error),
         )
 
+        return DesktopActionResponse(
+            status="approval_required",
+            approval_id=approval_id,
+            message=f"Approval required to start dev server for workspace {workspace_id}.",
+        )
 
 @app.post("/api/desktop/workspaces/{workspace_id}/start-dev", response_model=DesktopActionResponse)
 def desktop_start_dev(workspace_id: int):
