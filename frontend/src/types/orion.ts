@@ -151,3 +151,35 @@ export type FinalLaunchCheck = { name: string; ok: boolean; details: string; };
 export type FinalLaunchStatus = { status: string; generated_at: string; passed: number; failed: number; checks: FinalLaunchCheck[]; final_freeze: Record<string, unknown>; report: string; path: string; };
 export type FinalLaunchPackage = { status: string; generated_at: string; release_version: string; release_name: string; passed: number; failed: number; report_path: string; summary_path: string; safety: Record<string, unknown>; };
 export type GitHubLaunchCheck={name:string;ok:boolean;details:string}; export type GitHubLaunchResult={status:string;generated_at:string;passed:number;failed:number;checks:GitHubLaunchCheck[];description:string;topics:string[];badges:string;release_draft:string;safe_push_checklist:string;report:string;artifacts:Record<string,string>;templates:Record<string,string>;summary_path:string;safety:Record<string,unknown>};
+
+export type ReadinessFile = { path: string; exists: boolean };
+export type ResponsiveMarker = { marker: string; present: boolean };
+export type PublicLandingResult = {
+  status: string; generated_at: string; route: string; files: ReadinessFile[];
+  missing: ReadinessFile[]; missing_count: number; route_exists: boolean;
+  screenshot_dir_exists: boolean; screenshot_count: number; static_export_ready: boolean;
+  safety: Record<string, unknown>; report: string; path: string;
+};
+export type UIPolishResult = {
+  status: string; generated_at: string; files: ReadinessFile[]; missing: ReadinessFile[];
+  missing_count: number; responsive_markers: ResponsiveMarker[];
+  responsive_marker_count: number; mobile_ready: boolean;
+  safety: Record<string, unknown>; report: string; path: string;
+};
+export type ProductionReadinessCheck={name:string;ok:boolean;details:string};
+export type ProductionReadinessResult={status:string;generated_at:string;release_version:string;release_name:string;readiness_score:number;passed:number;failed:number;checks:ProductionReadinessCheck[];stabilization:Record<string,unknown>;frontend:Record<string,unknown>;release:Record<string,unknown>;launch:Record<string,unknown>;presentation:Record<string,unknown>;public_release:Record<string,unknown>;safety:Record<string,unknown>;report:string;path:string};
+export type FinalReleaseCandidateV2={status:string;generated_at:string;release_version:string;release_name:string;readiness_score:number;passed:number;failed:number;report_path:string;summary_path:string;safety:Record<string,unknown>};
+export type StableReleaseStatus={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;checks:ProductionReadinessCheck[];version_lock:Record<string,unknown>;production:Record<string,unknown>;verification:Record<string,unknown>;github_launch:Record<string,unknown>;safety:Record<string,unknown>;report:string;path:string};
+export type StableReleasePackage={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;report_path:string;changelog_path:string;workflow_path:string;release_draft_path:string;summary_path:string;safety:Record<string,unknown>};
+export type KnownIssue={id:string;title:string;body:string;source:string;status:string;category:string;priority:string;suggested_action:string;created_at:string;updated_at:string};
+export type PatchPlan={status:string;generated_at:string;recommended_patch:string;open_count:number;critical_count:number;high_count:number;medium_count:number;low_count:number;open_issues:KnownIssue[];patch_steps:string[]};
+export type PostReleaseMaintenanceResult={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;checks:ProductionReadinessCheck[];version_lock:Record<string,unknown>;stable_release:Record<string,unknown>;production:Record<string,unknown>;patch_plan:PatchPlan;safety:Record<string,unknown>;report:string;path:string};
+export type PatchReleaseStatus={status:string;generated_at:string;patch_state:Record<string,unknown>;patch_plan:PatchPlan;passed:number;failed:number;checks:ProductionReadinessCheck[];verification:Record<string,unknown>;stable_release:Record<string,unknown>;safety:Record<string,unknown>;report:string;path:string};
+export type PatchReleasePackage={status:string;generated_at:string;patch_version:string;patch_type:string;passed:number;failed:number;report_path:string;notes_path:string;checklist_path:string;summary_path:string;safety:Record<string,unknown>};
+export type FutureFeature={id:string;title:string;description:string;source:string;status:string;category:string;safety_level:string;effort:string;release_bucket:string;priority_score:number;governance_note:string;created_at:string;updated_at:string};
+export type RoadmapPlan={status:string;generated_at:string;total_features:number;proposed_count:number;patch_count:number;minor_count:number;safety_review_count:number;future_count:number;high_safety_count:number;medium_safety_count:number;low_safety_count:number;next_recommended_release:string;features:FutureFeature[];release_buckets:Record<string,FutureFeature[]>};
+export type RoadmapPlannerResult={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;checks:ProductionReadinessCheck[];roadmap_plan:RoadmapPlan;version_lock:Record<string,unknown>;safety:Record<string,unknown>;report:string;path:string};
+export type RoadmapPackage={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;next_recommended_release:string;report_path:string;future_plan_path:string;summary_path:string;safety:Record<string,unknown>};
+export type FeatureReview={id:string;feature_id:string;feature_title:string;reviewer:string;decision:string;recommended_decision:string;risk_score:number;risk_level:string;risk_factors:string[];required_controls:string[];notes:string;development_eligible:boolean;created_at:string;updated_at:string};
+export type SafetyReviewBoardResult={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;checks:ProductionReadinessCheck[];roadmap_plan:RoadmapPlan;reviews:FeatureReview[];pending_features:FutureFeature[];safety_review_features:FutureFeature[];approved_count:number;rejected_count:number;needs_changes_count:number;pending_count:number;safety_review_pending_count:number;safety:Record<string,unknown>;report:string;path:string};
+export type SafetyReviewPackage={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;approved_count:number;rejected_count:number;needs_changes_count:number;pending_count:number;safety_review_pending_count:number;report_path:string;approval_plan_path:string;summary_path:string;safety:Record<string,unknown>};

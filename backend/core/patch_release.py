@@ -1,6 +1,9 @@
 """Local-only patch planning and release artifact generation for O.R.I.O.N."""
 
 import json
+import os
+import re
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
@@ -15,8 +18,8 @@ PATCH_STATE_FILE = PATCH_RELEASE_DIR / "patch_release_state.json"
 
 DEFAULT_PATCH_STATE: Dict[str, Any] = {
     "active": False,
-    "base_version": "v6.0",
-    "patch_version": "v6.0.1",
+    "base_version": "v6.2",
+    "patch_version": "v6.2.1",
     "patch_type": "maintenance",
     "started_at": "",
     "completed_at": "",
@@ -30,41 +33,71 @@ def _now() -> str:
 
 
 def _timestamp() -> str:
-    return datetime.now().strftime("%Y%m%d_%H%M%S")
+    return datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+
+
+def _atomic_write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+        handle.write(content)
+        temporary = Path(handle.name)
+    os.replace(temporary, path)
+
+
+def _clean_reason(reason: str) -> str:
+    value = reason.strip()
+    if not value:
+        raise ValueError("Patch reason is required.")
+    if len(value) > 500:
+        raise ValueError("Patch reason must be 500 characters or fewer.")
+    return value
+
+
+def _validate_version(version: str) -> str:
+    value = version.strip()
+    if not re.fullmatch(r"v6\.2\.[1-9][0-9]*", value):
+        raise ValueError("Patch version must match v6.2.N where N is at least 1.")
+    return value
+
+
+def _normalize_state(value: Any) -> Dict[str, Any]:
+    if not isinstance(value, dict):
+        return DEFAULT_PATCH_STATE.copy()
+    patch_type = value.get("patch_type") if value.get("patch_type") in {"maintenance", "bugfix", "hotfix"} else "maintenance"
+    version = value.get("patch_version", DEFAULT_PATCH_STATE["patch_version"])
+    try:
+        version = _validate_version(str(version))
+    except ValueError:
+        version = DEFAULT_PATCH_STATE["patch_version"]
+    return {**DEFAULT_PATCH_STATE, "active": value.get("active") is True, "patch_version": version, "patch_type": patch_type, "started_at": str(value.get("started_at", ""))[:32], "completed_at": str(value.get("completed_at", ""))[:32], "reason": str(value.get("reason", ""))[:500], "updated_at": str(value.get("updated_at", ""))[:32]}
 
 
 def load_patch_state() -> Dict[str, Any]:
-    """Load the local patch workflow state, initializing it when needed."""
-    if not PATCH_STATE_FILE.exists():
-        return save_patch_state(DEFAULT_PATCH_STATE.copy())
+    """Read state without creating files as a GET side effect."""
     try:
-        return {**DEFAULT_PATCH_STATE, **json.loads(PATCH_STATE_FILE.read_text(encoding="utf-8"))}
+        return _normalize_state(json.loads(PATCH_STATE_FILE.read_text(encoding="utf-8")))
     except (json.JSONDecodeError, OSError):
         return DEFAULT_PATCH_STATE.copy()
 
 
 def save_patch_state(state: Dict[str, Any]) -> Dict[str, Any]:
-    """Persist state locally; this function never performs a remote operation."""
-    PATCH_RELEASE_DIR.mkdir(parents=True, exist_ok=True)
-    saved = {**DEFAULT_PATCH_STATE, **state, "updated_at": _now()}
-    PATCH_STATE_FILE.write_text(json.dumps(saved, indent=2), encoding="utf-8")
+    saved = _normalize_state(state)
+    saved["updated_at"] = _now()
+    _atomic_write(PATCH_STATE_FILE, json.dumps(saved, indent=2, sort_keys=True))
     return saved
 
 
-def start_patch_release(
-    patch_version: str = "v6.0.1",
-    patch_type: str = "maintenance",
-    reason: str = "Post-release maintenance patch.",
-) -> Dict[str, Any]:
-    return save_patch_state({
-        **load_patch_state(), "active": True, "patch_version": patch_version,
-        "patch_type": patch_type, "started_at": _now(), "completed_at": "", "reason": reason,
-    })
+def start_patch_release(patch_version: str = "v6.2.1", patch_type: str = "maintenance", reason: str = "Post-release maintenance patch.") -> Dict[str, Any]:
+    if patch_type not in {"maintenance", "bugfix", "hotfix"}:
+        raise ValueError("Patch type must be maintenance, bugfix, or hotfix.")
+    return save_patch_state({**load_patch_state(), "active": True, "patch_version": _validate_version(patch_version), "patch_type": patch_type, "started_at": _now(), "completed_at": "", "reason": _clean_reason(reason)})
 
 
 def complete_patch_release(reason: str = "Patch release workflow completed locally.") -> Dict[str, Any]:
-    return save_patch_state({**load_patch_state(), "active": False, "completed_at": _now(), "reason": reason})
-
+    state = load_patch_state()
+    if not state["active"]:
+        raise ValueError("No active patch release workflow to complete.")
+    return save_patch_state({**state, "active": False, "completed_at": _now(), "reason": _clean_reason(reason)})
 
 def classify_patch_type() -> Dict[str, Any]:
     """Derive a local patch candidate from the known-issue priority counts."""
@@ -79,7 +112,7 @@ def classify_patch_type() -> Dict[str, Any]:
         patch_type, urgency = "none", "none"
     return {
         "patch_type": patch_type,
-        "patch_version": "v6.0.1" if plan["open_count"] else "no_patch_needed",
+        "patch_version": "v6.2.1" if plan["open_count"] else "no_patch_needed",
         "urgency": urgency,
         **{key: plan[key] for key in ("open_count", "critical_count", "high_count", "medium_count", "low_count")},
     }
@@ -91,10 +124,10 @@ def generate_hotfix_checklist() -> Dict[str, Any]:
     stable_release, version_lock = generate_stable_release_checklist(), load_version_lock()
     checks = [
         {"name": "Patch workflow active", "ok": bool(state["active"]), "details": f"Active: {state['active']}"},
-        {"name": "Stable version lock exists", "ok": "locked" in version_lock, "details": f"Locked: {version_lock.get('locked')}"},
-        {"name": "Stable release baseline acceptable", "ok": stable_release["status"] in {"stable_release_ready", "release_review_needed"}, "details": f"Status: {stable_release['status']}"},
+        {"name": "Stable version lock active", "ok": version_lock.get("locked") is True, "details": f"Locked: {version_lock.get('locked')}"},
+        {"name": "Stable release baseline acceptable", "ok": stable_release["status"] == "stable_release_ready", "details": f"Status: {stable_release['status']}"},
         {"name": "Patch plan available", "ok": plan["status"] in {"patch_needed", "clean"}, "details": f"Status: {plan['status']} | Open: {plan['open_count']}"},
-        {"name": "Release verification available", "ok": verification["status"] in {"passed", "needs_attention"}, "details": f"Status: {verification['status']}"},
+        {"name": "Release verification available", "ok": verification["status"] == "passed", "details": f"Status: {verification['status']}"},
         {"name": "Critical hotfixes require manual review", "ok": True, "details": f"Critical issues: {plan['critical_count']}"},
     ]
     passed = sum(check["ok"] for check in checks)
@@ -167,18 +200,20 @@ No GitHub push, release publishing, GitHub issue modification, deletion, or appr
 def save_patch_release_report() -> Dict[str, Any]:
     report = render_patch_release_report()
     path = PATCH_RELEASE_DIR / f"PATCH_RELEASE_REPORT_{_timestamp()}.md"
-    path.write_text(report, encoding="utf-8")
+    _atomic_write(path, report)
     return {"status": "saved", "generated_at": _now(), "path": str(path), "report": report}
 
 
 def generate_patch_release_package() -> Dict[str, Any]:
     """Generate local report, notes, checklist, and JSON summary only."""
-    PATCH_RELEASE_DIR.mkdir(parents=True, exist_ok=True)
     checklist, timestamp = generate_hotfix_checklist(), _timestamp()
+    if not checklist["patch_state"]["active"]:
+        raise ValueError("Patch workflow must be active before packaging.")
     paths = {name: PATCH_RELEASE_DIR / f"{name.upper()}_{timestamp}.md" for name in ("patch_release_report", "patch_notes", "hotfix_checklist")}
-    paths["patch_release_report"].write_text(render_patch_release_report(), encoding="utf-8")
-    paths["patch_notes"].write_text(generate_patch_notes(), encoding="utf-8")
-    paths["hotfix_checklist"].write_text(render_patch_release_report(), encoding="utf-8")
+    report = render_patch_release_report()
+    _atomic_write(paths["patch_release_report"], report)
+    _atomic_write(paths["patch_notes"], generate_patch_notes())
+    _atomic_write(paths["hotfix_checklist"], report)
     summary_path = PATCH_RELEASE_DIR / f"PATCH_RELEASE_SUMMARY_{timestamp}.json"
     summary = {
         "status": checklist["status"], "generated_at": _now(), "patch_version": checklist["patch_state"]["patch_version"],
@@ -186,5 +221,5 @@ def generate_patch_release_package() -> Dict[str, Any]:
         "report_path": str(paths["patch_release_report"]), "notes_path": str(paths["patch_notes"]),
         "checklist_path": str(paths["hotfix_checklist"]), "summary_path": str(summary_path), "safety": checklist["safety"],
     }
-    summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
+    _atomic_write(summary_path, json.dumps(summary, indent=2, sort_keys=True))
     return summary

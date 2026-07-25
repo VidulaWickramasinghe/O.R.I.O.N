@@ -1,5 +1,7 @@
+import os
 import sqlite3
 import sys
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -102,9 +104,19 @@ def _get_workspace_root(workspace_id: int) -> Path:
 
 
 def _safe_workspace_file(root: Path, relative_path: str) -> Path:
+    if not relative_path or not relative_path.strip():
+        raise ValueError("Workspace file path is required.")
+    if Path(relative_path).is_absolute():
+        raise ValueError("Workspace file path must be relative.")
+
     target = (root / relative_path).resolve()
 
-    if not str(target).startswith(str(root)):
+    try:
+        target.relative_to(root.resolve())
+    except ValueError as error:
+        raise ValueError("Blocked unsafe workspace path access.") from error
+
+    if target == root.resolve():
         raise ValueError("Blocked unsafe workspace path access.")
 
     return target
@@ -126,11 +138,14 @@ def _discover_important_files(root: Path) -> List[str]:
     found = []
 
     for relative in COMMON_IMPORTANT_FILES:
-        if (root / relative).exists():
+        candidate = root / relative
+        if candidate.exists() and not candidate.is_symlink():
             found.append(relative)
 
     for pattern in ["*.md", "*.ts", "*.tsx", "*.py"]:
         for file_path in root.rglob(pattern):
+            if file_path.is_symlink():
+                continue
             if any(part in IGNORED_SCAN_PARTS for part in file_path.parts):
                 continue
 
@@ -160,7 +175,7 @@ def create_developer_report_record(
     workspace_name = workspace["name"] if workspace else f"workspace_{workspace_id}"
     file_name = (
         f"{_safe_slug(workspace_name)}_{_safe_slug(report_type)}_"
-        f"{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
+        f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.md"
     )
     artifact_path = REPORTS_DIR / file_name
     artifact_path.write_text(content, encoding="utf-8")
@@ -421,6 +436,12 @@ def request_workspace_file_patch(
 
     root = _get_workspace_root(workspace_id)
     target = _safe_workspace_file(root, relative_path)
+    if target.exists() and target.is_dir():
+        raise ValueError("Workspace patch target must be a file.")
+    if len(new_content.encode("utf-8")) > 1_000_000:
+        raise ValueError("Workspace patch content exceeds the 1 MB safety limit.")
+    if not reason.strip():
+        raise ValueError("A patch reason is required.")
     existing_content = ""
 
     if target.exists() and target.is_file():
@@ -445,17 +466,28 @@ def request_workspace_file_patch(
 
 
 def execute_approved_workspace_patch(approval: Dict[str, Any]) -> str:
+    if approval.get("action_type") != "APPLY_WORKSPACE_FILE_PATCH":
+        raise ValueError("Approval is not a workspace file patch request.")
+    if approval.get("status") != "pending":
+        raise ValueError("Workspace patch approval is no longer pending.")
+
     payload = approval.get("payload", {})
-    workspace_path = Path(payload["workspace_path"]).expanduser().resolve()
-    target_path = Path(payload["target_path"]).expanduser().resolve()
+    workspace_id = int(payload["workspace_id"])
+    workspace_path = _get_workspace_root(workspace_id)
     relative_path = payload["relative_path"]
+    target_path = _safe_workspace_file(workspace_path, relative_path)
     new_content = payload["new_content"]
 
-    if not str(target_path).startswith(str(workspace_path)):
-        return "Blocked unsafe patch path."
+    requested_target = Path(payload["target_path"]).expanduser().resolve()
+    if target_path != requested_target:
+        raise ValueError("Workspace patch target no longer matches the approval request.")
+    if target_path.exists() and target_path.is_dir():
+        raise ValueError("Workspace patch target must be a file.")
 
     target_path.parent.mkdir(parents=True, exist_ok=True)
-    backup_path = target_path.with_suffix(target_path.suffix + ".orion_backup")
+    backup_path = target_path.with_name(
+        f"{target_path.name}.{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}.orion_backup"
+    )
 
     if target_path.exists():
         backup_path.write_text(
@@ -463,7 +495,20 @@ def execute_approved_workspace_patch(approval: Dict[str, Any]) -> str:
             encoding="utf-8",
         )
 
-    target_path.write_text(new_content, encoding="utf-8")
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        dir=target_path.parent,
+        prefix=f".{target_path.name}.",
+        delete=False,
+    ) as temporary_file:
+        temporary_file.write(new_content)
+        temporary_path = Path(temporary_file.name)
+
+    try:
+        os.replace(temporary_path, target_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
 
     if backup_path.exists():
         return f"Workspace patch applied: {relative_path}\nBackup: {backup_path}"

@@ -23,6 +23,16 @@ PROTECTED_POLICY_PLUGINS = {
     "tool_audit_center",
     "security_policy_profiles",
 }
+MAX_POLICY_EVENTS = 200
+
+
+def _clean_text(value: Any, field: str, max_length: int) -> str:
+    clean = str(value or "").strip()
+    if not clean:
+        raise ValueError(f"{field} cannot be empty.")
+    if len(clean) > max_length:
+        raise ValueError(f"{field} must be {max_length} characters or fewer.")
+    return clean
 
 SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
     "strict": {
@@ -61,6 +71,8 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "production_readiness",
             "stable_release",
             "post_release_maintenance",
+            "safety_review_board",
+            "roadmap_planner",
             "patch_release",
         },
         "disabled_plugins": {
@@ -120,6 +132,8 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "production_readiness",
             "stable_release",
             "post_release_maintenance",
+            "safety_review_board",
+            "roadmap_planner",
             "patch_release",
         },
         "disabled_plugins": set(),
@@ -169,6 +183,8 @@ SECURITY_PROFILES: Dict[str, Dict[str, Any]] = {
             "production_readiness",
             "stable_release",
             "post_release_maintenance",
+            "safety_review_board",
+            "roadmap_planner",
             "patch_release",
         },
         "disabled_plugins": set(),
@@ -217,7 +233,7 @@ def init_security_policy_db() -> None:
                 """
                 INSERT INTO security_policy_state
                 (id, active_profile, applied_at, updated_at)
-                VALUES (1, 'balanced', ?, ?)
+                VALUES (1, 'strict', ?, ?)
                 """,
                 (now, now),
             )
@@ -239,11 +255,12 @@ def list_security_profiles() -> List[Dict[str, Any]]:
 
 
 def get_security_profile(profile_key: str) -> Optional[Dict[str, Any]]:
-    profile = SECURITY_PROFILES.get(profile_key)
+    clean_key = str(profile_key or "").strip().lower()
+    profile = SECURITY_PROFILES.get(clean_key)
     if not profile:
         return None
     return {
-        "key": profile_key,
+        "key": clean_key,
         "name": profile["name"],
         "description": profile["description"],
         "safety_level": profile["safety_level"],
@@ -257,8 +274,8 @@ def get_active_security_policy() -> Dict[str, Any]:
     with get_connection() as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT * FROM security_policy_state WHERE id = 1").fetchone()
-    state = dict(row) if row else {"active_profile": "balanced", "applied_at": "", "updated_at": ""}
-    profile = get_security_profile(state["active_profile"]) or get_security_profile("balanced")
+    state = dict(row) if row else {"active_profile": "strict", "applied_at": "", "updated_at": ""}
+    profile = get_security_profile(state["active_profile"]) or get_security_profile("strict")
     return {
         "active_profile": state["active_profile"],
         "applied_at": state.get("applied_at", ""),
@@ -270,9 +287,11 @@ def get_active_security_policy() -> Dict[str, Any]:
 
 def apply_security_profile(profile_key: str, source: str = "O.R.I.O.N.") -> Dict[str, Any]:
     init_security_policy_db()
-    profile = get_security_profile(profile_key)
+    clean_key = _clean_text(profile_key, "profile_key", 40).lower()
+    clean_source = _clean_text(source, "source", 100)
+    profile = get_security_profile(clean_key)
     if not profile:
-        raise ValueError(f"Security profile not found: {profile_key}")
+        raise ValueError(f"Security profile not found: {clean_key}")
 
     all_plugins = list_plugins(limit=300)
     enabled_set = set(profile["enabled_plugins"])
@@ -281,58 +300,86 @@ def apply_security_profile(profile_key: str, source: str = "O.R.I.O.N.") -> Dict
     disabled_count = 0
     unchanged_count = 0
 
-    for plugin in all_plugins:
-        key = plugin["key"]
-        if key in PROTECTED_POLICY_PLUGINS:
-            set_plugin_enabled(key, True)
-            enabled_count += 1
-        elif key in enabled_set:
-            set_plugin_enabled(key, True)
-            enabled_count += 1
-        elif key in disabled_set:
-            set_plugin_enabled(key, False)
-            disabled_count += 1
-        else:
-            unchanged_count += 1
+    previous_plugins = {plugin["key"]: bool(plugin["enabled"]) for plugin in all_plugins}
+    previous_policy = get_active_security_policy()
+    from core.user_settings import get_user_settings_map
 
-    update_user_setting("safety_level", profile["safety_level"])
-    now = _now()
-    summary = (
-        f"Applied {profile['name']}. Enabled: {enabled_count}. "
-        f"Disabled: {disabled_count}. Unchanged: {unchanged_count}."
-    )
+    previous_safety_level = get_user_settings_map().get("safety_level", "strict")
 
-    with get_connection() as conn:
-        conn.execute(
-            """
-            UPDATE security_policy_state
-            SET active_profile = ?, applied_at = ?, updated_at = ?
-            WHERE id = 1
-            """,
-            (profile_key, now, now),
+    try:
+        for plugin in all_plugins:
+            key = plugin["key"]
+            if key in PROTECTED_POLICY_PLUGINS or key in enabled_set:
+                set_plugin_enabled(key, True)
+                enabled_count += 1
+            elif key in disabled_set or clean_key == "strict":
+                # Strict profiles fail closed for plugins added after the profile
+                # definition instead of silently leaving new capabilities enabled.
+                set_plugin_enabled(key, False)
+                disabled_count += 1
+            else:
+                unchanged_count += 1
+
+        update_user_setting("safety_level", profile["safety_level"])
+        now = _now()
+        summary = (
+            f"Applied {profile['name']}. Enabled: {enabled_count}. "
+            f"Disabled: {disabled_count}. Unchanged: {unchanged_count}."
         )
-        conn.execute(
-            """
-            INSERT INTO security_policy_events
-            (profile_key, profile_name, summary, enabled_count, disabled_count, source, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (profile_key, profile["name"], summary, enabled_count, disabled_count, source, now),
-        )
-        conn.commit()
 
-    record_tool_audit_event(
-        tool_name="apply_security_profile",
-        plugin_key="security_policy_profiles",
-        decision="allowed",
-        reason=summary,
-        risk_level="high",
-        category="safety",
-        source=source,
-    )
+        with get_connection() as conn:
+            conn.execute(
+                """
+                UPDATE security_policy_state
+                SET active_profile = ?, applied_at = ?, updated_at = ?
+                WHERE id = 1
+                """,
+                (clean_key, now, now),
+            )
+            event_cursor = conn.execute(
+                """
+                INSERT INTO security_policy_events
+                (profile_key, profile_name, summary, enabled_count, disabled_count, source, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (clean_key, profile["name"], summary, enabled_count, disabled_count, clean_source, now),
+            )
+            conn.commit()
+
+        record_tool_audit_event(
+            tool_name="apply_security_profile",
+            plugin_key="security_policy_profiles",
+            decision="allowed",
+            reason=summary,
+            risk_level="high",
+            category="safety",
+            source=clean_source,
+        )
+    except Exception:
+        for key, was_enabled in previous_plugins.items():
+            set_plugin_enabled(key, was_enabled)
+        update_user_setting("safety_level", previous_safety_level)
+        with get_connection() as conn:
+            conn.execute(
+                """UPDATE security_policy_state
+                   SET active_profile = ?, applied_at = ?, updated_at = ? WHERE id = 1""",
+                (
+                    previous_policy["active_profile"],
+                    previous_policy.get("applied_at", ""),
+                    previous_policy.get("updated_at", ""),
+                ),
+            )
+            event_id = locals().get("event_cursor")
+            if event_id is not None:
+                conn.execute(
+                    "DELETE FROM security_policy_events WHERE id = ?",
+                    (int(event_id.lastrowid),),
+                )
+            conn.commit()
+        raise
     return {
         "status": "applied",
-        "profile_key": profile_key,
+        "profile_key": clean_key,
         "profile_name": profile["name"],
         "summary": summary,
         "enabled_count": enabled_count,
@@ -345,6 +392,7 @@ def apply_security_profile(profile_key: str, source: str = "O.R.I.O.N.") -> Dict
 
 def list_security_policy_events(limit: int = 50) -> List[Dict[str, Any]]:
     init_security_policy_db()
+    clean_limit = max(1, min(int(limit), MAX_POLICY_EVENTS))
     with get_connection() as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
@@ -354,15 +402,24 @@ def list_security_policy_events(limit: int = 50) -> List[Dict[str, Any]]:
             ORDER BY id DESC
             LIMIT ?
             """,
-            (limit,),
+            (clean_limit,),
         ).fetchall()
     return [dict(row) for row in rows]
 
 
-def render_security_policy_report() -> str:
-    active = get_active_security_policy()
-    profiles = list_security_profiles()
-    events = list_security_policy_events(limit=20)
+def get_security_policy_snapshot(event_limit: int = 20) -> Dict[str, Any]:
+    return {
+        "active_policy": get_active_security_policy(),
+        "profiles": list_security_profiles(),
+        "events": list_security_policy_events(limit=event_limit),
+    }
+
+
+def render_security_policy_report(snapshot: Optional[Dict[str, Any]] = None) -> str:
+    snapshot = snapshot or get_security_policy_snapshot()
+    active = snapshot["active_policy"]
+    profiles = snapshot["profiles"]
+    events = snapshot["events"]
     profile_lines = [
         f"## {profile['name']}\n\n"
         f"- Key: {profile['key']}\n"

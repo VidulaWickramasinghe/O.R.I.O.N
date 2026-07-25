@@ -1,28 +1,35 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from core.activity import get_recent_activity
-from core.approvals import list_approval_requests
-from core.developer_agent import list_developer_reports
-from core.knowledge_base import list_knowledge_documents
-from core.mission_planner import list_mission_records
-from core.mission_run_history import list_mission_runs
-from core.notification_engine import list_reminders, refresh_due_reminders
-from core.plugin_registry import get_plugin_metrics
-from core.security_policy import get_active_security_policy
-from core.release_candidate import generate_release_checklist, get_freeze_state
-from core.stabilization_manager import run_stabilization_scan
-from core.tool_permissions import get_tool_permission_metrics
-from core.tool_audit import get_tool_audit_metrics
-from core.persistent_memory import list_recent_memory
-from core.user_settings import get_user_settings_map
-from core.vector_memory import list_vector_items
-from core.workspace_manager import detect_workspace_stack, list_workspace_records
+from .activity import get_recent_activity
+from .approvals import list_approval_requests
+from .developer_agent import list_developer_reports
+from .knowledge_base import list_knowledge_documents
+from .mission_planner import list_mission_records
+from .mission_run_history import list_mission_runs
+from .notification_engine import list_reminders, refresh_due_reminders
+from .persistent_memory import list_recent_memory
+from .plugin_registry import get_plugin_metrics
+from .release_candidate import generate_release_checklist, get_freeze_state
+from .security_policy import get_active_security_policy
+from .stabilization_manager import run_stabilization_scan
+from .tool_audit import get_tool_audit_metrics
+from .tool_permissions import get_tool_permission_metrics
+from .user_settings import get_user_settings_map
+from .vector_memory import list_vector_items
+from .workspace_manager import detect_workspace_stack, list_workspace_records
 
 
 def _safe_percentage(value: int, total: int) -> int:
     if total <= 0:
         return 0
     return round((value / total) * 100)
+
+
+def _safe_int(value: Any) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
 
 
 def calculate_mission_metrics() -> Dict[str, Any]:
@@ -40,7 +47,7 @@ def calculate_mission_metrics() -> Dict[str, Any]:
         for mission in missions
         if mission.get("status") in ["blocked", "waiting_approval"]
     )
-    high_priority = sum(1 for mission in missions if int(mission.get("priority", 0)) >= 4)
+    high_priority = sum(1 for mission in missions if _safe_int(mission.get("priority")) >= 4)
 
     return {
         "total_missions": total,
@@ -60,7 +67,14 @@ def calculate_workspace_metrics() -> Dict[str, Any]:
     workspace_summaries = []
 
     for workspace in workspaces:
-        stack = detect_workspace_stack(workspace["id"])
+        try:
+            stack = detect_workspace_stack(workspace["id"])
+        except (OSError, ValueError) as error:
+            stack = {
+                "detected_stack": [],
+                "key_files": [],
+                "error": str(error),
+            }
         detected_stack = stack.get("detected_stack", [])
         key_files = stack.get("key_files", [])
 
@@ -91,6 +105,7 @@ def calculate_workspace_metrics() -> Dict[str, Any]:
                 "readiness_score": readiness_points,
                 "detected_stack": detected_stack,
                 "key_files": key_files,
+                "error": stack.get("error", ""),
             }
         )
 
@@ -330,8 +345,10 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
     }
 
 
-def render_dashboard_intelligence_report() -> str:
-    data = generate_dashboard_intelligence()
+def render_dashboard_intelligence_report(
+    data: Optional[Dict[str, Any]] = None,
+) -> str:
+    data = data or generate_dashboard_intelligence()
 
     return f"""# Aurora OS Dashboard Intelligence Report
 
