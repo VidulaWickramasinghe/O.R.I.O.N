@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 from .workspace_manager import get_workspace_record
 
 
+from core.database import managed_connection
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BACKEND_DIR / "data"
 DB_PATH = DATA_DIR / "orion_user_settings.sqlite"
@@ -60,7 +61,7 @@ SETTING_OPTIONS = {
 
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    return managed_connection(DB_PATH)
 
 
 def _now() -> str:

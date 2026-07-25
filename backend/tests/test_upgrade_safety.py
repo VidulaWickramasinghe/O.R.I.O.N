@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 
 from core import (
     backend_sidecar,
+    database,
     developer_agent,
     demo_recording,
     demo_walkthrough,
@@ -31,6 +32,32 @@ from core import (
     vector_memory,
     workflow_blueprints,
 )
+
+
+class DatabaseConnectionTests(unittest.TestCase):
+    def test_managed_connection_closes_after_success(self) -> None:
+        connection = Mock()
+        connection.__enter__ = Mock(return_value=connection)
+        connection.__exit__ = Mock(return_value=False)
+
+        with patch.object(database.sqlite3, "connect", return_value=connection):
+            with database.managed_connection("test.sqlite") as active:
+                self.assertIs(active, connection)
+
+        connection.__exit__.assert_called_once_with(None, None, None)
+        connection.close.assert_called_once_with()
+
+    def test_managed_connection_closes_after_failure(self) -> None:
+        connection = Mock()
+        connection.__enter__ = Mock(return_value=connection)
+        connection.__exit__ = Mock(return_value=False)
+
+        with patch.object(database.sqlite3, "connect", return_value=connection):
+            with self.assertRaisesRegex(RuntimeError, "query failed"):
+                with database.managed_connection("test.sqlite"):
+                    raise RuntimeError("query failed")
+
+        connection.close.assert_called_once_with()
 
 
 class StabilizationManagerTests(unittest.TestCase):
@@ -83,6 +110,23 @@ class StabilizationManagerTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_dashboard_restores_preferences_without_stale_hook_references(self) -> None:
+        dashboard = (
+            Path(__file__).resolve().parents[2]
+            / "frontend"
+            / "src"
+            / "components"
+            / "aurora"
+            / "dashboard-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("restoreDashboardPreferences();", dashboard)
+        self.assertIn("const store = useAuroraStore.getState();", dashboard)
+        self.assertNotIn(
+            "[loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore]",
+            dashboard,
+        )
+
     def test_active_aurora_components_use_shared_api_services(self) -> None:
         frontend_root = Path(__file__).resolve().parents[2] / "frontend" / "src"
         violations = []

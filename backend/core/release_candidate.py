@@ -22,6 +22,7 @@ from core.system_doctor import render_system_doctor_report
 from core.tool_audit import get_tool_audit_metrics, render_tool_audit_report
 from core.tool_permissions import get_tool_permission_metrics, render_tool_permission_report
 from core.user_settings import get_user_settings_map
+from core.database import managed_connection
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -52,8 +53,8 @@ def _clean_text(value: Any, field: str, max_length: int, *, required: bool = Tru
     return clean
 
 
-def get_connection() -> sqlite3.Connection:
-    return sqlite3.connect(DB_PATH)
+def get_connection():
+    return managed_connection(DB_PATH)
 
 
 def _now() -> str:

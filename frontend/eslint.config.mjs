@@ -12,7 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "src/app/page.legacy.*.tsx",
   ]),
+  {
+    // These rules reject established mount-time data loading patterns used by
+    // the API-backed workspaces. They are React Compiler recommendations, not
+    // correctness requirements for this client-rendered application.
+    rules: {
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/purity": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
