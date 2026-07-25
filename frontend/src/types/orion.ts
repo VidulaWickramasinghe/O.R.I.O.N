@@ -151,3 +151,23 @@ export type FinalLaunchCheck = { name: string; ok: boolean; details: string; };
 export type FinalLaunchStatus = { status: string; generated_at: string; passed: number; failed: number; checks: FinalLaunchCheck[]; final_freeze: Record<string, unknown>; report: string; path: string; };
 export type FinalLaunchPackage = { status: string; generated_at: string; release_version: string; release_name: string; passed: number; failed: number; report_path: string; summary_path: string; safety: Record<string, unknown>; };
 export type GitHubLaunchCheck={name:string;ok:boolean;details:string}; export type GitHubLaunchResult={status:string;generated_at:string;passed:number;failed:number;checks:GitHubLaunchCheck[];description:string;topics:string[];badges:string;release_draft:string;safe_push_checklist:string;report:string;artifacts:Record<string,string>;templates:Record<string,string>;summary_path:string;safety:Record<string,unknown>};
+
+export type ReadinessFile = { path: string; exists: boolean };
+export type ResponsiveMarker = { marker: string; present: boolean };
+export type PublicLandingResult = {
+  status: string; generated_at: string; route: string; files: ReadinessFile[];
+  missing: ReadinessFile[]; missing_count: number; route_exists: boolean;
+  screenshot_dir_exists: boolean; screenshot_count: number; static_export_ready: boolean;
+  safety: Record<string, unknown>; report: string; path: string;
+};
+export type UIPolishResult = {
+  status: string; generated_at: string; files: ReadinessFile[]; missing: ReadinessFile[];
+  missing_count: number; responsive_markers: ResponsiveMarker[];
+  responsive_marker_count: number; mobile_ready: boolean;
+  safety: Record<string, unknown>; report: string; path: string;
+};
+export type ProductionReadinessCheck={name:string;ok:boolean;details:string};
+export type ProductionReadinessResult={status:string;generated_at:string;release_version:string;release_name:string;readiness_score:number;passed:number;failed:number;checks:ProductionReadinessCheck[];stabilization:Record<string,unknown>;frontend:Record<string,unknown>;release:Record<string,unknown>;launch:Record<string,unknown>;presentation:Record<string,unknown>;public_release:Record<string,unknown>;safety:Record<string,unknown>;report:string;path:string};
+export type FinalReleaseCandidateV2={status:string;generated_at:string;release_version:string;release_name:string;readiness_score:number;passed:number;failed:number;report_path:string;summary_path:string;safety:Record<string,unknown>};
+export type StableReleaseStatus={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;checks:ProductionReadinessCheck[];version_lock:Record<string,unknown>;production:Record<string,unknown>;verification:Record<string,unknown>;github_launch:Record<string,unknown>;safety:Record<string,unknown>;report:string;path:string};
+export type StableReleasePackage={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;report_path:string;changelog_path:string;workflow_path:string;release_draft_path:string;summary_path:string;safety:Record<string,unknown>};
