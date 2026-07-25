@@ -926,5 +926,42 @@ class MaintenanceAndPatchTests(unittest.TestCase):
             with self.assertRaises(ValueError): patch_release.generate_patch_release_package()
 
 
+class RoadmapAndSafetyTests(unittest.TestCase):
+    def test_roadmap_read_has_no_side_effect_and_security_precedes_memory(self) -> None:
+        from core import roadmap_planner
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path=Path(temp_dir)/"roadmap.json"
+            with patch.object(roadmap_planner,"ROADMAP_FILE",path): data=roadmap_planner.load_future_features()
+            self.assertEqual(data["features"],[]);self.assertFalse(path.exists())
+        result=roadmap_planner.classify_feature_request("Secure cloud sync for memory","protect tokens")
+        self.assertEqual(result["category"],"security");self.assertEqual(result["release_bucket"],"safety_review")
+
+    def test_feature_input_is_bounded_and_ids_are_unique(self) -> None:
+        from core import roadmap_planner
+        with self.assertRaises(ValueError):roadmap_planner.classify_feature_request("x"*201)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path=Path(temp_dir)/"roadmap.json"
+            with patch.object(roadmap_planner,"ROADMAP_FILE",path):
+                first=roadmap_planner.add_future_feature("UI panel");second=roadmap_planner.add_future_feature("UI panel")
+            self.assertNotEqual(first["id"],second["id"])
+
+    def test_critical_feature_cannot_be_manually_approved(self) -> None:
+        from core import safety_review_board
+        feature={"id":"feature_1","title":"Execute terminal commands with secrets","description":"upload token","safety_level":"high","category":"agentic_tools","release_bucket":"safety_review","priority_score":90,"status":"proposed","source":"manual","effort":"high","governance_note":"review","created_at":"","updated_at":""}
+        with patch.object(safety_review_board,"load_future_features",return_value={"features":[feature]}):
+            with self.assertRaises(ValueError):safety_review_board.create_feature_review("feature_1",decision="approved")
+            with tempfile.TemporaryDirectory() as temp_dir:
+                path=Path(temp_dir)/"reviews.json"
+                with patch.object(safety_review_board,"REVIEW_FILE",path): review=safety_review_board.create_feature_review("feature_1")
+            self.assertEqual(review["decision"],"needs_changes");self.assertFalse(review["development_eligible"])
+
+    def test_review_read_has_no_write_side_effect(self) -> None:
+        from core import safety_review_board
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path=Path(temp_dir)/"reviews.json"
+            with patch.object(safety_review_board,"REVIEW_FILE",path):data=safety_review_board.load_feature_reviews()
+            self.assertEqual(data["reviews"],[]);self.assertFalse(path.exists())
+
+
 if __name__ == "__main__":
     unittest.main()

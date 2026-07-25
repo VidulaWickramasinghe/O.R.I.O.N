@@ -147,6 +147,8 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     # Demo walkthrough
     "get_demo_walkthrough_report": "demo_walkthrough",
     "save_demo_walkthrough_report": "demo_walkthrough",
+    "get_roadmap_report":"roadmap_planner", "save_roadmap_report":"roadmap_planner", "add_future_feature":"roadmap_planner", "generate_roadmap_package":"roadmap_planner",
+    "get_safety_review_report":"safety_review_board", "save_safety_review_report":"safety_review_board", "create_feature_review":"safety_review_board", "generate_safety_review_package":"safety_review_board",
 }
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
@@ -175,6 +177,8 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "release_candidate",
     "stabilization_manager",
     "frontend_refactor",
+    "roadmap_planner",
+    "safety_review_board",
 }
 
 

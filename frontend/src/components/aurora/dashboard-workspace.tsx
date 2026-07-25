@@ -44,6 +44,8 @@ import { ToolPermissionPanel } from "@/components/aurora/panels/ToolPermissionPa
 import { PublicLandingPanel } from "@/components/aurora/panels/PublicLandingPanel";
 import { ProductionReadinessPanel } from "@/components/aurora/panels/ProductionReadinessPanel";
 import { PostReleaseMaintenancePanel } from "@/components/aurora/panels/PostReleaseMaintenancePanel";
+import { RoadmapPlannerPanel } from "@/components/aurora/panels/RoadmapPlannerPanel";
+import { SafetyReviewBoardPanel } from "@/components/aurora/panels/SafetyReviewBoardPanel";
 import { PatchReleasePanel } from "@/components/aurora/panels/PatchReleasePanel";
 import { StableReleasePanel } from "@/components/aurora/panels/StableReleasePanel";
 import { UIPolishPanel } from "@/components/aurora/panels/UIPolishPanel";
@@ -220,6 +222,8 @@ export function DashboardWorkspace() {
     "Stable Public Release",
     "Post-Release Maintenance",
     "Patch Release",
+    "Roadmap Planner",
+    "Safety Review Board",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -265,7 +269,8 @@ export function DashboardWorkspace() {
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
     recordingModeState, loadRecordingModeStateFromStore, startRecordingModeFromStore, stopRecordingModeFromStore, setRecordingSceneFromStore, toggleRecordingLargeCalloutFromStore, toggleRecordingHideNoisyPanelsFromStore, toggleRecordingTimerFromStore, toggleRecordingChecklistFromStore, resetRecordingModeFromStore,
     demoWalkthroughState, loadDemoWalkthroughStateFromStore, startDemoWalkthroughFromStore, stopDemoWalkthroughFromStore, nextDemoWalkthroughStepFromStore, previousDemoWalkthroughStepFromStore, resetDemoWalkthroughFromStore,
-    postReleaseMaintenanceResult,knownIssues,patchPlan,postReleaseMaintenanceLoading,loadPostReleaseMaintenanceStatusFromStore,savePostReleaseMaintenanceReportFromStore,loadKnownIssuesFromStore,addKnownIssueFromStore,loadPatchPlanFromStore,patchReleaseStatus,patchReleasePackage,patchReleaseLoading,loadPatchReleaseStatusFromStore,startPatchReleaseFromStore,completePatchReleaseFromStore,savePatchReleaseReportFromStore,generatePatchReleasePackageFromStore,
+    roadmapPlannerResult,futureFeatures,roadmapPackage,roadmapPlannerLoading,loadRoadmapPlannerStatusFromStore,saveRoadmapPlannerReportFromStore,loadFutureFeaturesFromStore,addFutureFeatureFromStore,generateRoadmapPackageFromStore,safetyReviewBoardResult,featureReviews,safetyReviewPackage,safetyReviewBoardLoading,loadSafetyReviewBoardStatusFromStore,saveSafetyReviewBoardReportFromStore,loadFeatureReviewsFromStore,createFeatureReviewFromStore,generateSafetyReviewPackageFromStore,
+        postReleaseMaintenanceResult,knownIssues,patchPlan,postReleaseMaintenanceLoading,loadPostReleaseMaintenanceStatusFromStore,savePostReleaseMaintenanceReportFromStore,loadKnownIssuesFromStore,addKnownIssueFromStore,loadPatchPlanFromStore,patchReleaseStatus,patchReleasePackage,patchReleaseLoading,loadPatchReleaseStatusFromStore,startPatchReleaseFromStore,completePatchReleaseFromStore,savePatchReleaseReportFromStore,generatePatchReleasePackageFromStore,
         productionReadinessResult, finalReleaseCandidateV2, productionReadinessLoading, loadProductionReadinessStatusFromStore, saveProductionReadinessReportFromStore, generateFinalReleaseCandidateV2FromStore, stableReleaseStatus, stableReleasePackage, stableReleaseLoading, loadStableReleaseStatusFromStore, lockStableReleaseFromStore, unlockStableReleaseFromStore, saveStableReleaseReportFromStore, generateStableReleasePackageFromStore,
         publicLandingResult, publicLandingLoading, loadPublicLandingStatusFromStore, savePublicLandingReportFromStore, uiPolishResult, uiPolishLoading, loadUIPolishStatusFromStore, saveUIPolishReportFromStore,
         panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
@@ -490,6 +495,12 @@ export function DashboardWorkspace() {
             />
           )}
 
+          {widgets.includes("Safety Review Board") && panelVisible("safety-review-board") && (
+            <SafePanel panelId="safety-review-board"><SafetyReviewBoardPanel result={safetyReviewBoardResult} reviews={featureReviews} pkg={safetyReviewPackage} loading={safetyReviewBoardLoading} onCheck={loadSafetyReviewBoardStatusFromStore} onSave={saveSafetyReviewBoardReportFromStore} onLoad={loadFeatureReviewsFromStore} onReview={createFeatureReviewFromStore} onPackage={generateSafetyReviewPackageFromStore}/></SafePanel>
+          )}
+          {widgets.includes("Roadmap Planner") && panelVisible("roadmap-planner") && (
+            <SafePanel panelId="roadmap-planner"><RoadmapPlannerPanel result={roadmapPlannerResult} features={futureFeatures} pkg={roadmapPackage} loading={roadmapPlannerLoading} onCheck={loadRoadmapPlannerStatusFromStore} onSave={saveRoadmapPlannerReportFromStore} onLoad={loadFutureFeaturesFromStore} onAdd={addFutureFeatureFromStore} onPackage={generateRoadmapPackageFromStore}/></SafePanel>
+          )}
           {widgets.includes("Patch Release") && panelVisible("patch-release") && (
             <SafePanel panelId="patch-release"><PatchReleasePanel status={patchReleaseStatus} pkg={patchReleasePackage} loading={patchReleaseLoading} onCheck={loadPatchReleaseStatusFromStore} onStart={startPatchReleaseFromStore} onComplete={completePatchReleaseFromStore} onSave={savePatchReleaseReportFromStore} onPackage={generatePatchReleasePackageFromStore}/></SafePanel>
           )}

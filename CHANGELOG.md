@@ -1120,3 +1120,10 @@
 - Added maintenance status/report APIs and Aurora issue-triage controls.
 - Validated `v6.2.N` patch versions and patch types, made state reads side-effect free, and gated completion and packaging on an active workflow.
 - Added atomic, collision-safe patch artifacts and local-only safety declarations.
+
+## Roadmap and safety governance
+
+- Added bounded, atomic future-feature planning with deterministic safety and release-bucket classification.
+- Added a local Safety Review Board with risk scoring, review history, required controls, and explicit development eligibility.
+- Prevented critical-risk features from being approved before design changes and a new review.
+- Added roadmap/safety APIs, agent tools, Aurora panels, and local-only report packages.

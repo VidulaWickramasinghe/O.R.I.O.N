@@ -296,6 +296,8 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
     {"key": "final_launch", "name": "Final Public Launch", "description": "Final launch checklist, repository freeze, release verification, and public portfolio readiness.", "category": "release", "risk_level": "low", "permissions": ["final_launch_checklist", "repository_freeze", "launch_package"], "default_enabled": True},
     {"key": "demo_recording", "name": "Demo Recording Mode", "description": "Presenter controls, recording layout, scene presets, and demo recording readiness.", "category": "release", "risk_level": "low", "permissions": ["recording_mode", "presenter_controls", "demo_readiness"], "default_enabled": True},
     {"key": "demo_walkthrough", "name": "Demo Walkthrough", "description": "Guided portfolio walkthrough, demo steps, and presentation-mode reporting.", "category": "release", "risk_level": "low", "permissions": ["demo_mode", "guided_walkthrough", "presentation"], "default_enabled": True},
+    {"key":"roadmap_planner","name":"Roadmap Planner","description":"Future feature governance and release bucket planning.","category":"release","risk_level":"low","permissions":["roadmap_planning","feature_governance","priority_scoring"],"default_enabled":True},
+    {"key":"safety_review_board","name":"Safety Review Board","description":"Feature risk scoring and development eligibility governance.","category":"security","risk_level":"low","permissions":["feature_review","risk_scoring","approval_governance"],"default_enabled":True},
 ]
 
 # Disabling these entries would make the registry claim its own safety controls

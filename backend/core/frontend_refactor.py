@@ -51,6 +51,8 @@ EXPECTED_FILES = [
     "src/lib/api/stable-release.ts", "src/components/aurora/panels/StableReleasePanel.tsx",
     "src/lib/api/post-release-maintenance.ts", "src/components/aurora/panels/PostReleaseMaintenancePanel.tsx",
     "src/lib/api/patch-release.ts", "src/components/aurora/panels/PatchReleasePanel.tsx",
+    "src/lib/api/roadmap-planner.ts", "src/components/aurora/panels/RoadmapPlannerPanel.tsx",
+    "src/lib/api/safety-review-board.ts", "src/components/aurora/panels/SafetyReviewBoardPanel.tsx",
     "src/lib/api/github-launch.ts", "src/components/aurora/panels/GitHubLaunchPanel.tsx",
     "src/lib/api/final-launch.ts", "src/components/aurora/panels/FinalLaunchPanel.tsx",
     "src/types/recording.ts", "src/lib/recordingRegistry.ts", "src/lib/recordingModeStorage.ts", "src/components/aurora/panels/PresenterControlsPanel.tsx", "src/components/aurora/resilience/RecordingModeOverlay.tsx",

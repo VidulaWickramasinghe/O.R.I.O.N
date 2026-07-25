@@ -249,6 +249,15 @@ from tools.post_release_maintenance_tools import (
     get_patch_plan as get_patch_plan_tool,
 )
 
+from tools.roadmap_planner_tools import (
+    get_roadmap_report as get_roadmap_report_tool, save_roadmap_report as save_roadmap_report_tool,
+    add_future_feature as add_future_feature_tool, generate_roadmap_package as generate_roadmap_package_tool,
+)
+from tools.safety_review_board_tools import (
+    get_safety_review_report as get_safety_review_report_tool, save_safety_review_report as save_safety_review_report_tool,
+    create_feature_review as create_feature_review_tool, generate_safety_review_package as generate_safety_review_package_tool,
+)
+
 from voice.wake_word import (
     listen_for_wake_phrase,
     is_sleep_command,
@@ -368,6 +377,14 @@ orion = Agent(
         save_post_release_maintenance_report_tool,
         add_known_issue_tool,
         get_patch_plan_tool,
+        get_roadmap_report_tool,
+        save_roadmap_report_tool,
+        add_future_feature_tool,
+        generate_roadmap_package_tool,
+        get_safety_review_report_tool,
+        save_safety_review_report_tool,
+        create_feature_review_tool,
+        generate_safety_review_package_tool,
     ],
 )
 

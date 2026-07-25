@@ -281,6 +281,23 @@ from core.post_release_maintenance import (
     render_maintenance_report,
     save_maintenance_report,
 )
+from core.roadmap_planner import (
+    add_future_feature,
+    generate_governance_checklist,
+    generate_roadmap_package,
+    generate_roadmap_plan,
+    load_future_features,
+    render_roadmap_report,
+    save_roadmap_report,
+)
+from core.safety_review_board import (
+    create_feature_review,
+    generate_safety_review_package,
+    generate_safety_review_snapshot,
+    load_feature_reviews,
+    render_safety_review_report,
+    save_safety_review_report,
+)
 from core.frontend_refactor import (
     inspect_frontend_architecture,
     render_frontend_refactor_report,
@@ -491,6 +508,15 @@ from tools.post_release_maintenance_tools import (
     save_post_release_maintenance_report as save_post_release_maintenance_report_tool,
     add_known_issue as add_known_issue_tool,
     get_patch_plan as get_patch_plan_tool,
+)
+
+from tools.roadmap_planner_tools import (
+    get_roadmap_report as get_roadmap_report_tool, save_roadmap_report as save_roadmap_report_tool,
+    add_future_feature as add_future_feature_tool, generate_roadmap_package as generate_roadmap_package_tool,
+)
+from tools.safety_review_board_tools import (
+    get_safety_review_report as get_safety_review_report_tool, save_safety_review_report as save_safety_review_report_tool,
+    create_feature_review as create_feature_review_tool, generate_safety_review_package as generate_safety_review_package_tool,
 )
 
 
@@ -721,6 +747,19 @@ class KnownIssueRequest(BaseModel):
     source: str = Field(default="manual", min_length=1, max_length=40)
 
 
+class FutureFeatureRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=5000)
+    source: str = Field(default="manual", min_length=1, max_length=40)
+
+
+class FeatureReviewRequest(BaseModel):
+    feature_id: str = Field(min_length=1, max_length=80)
+    reviewer: str = Field(default="O.R.I.O.N. Safety Review Board", min_length=1, max_length=120)
+    decision: Literal["auto_recommend", "approved", "conditional_approval", "rejected", "needs_changes"] = "auto_recommend"
+    notes: str = Field(default="", max_length=5000)
+
+
 class PostReleaseMaintenanceResponse(BaseModel):
     status: str; generated_at: str; release_version: str; release_name: str
     passed: int; failed: int; checks: List[Dict[str, Any]]; version_lock: Dict[str, Any]
@@ -897,6 +936,14 @@ orion = Agent(
         save_post_release_maintenance_report_tool,
         add_known_issue_tool,
         get_patch_plan_tool,
+        get_roadmap_report_tool,
+        save_roadmap_report_tool,
+        add_future_feature_tool,
+        generate_roadmap_package_tool,
+        get_safety_review_report_tool,
+        save_safety_review_report_tool,
+        create_feature_review_tool,
+        generate_safety_review_package_tool,
     ],
 )
 
@@ -2755,6 +2802,11 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
+    except Exception as error:
+        return DesktopActionResponse(
+            status="failed",
+            message=str(error),
+        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):
@@ -3974,6 +4026,73 @@ def post_release_maintenance_issue_add(request: KnownIssueRequest):
 @app.get("/api/post-release-maintenance/patch-plan")
 def post_release_maintenance_patch_plan():
     return generate_patch_plan()
+
+
+@app.get("/api/roadmap-planner/status")
+def roadmap_planner_status():
+    governance = generate_governance_checklist()
+    return {**governance, "report": render_roadmap_report(governance)}
+
+
+@app.post("/api/roadmap-planner/report/save")
+def roadmap_planner_report_save():
+    saved = save_roadmap_report(); governance = saved["governance"]
+    log_activity("ROADMAP_PLANNER_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
+    return {**governance, "report": saved["report"], "path": saved["path"]}
+
+
+@app.get("/api/roadmap-planner/features")
+def roadmap_planner_features():
+    return load_future_features()
+
+
+@app.post("/api/roadmap-planner/features/add")
+def roadmap_planner_feature_add(request: FutureFeatureRequest):
+    feature = add_future_feature(request.title, request.description, request.source)
+    log_activity("FUTURE_FEATURE_ADDED", feature["title"], "O.R.I.O.N.")
+    return {"feature": feature, "roadmap_plan": generate_roadmap_plan()}
+
+
+@app.post("/api/roadmap-planner/package")
+def roadmap_planner_package():
+    result = generate_roadmap_package()
+    log_activity("ROADMAP_PACKAGE", f"Generated: {result['summary_path']}", "O.R.I.O.N.")
+    return result
+
+
+@app.get("/api/safety-review-board/status")
+def safety_review_board_status():
+    snapshot = generate_safety_review_snapshot()
+    return {**snapshot, "report": render_safety_review_report(snapshot)}
+
+
+@app.post("/api/safety-review-board/report/save")
+def safety_review_board_report_save():
+    saved = save_safety_review_report(); snapshot = saved["snapshot"]
+    log_activity("SAFETY_REVIEW_BOARD_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
+    return {**snapshot, "report": saved["report"], "path": saved["path"]}
+
+
+@app.get("/api/safety-review-board/reviews")
+def safety_review_board_reviews():
+    return load_feature_reviews()
+
+
+@app.post("/api/safety-review-board/reviews/create")
+def safety_review_board_review_create(request: FeatureReviewRequest):
+    try:
+        review = create_feature_review(request.feature_id, request.reviewer, request.decision, request.notes)
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    log_activity("FEATURE_SAFETY_REVIEW_CREATED", review["feature_title"], "O.R.I.O.N.")
+    return {"review": review, "snapshot": generate_safety_review_snapshot()}
+
+
+@app.post("/api/safety-review-board/package")
+def safety_review_board_package():
+    result = generate_safety_review_package()
+    log_activity("SAFETY_REVIEW_PACKAGE", f"Generated: {result['summary_path']}", "O.R.I.O.N.")
+    return result
 
 
 @app.get("/api/patch-release/status")

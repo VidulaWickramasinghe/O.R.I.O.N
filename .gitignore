@@ -97,3 +97,6 @@ backend/data/stable_release/
 
 backend/data/post_release_maintenance/
 backend/data/patch_release/
+
+backend/data/roadmap_planner/
+backend/data/safety_review_board/
