@@ -1,7 +1,9 @@
 """Read-only Aurora OS component-architecture health reporting."""
 
 from datetime import datetime
+import os
 from pathlib import Path
+import tempfile
 from typing import Any, Dict, List
 
 
@@ -55,6 +57,8 @@ EXPECTED_SERVICE_FILES = [
     "src/lib/api/desktop.ts", "src/lib/api/sidecar.ts", "src/lib/api/notifications.ts",
     "src/lib/api/settings.ts", "src/lib/api/workspaces.ts", "src/lib/api/knowledge.ts",
     "src/lib/api/vector.ts", "src/lib/api/workflows.ts", "src/lib/api/developer.ts", "src/lib/api/github-polish.ts",
+    "src/lib/api/demo.ts", "src/lib/api/browser.ts", "src/lib/api/memory.ts",
+    "src/lib/api/voice.ts",
 ]
 
 
@@ -99,13 +103,13 @@ def inspect_frontend_architecture() -> Dict[str, Any]:
             "dashboard_workspace_size": len(dashboard_text), "component_count": len(components), "components": components, "github_launch_panel_exists": github_launch_panel_exists, "github_launch_service_exists": github_launch_service_exists, "final_launch_panel_exists": final_launch_panel_exists, "final_launch_service_exists": final_launch_service_exists, "recording_types_exists": recording_types_exists, "recording_registry_exists": recording_registry_exists, "recording_storage_exists": recording_storage_exists, "presenter_controls_panel_exists": presenter_controls_panel_exists, "recording_overlay_exists": recording_overlay_exists, "demo_types_exists": demo_types_exists, "demo_registry_exists": demo_registry_exists, "demo_storage_exists": demo_storage_exists, "guided_walkthrough_panel_exists": guided_walkthrough_panel_exists, "demo_callout_overlay_exists": demo_callout_overlay_exists}
 
 
-def render_frontend_refactor_report() -> str:
-    scan = inspect_frontend_architecture()
+def render_frontend_refactor_report(scan: Dict[str, Any] | None = None) -> str:
+    scan = scan or inspect_frontend_architecture()
     directories = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["directories"])
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v5.6 GitHub Launch Assistant Frontend Report
+    return f"""# O.R.I.O.N. v6.2 Frontend Service Architecture Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}
@@ -194,7 +198,22 @@ Component Count: {scan['component_count']}
 
 
 def save_frontend_refactor_report() -> Dict[str, Any]:
-    report = render_frontend_refactor_report()
-    path = REPORT_DIR / f"orion_v5_0_public_release_report_{datetime.now():%Y%m%d_%H%M%S}.md"
-    path.write_text(report, encoding="utf-8")
-    return {"status": "saved", "path": str(path), "report": report, "generated_at": _now()}
+    scan = inspect_frontend_architecture()
+    report = render_frontend_refactor_report(scan)
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    path = REPORT_DIR / (
+        f"orion_v4_2_frontend_refactor_report_{datetime.now():%Y%m%d_%H%M%S_%f}.md"
+    )
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=REPORT_DIR, delete=False
+    ) as handle:
+        handle.write(report)
+        temporary_path = Path(handle.name)
+    os.replace(temporary_path, path)
+    return {
+        "status": "saved",
+        "path": str(path),
+        "report": report,
+        "scan": scan,
+        "generated_at": _now(),
+    }

@@ -25,6 +25,9 @@ The Tool Audit Center makes O.R.I.O.N. more transparent by showing which protect
 ## Safety
 
 - Audit data is local.
+- Audit decisions and filters accept only `allowed` or `blocked`.
+- Audit inputs and result limits are bounded before database access.
+- Dashboard metrics cover the complete local audit history, while event lists remain bounded.
 - Disabled plugins block mapped tools.
 - Blocked attempts are logged.
 - Approval gates remain active.
