@@ -1,3 +1,25 @@
+## v6.2 — Security Policy and Release Freeze Integrity
+
+### Improved
+
+- Strict security profiles now fail closed for newly registered, non-protected
+  plugins instead of leaving unknown capabilities enabled.
+- Security profile application validates inputs and compensates plugin, setting,
+  policy-state, and policy-event changes when audit persistence fails.
+- New policy databases default to Strict Mode, matching the default user safety
+  setting instead of reporting a contradictory Balanced Mode state.
+- Security policy and release candidate API reports now share the same snapshots
+  as their returned state, event, and checklist data.
+- Release candidate packages require an active system freeze, use collision-safe
+  microsecond timestamps, and write artifacts atomically.
+- Release freeze metadata and locally stored release events are validated and
+  bounded, and missing security profile routes now return HTTP 404.
+
+### Tests
+
+- Added regression coverage for strict-mode handling of future plugins, failed
+  policy-audit rollback, freeze-gated packaging, and release metadata bounds.
+
 ## v6.2 — Tool Enforcement and Audit Integrity
 
 ### Improved

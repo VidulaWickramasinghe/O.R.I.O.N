@@ -197,21 +197,17 @@ from core.tool_audit import (
 
 from core.security_policy import (
     apply_security_profile,
-    get_active_security_policy,
     get_security_profile,
+    get_security_policy_snapshot,
     init_security_policy_db,
-    list_security_policy_events,
-    list_security_profiles,
     render_security_policy_report,
 )
 
 from core.release_candidate import (
     freeze_system,
     generate_release_candidate_package,
-    generate_release_checklist as generate_release_candidate_checklist,
-    get_freeze_state,
+    get_release_candidate_snapshot,
     init_release_candidate_db,
-    list_release_events,
     render_release_candidate_report,
     unfreeze_system,
 )
@@ -1046,7 +1042,7 @@ class SecurityPolicyResponse(BaseModel):
 
 
 class SecurityPolicyApplyRequest(BaseModel):
-    profile_key: str
+    profile_key: Literal["strict", "balanced", "developer_lab"]
 
 
 class SecurityPolicyApplyResponse(BaseModel):
@@ -1072,7 +1068,11 @@ class ReleaseFreezeState(BaseModel):
 
 
 class ReleaseFreezeRequest(BaseModel):
-    reason: str = "Preparing O.R.I.O.N. v4.0 release candidate."
+    reason: str = Field(
+        default="Preparing O.R.I.O.N. v4.0 release candidate.",
+        min_length=1,
+        max_length=1000,
+    )
 
 
 class ReleaseChecklistItem(BaseModel):
@@ -1733,120 +1733,6 @@ def memory_items():
     )
     return MemoryResponse(items=list_recent_memory(limit=20))
 
-@app.get("/api/mission")
-def mission():
-    return {
-        "name": "O.R.I.O.N.",
-        "full_name": "Operational Response and Intelligent Orchestration Network",
-        "interface": "Aurora OS",
-        "tagline": "Think. Plan. Act. Learn.",
-        "release": "v6.2 Patch Release Manager + Hotfix Workflow",
-        "capabilities": [
-            "AI chat console",
-            "Project memory",
-            "Safe developer tools",
-            "Voice mode",
-            "Wake phrase mode",
-            "Live activity timeline",
-            "Tool-level instrumentation",
-            "Project launcher",
-            "Mission Planner System",
-            "Command Approval System",
-            "Controlled Autonomous Mission Execution Loop",
-            "Mission Run History",
-            "Mission Execution Reports",
-            "Workspace context retrieval",
-            "Project context retrieval",
-            "Memory context retrieval",
-            "Mission context retrieval",
-            "Controlled multi-step mission execution",
-            "Desktop control approvals",
-            "Open workspace in VS Code",
-            "Open workspace folder",
-            "Start workspace development server",
-            "Open approved URLs in browser",
-            "Portfolio demo mode",
-            "Demo readiness report",
-            "Portfolio release pack generation",
-            "Local Knowledge Base",
-            "Document indexing and search",
-            "Knowledge-aware context retrieval",
-            "Aurora OS Knowledge Base panel",
-            "Vector Memory",
-            "Semantic search",
-            "Embedding-based context retrieval",
-            "Meaning-aware memory and knowledge search",
-            "Workflow Blueprints",
-            "Reusable mission templates",
-            "Blueprint-to-mission generation",
-            "Standard release, research, bug-fix, and portfolio workflows",
-            "Agentic Workspace Developer Mode",
-            "Workspace inspection and diagnosis",
-            "Approval-gated patch planning",
-            "Developer report generation",
-            "Safe workspace file patching with backup",
-            "Dashboard Intelligence",
-            "System intelligence score",
-            "Mission and workspace analytics",
-            "Memory, knowledge, vector, approval, and activity metrics",
-            "Readiness recommendations",
-            "Notification + Reminder Engine",
-            "Secure User Profiles + Settings",
-            "Plugin System + Tool Registry",
-            "Local reminders",
-            "Startup briefing",
-            "Due task tracking",
-            "Notification event log",
-            "Secure local user profile settings",
-            "Safety level configuration",
-            "Default workspace preference",
-            "Voice, theme, and model preferences",
-            "Settings-aware context retrieval",
-            "Plugin System + Tool Registry",
-            "Plugin permissions and risk levels",
-            "Enable/disable plugin state",
-            "Plugin registry reports",
-            "Modular tool architecture foundation",
-            "Packaged desktop app shell",
-            "Tauri desktop wrapper",
-            "Static Aurora OS frontend export",
-            "Desktop shell backend status",
-            "Local desktop launch scripts",
-            "Backend sidecar manager",
-            "One-click desktop launch",
-            "Sidecar status panel",
-            "Local desktop shortcut installer",
-            "Backend process health tracking",
-            "Tool Permission Enforcement",
-            "Plugin-controlled tool access",
-            "Blocked tool logging",
-            "Tool-to-plugin permission matrix",
-            "High-risk tool visibility",
-            "Tool Audit Center",
-            "Allowed/blocked tool event history",
-            "Security decision reports",
-            "Expanded plugin enforcement coverage",
-            "Audit-aware Dashboard Intelligence",
-            "Security Policy Profiles",
-            "Strict, Balanced, and Developer Lab risk modes",
-            "Policy-controlled plugin states",
-            "Security policy event history",
-            "Risk-aware Dashboard Intelligence",
-        ],
-        "safety_model": [
-            "No uncontrolled destructive commands",
-            "Safe project directory access",
-            "Approved developer command execution only",
-            "Approved desktop actions only",
-            "Activity and tool execution logging",
-            "Mission run history records every controlled execution cycle",
-            "Multi-step mission mode stops on approval, completion, error, or repeated step detection",
-            "Desktop control actions must pass through the Command Approval System",
-            "Portfolio demo mode uses generated release artifacts and readiness reporting",
-            "Local knowledge indexing reads supported local files only and skips heavy folders",
-            "Local reminders stay inside Aurora OS without external calendar, email, SMS, or push integrations",
-        ],
-    }
 
 @app.get("/api/memory/search", response_model=MemoryResponse)
 def memory_search(q: str):
@@ -2207,6 +2093,8 @@ Rules:
             result=output,
         )
 
+    except Exception as error:
+        error_message = str(error)
 
 @app.post("/api/missions/{mission_id}/run-batch", response_model=MultiStepMissionRunResponse)
 async def run_mission_batch(mission_id: int, request: MultiStepMissionRunRequest):
@@ -3342,11 +3230,12 @@ def security_policy_status():
         "Aurora OS requested security policy status.",
         "Aurora OS",
     )
+    snapshot = get_security_policy_snapshot(event_limit=50)
     return SecurityPolicyResponse(
-        active_policy=get_active_security_policy(),
-        profiles=list_security_profiles(),
-        events=list_security_policy_events(limit=50),
-        report=render_security_policy_report(),
+        active_policy=snapshot["active_policy"],
+        profiles=snapshot["profiles"],
+        events=snapshot["events"],
+        report=render_security_policy_report(snapshot),
     )
 
 
@@ -3354,14 +3243,7 @@ def security_policy_status():
 def security_policy_profile_detail(profile_key: str):
     profile = get_security_profile(profile_key)
     if not profile:
-        return SecurityProfileDetail(
-            key=profile_key,
-            name="Profile not found",
-            description="No matching security profile.",
-            safety_level="unknown",
-            enabled_plugins=[],
-            disabled_plugins=[],
-        )
+        raise HTTPException(status_code=404, detail="Security profile not found.")
     return SecurityProfileDetail(**profile)
 
 
@@ -3389,11 +3271,12 @@ def release_candidate_status():
         "Aurora OS requested v4.0 release candidate status.",
         "Aurora OS",
     )
+    snapshot = get_release_candidate_snapshot(event_limit=50)
     return ReleaseCandidateStatusResponse(
-        freeze_state=ReleaseFreezeState(**get_freeze_state()),
-        checklist=ReleaseChecklistResponse(**generate_release_candidate_checklist()),
-        events=list_release_events(limit=50),
-        report=render_release_candidate_report(),
+        freeze_state=ReleaseFreezeState(**snapshot["freeze_state"]),
+        checklist=ReleaseChecklistResponse(**snapshot["checklist"]),
+        events=snapshot["events"],
+        report=render_release_candidate_report(snapshot),
     )
 
 
@@ -3413,7 +3296,10 @@ def release_candidate_unfreeze(request: ReleaseFreezeRequest):
 
 @app.post("/api/release-candidate/package", response_model=ReleaseCandidatePackageResponse)
 def release_candidate_package():
-    result = generate_release_candidate_package()
+    try:
+        result = generate_release_candidate_package()
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
     log_activity(
         "RELEASE_CANDIDATE_PACKAGE",
         f"v4.0 release candidate package generated: {result['summary_path']}",

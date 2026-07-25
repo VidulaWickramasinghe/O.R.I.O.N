@@ -6,7 +6,9 @@ diagnostic artifacts below ``backend/data/release_candidates``.
 """
 
 import json
+import os
 import sqlite3
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
@@ -38,6 +40,16 @@ DEFAULT_FREEZE_STATE: Dict[str, Any] = {
     "unfrozen_at": "",
     "updated_at": "",
 }
+MAX_RELEASE_EVENTS = 500
+
+
+def _clean_text(value: Any, field: str, max_length: int, *, required: bool = True) -> str:
+    clean = str(value or "").strip()
+    if required and not clean:
+        raise ValueError(f"{field} cannot be empty.")
+    if len(clean) > max_length:
+        raise ValueError(f"{field} must be {max_length} characters or fewer.")
+    return clean
 
 
 def get_connection() -> sqlite3.Connection:
@@ -104,6 +116,12 @@ def get_freeze_state() -> Dict[str, Any]:
 
 def record_release_event(event_type: str, title: str, message: str, artifact_path: str = "") -> Dict[str, Any]:
     init_release_candidate_db()
+    clean_event_type = _clean_text(event_type, "event_type", 80)
+    clean_title = _clean_text(title, "title", 160)
+    clean_message = _clean_text(message, "message", 2000)
+    clean_artifact_path = _clean_text(
+        artifact_path, "artifact_path", 1000, required=False
+    )
     now = _now()
     with get_connection() as conn:
         cursor = conn.execute(
@@ -112,16 +130,16 @@ def record_release_event(event_type: str, title: str, message: str, artifact_pat
             (event_type, title, message, artifact_path, created_at)
             VALUES (?, ?, ?, ?, ?)
             """,
-            (event_type, title, message, artifact_path, now),
+            (clean_event_type, clean_title, clean_message, clean_artifact_path, now),
         )
         conn.commit()
-    return {"id": int(cursor.lastrowid), "event_type": event_type, "title": title,
-            "message": message, "artifact_path": artifact_path, "created_at": now}
+    return {"id": int(cursor.lastrowid), "event_type": clean_event_type, "title": clean_title,
+            "message": clean_message, "artifact_path": clean_artifact_path, "created_at": now}
 
 
 def list_release_events(limit: int = 50) -> List[Dict[str, Any]]:
     init_release_candidate_db()
-    safe_limit = max(1, min(int(limit), 500))
+    safe_limit = max(1, min(int(limit), MAX_RELEASE_EVENTS))
     with get_connection() as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
@@ -133,6 +151,8 @@ def list_release_events(limit: int = 50) -> List[Dict[str, Any]]:
 def freeze_system(reason: str = "Preparing O.R.I.O.N. v4.0 release candidate.", release_version: str = "v4.0") -> Dict[str, Any]:
     """Enter local release-readiness mode; no external system is changed."""
     init_release_candidate_db()
+    clean_reason = _clean_text(reason, "reason", 1000)
+    clean_version = _clean_text(release_version, "release_version", 40)
     now = _now()
     with get_connection() as conn:
         conn.execute(
@@ -142,16 +162,17 @@ def freeze_system(reason: str = "Preparing O.R.I.O.N. v4.0 release candidate.", 
                 freeze_reason = ?, frozen_at = ?, updated_at = ?
             WHERE id = 1
             """,
-            (release_version, DEFAULT_FREEZE_STATE["release_name"], reason.strip() or DEFAULT_FREEZE_STATE["freeze_reason"], now, now),
+            (clean_version, DEFAULT_FREEZE_STATE["release_name"], clean_reason, now, now),
         )
         conn.commit()
-    record_release_event("SYSTEM_FROZEN", "System Freeze Enabled", reason)
+    record_release_event("SYSTEM_FROZEN", "System Freeze Enabled", clean_reason)
     return get_freeze_state()
 
 
 def unfreeze_system(reason: str = "Release candidate freeze lifted.") -> Dict[str, Any]:
     """Leave local release-readiness mode without changing external services."""
     init_release_candidate_db()
+    clean_reason = _clean_text(reason, "reason", 1000)
     now = _now()
     with get_connection() as conn:
         conn.execute(
@@ -160,10 +181,10 @@ def unfreeze_system(reason: str = "Release candidate freeze lifted.") -> Dict[st
             SET frozen = 'false', unfrozen_at = ?, freeze_reason = ?, updated_at = ?
             WHERE id = 1
             """,
-            (now, reason.strip() or "Release candidate freeze lifted.", now),
+            (now, clean_reason, now),
         )
         conn.commit()
-    record_release_event("SYSTEM_UNFROZEN", "System Freeze Disabled", reason)
+    record_release_event("SYSTEM_UNFROZEN", "System Freeze Disabled", clean_reason)
     return get_freeze_state()
 
 
@@ -204,8 +225,14 @@ def generate_release_checklist(include_dashboard: bool = True) -> Dict[str, Any]
 
 
 def _write_artifact(file_name: str, content: str) -> str:
+    RC_DIR.mkdir(parents=True, exist_ok=True)
     path = RC_DIR / file_name
-    path.write_text(content, encoding="utf-8")
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=RC_DIR, delete=False
+    ) as handle:
+        handle.write(content)
+        temporary_path = Path(handle.name)
+    os.replace(temporary_path, path)
     return str(path)
 
 
@@ -214,8 +241,10 @@ def generate_release_candidate_package() -> Dict[str, Any]:
     from core.dashboard_intelligence import render_dashboard_intelligence_report
 
     init_release_candidate_db()
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     freeze_state = get_freeze_state()
+    if not freeze_state["frozen"]:
+        raise ValueError("Freeze the system before generating a release candidate package.")
     checklist = generate_release_checklist()
     reports = {
         "dashboard_intelligence": render_dashboard_intelligence_report(),
@@ -274,15 +303,24 @@ Generated: {_now()}
     return {**package_summary, "summary_path": summary_path}
 
 
-def render_release_candidate_report() -> str:
-    freeze_state = get_freeze_state()
-    checklist = generate_release_checklist()
+def get_release_candidate_snapshot(event_limit: int = 20) -> Dict[str, Any]:
+    return {
+        "freeze_state": get_freeze_state(),
+        "checklist": generate_release_checklist(),
+        "events": list_release_events(limit=event_limit),
+    }
+
+
+def render_release_candidate_report(snapshot: Dict[str, Any] | None = None) -> str:
+    snapshot = snapshot or get_release_candidate_snapshot()
+    freeze_state = snapshot["freeze_state"]
+    checklist = snapshot["checklist"]
     checklist_lines = "\n".join(
         f"- [{'x' if item['ok'] else ' '}] {item['item']} — {item['details']}" for item in checklist["items"]
     )
     event_lines = "\n".join(
         f"- [{event['created_at']}] {event['event_type']}: {event['title']} — {event['message']}"
-        for event in list_release_events(limit=20)
+        for event in snapshot["events"]
     ) or "No release candidate events yet."
     return f"""# O.R.I.O.N. v4.0 Release Candidate Report
 

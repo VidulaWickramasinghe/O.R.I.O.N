@@ -12,12 +12,81 @@ from core import (
     developer_agent,
     notification_engine,
     plugin_registry,
+    release_candidate,
+    security_policy,
     tool_audit,
     tool_permissions,
     user_settings,
     vector_memory,
     workflow_blueprints,
 )
+
+
+class SecurityPolicyTests(unittest.TestCase):
+    def _database_patches(self, root: Path):
+        return (
+            patch.object(plugin_registry, "DB_PATH", root / "plugins.sqlite"),
+            patch.object(security_policy, "DB_PATH", root / "policy.sqlite"),
+            patch.object(user_settings, "DB_PATH", root / "settings.sqlite"),
+            patch.object(tool_audit, "DB_PATH", root / "audit.sqlite"),
+        )
+
+    def test_strict_profile_disables_unknown_non_protected_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            patches = self._database_patches(Path(temp_dir))
+            with patches[0], patches[1], patches[2], patches[3]:
+                plugin_registry.init_plugin_registry_db()
+                now = plugin_registry._now()
+                with plugin_registry.get_connection() as connection:
+                    connection.execute(
+                        """INSERT INTO plugins
+                        (key, name, description, category, risk_level, permissions_json,
+                         enabled, built_in, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, 'true', 'false', ?, ?)""",
+                        ("future_plugin", "Future", "test", "test", "high", "[]", now, now),
+                    )
+                    connection.commit()
+
+                security_policy.apply_security_profile("strict", source="test")
+                future = plugin_registry.get_plugin("future_plugin")
+
+        self.assertIsNotNone(future)
+        self.assertFalse(future["enabled"])
+
+    def test_failed_audit_rolls_back_policy_plugins_and_setting(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            patches = self._database_patches(Path(temp_dir))
+            with patches[0], patches[1], patches[2], patches[3]:
+                plugin_registry.init_plugin_registry_db()
+                before = plugin_registry.get_plugin("desktop_control")
+                with patch.object(
+                    security_policy,
+                    "record_tool_audit_event",
+                    side_effect=OSError("audit unavailable"),
+                ):
+                    with self.assertRaisesRegex(OSError, "audit unavailable"):
+                        security_policy.apply_security_profile("strict", source="test")
+
+                after = plugin_registry.get_plugin("desktop_control")
+                active = security_policy.get_active_security_policy()
+                settings = user_settings.get_user_settings_map()
+
+        self.assertEqual(before["enabled"], after["enabled"])
+        self.assertEqual(active["active_profile"], "strict")
+        self.assertEqual(settings["safety_level"], "strict")
+
+
+class ReleaseCandidateSafetyTests(unittest.TestCase):
+    def test_package_requires_freeze(self) -> None:
+        state = {**release_candidate.DEFAULT_FREEZE_STATE, "frozen": False}
+        with patch.object(release_candidate, "init_release_candidate_db"):
+            with patch.object(release_candidate, "get_freeze_state", return_value=state):
+                with self.assertRaisesRegex(ValueError, "Freeze the system"):
+                    release_candidate.generate_release_candidate_package()
+
+    def test_freeze_metadata_is_bounded(self) -> None:
+        with self.assertRaisesRegex(ValueError, "1000 characters or fewer"):
+            release_candidate.freeze_system(reason="x" * 1001)
 
 
 class ToolPermissionTests(unittest.TestCase):
