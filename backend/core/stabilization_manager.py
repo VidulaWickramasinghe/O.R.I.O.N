@@ -1,8 +1,13 @@
 """Read-only codebase diagnostics for the O.R.I.O.N. stabilization workflow."""
 
 import ast
+import copy
 import hashlib
+import os
 import subprocess
+import sys
+import tempfile
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
@@ -26,6 +31,7 @@ IMPORTANT_BACKEND_FILES = [
     "backend/core/notification_engine.py", "backend/core/user_settings.py", "backend/core/plugin_registry.py",
     "backend/core/backend_sidecar.py", "backend/core/tool_permissions.py", "backend/core/tool_audit.py",
     "backend/core/security_policy.py", "backend/core/release_candidate.py", "backend/core/stabilization_manager.py",
+    "backend/core/frontend_refactor.py",
     "backend/tools/safe_tools.py", "backend/tools/project_tools.py", "backend/tools/dev_tools.py",
     "backend/tools/memory_tools.py", "backend/tools/mission_tools.py", "backend/tools/workspace_tools.py",
     "backend/tools/github_release_tools.py", "backend/tools/browser_research_tools.py",
@@ -37,7 +43,8 @@ IMPORTANT_BACKEND_FILES = [
     "backend/tools/plugin_registry_tools.py", "backend/tools/backend_sidecar_tools.py",
     "backend/tools/tool_permission_tools.py", "backend/tools/tool_audit_tools.py",
     "backend/tools/security_policy_tools.py", "backend/tools/release_candidate_tools.py",
-    "backend/tools/stabilization_tools.py", "backend/voice/voice_io.py", "backend/voice/wake_word.py",
+    "backend/tools/stabilization_tools.py", "backend/tools/frontend_refactor_tools.py",
+    "backend/voice/voice_io.py", "backend/voice/wake_word.py",
 ]
 
 IMPORTANT_FRONTEND_FILE_OPTIONS = [
@@ -52,6 +59,7 @@ RISK_PATTERNS = ("TODO", "FIXME", "print(", "console.log", "except Exception", "
 SOURCE_EXTENSIONS = {".py", ".tsx", ".ts", ".js", ".jsx", ".css", ".json", ".md"}
 IGNORED_PARTS = {".git", ".venv", "node_modules", ".next", "out", "target", "__pycache__", "dist", "build", "data"}
 _SCAN_CACHE: Dict[str, Any] = {"created_at": None, "scan": None}
+_SCAN_CACHE_LOCK = threading.Lock()
 
 
 def _now() -> str:
@@ -117,14 +125,36 @@ def check_import_style_risks() -> Dict[str, Any]:
             continue
         relative = str(path.relative_to(PROJECT_ROOT))
         text = path.read_text(encoding="utf-8", errors="ignore")
-        if "from backend.core" in text or "from backend.tools" in text:
-            risks.append({"file": relative, "risk": "Uses backend.* imports; runtime expects core.* / tools.*."})
-        if "sys.path.append" in text:
-            risks.append({"file": relative, "risk": "Manual sys.path modification found."})
         try:
-            ast.parse(text, filename=relative)
+            tree = ast.parse(text, filename=relative)
         except SyntaxError as error:
             risks.append({"file": relative, "risk": f"Python syntax error: {error.msg} (line {error.lineno})."})
+            continue
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+                ("backend.core", "backend.tools")
+            ):
+                risks.append(
+                    {
+                        "file": relative,
+                        "risk": (
+                            f"Line {node.lineno} uses backend.* imports; runtime "
+                            "expects core.* / tools.*."
+                        ),
+                    }
+                )
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Attribute)
+                and node.func.attr == "append"
+                and isinstance(node.func.value, ast.Attribute)
+                and isinstance(node.func.value.value, ast.Name)
+                and node.func.value.value.id == "sys"
+                and node.func.value.attr == "path"
+            ):
+                risks.append(
+                    {"file": relative, "risk": f"Line {node.lineno} modifies sys.path."}
+                )
     return {"ok": not risks, "risk_count": len(risks), "risks": risks}
 
 
@@ -147,7 +177,7 @@ def check_backend_compile() -> Dict[str, Any]:
     files = [str(PROJECT_ROOT / item) for item in IMPORTANT_BACKEND_FILES if (PROJECT_ROOT / item).exists()]
     if not files:
         return {"ok": False, "command": "python -m py_compile", "stdout": "", "stderr": "No backend files found."}
-    return _run_command(["python", "-m", "py_compile", *files])
+    return _run_command([sys.executable, "-m", "py_compile", *files])
 
 
 def check_frontend_build_available() -> Dict[str, Any]:
@@ -156,8 +186,16 @@ def check_frontend_build_available() -> Dict[str, Any]:
     return _run_command(["npm", "run", "build"], cwd=FRONTEND_DIR, timeout=120)
 
 
-def generate_cleanup_checklist() -> Dict[str, Any]:
-    required, imports, risks, duplicates = (check_required_files(), check_import_style_risks(), scan_code_risks(), scan_duplicate_risk_zones())
+def generate_cleanup_checklist(
+    required: Dict[str, Any] | None = None,
+    imports: Dict[str, Any] | None = None,
+    risks: Dict[str, Any] | None = None,
+    duplicates: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    required = required or check_required_files()
+    imports = imports or check_import_style_risks()
+    risks = risks or scan_code_risks()
+    duplicates = duplicates or scan_duplicate_risk_zones()
     items = [
         {"item": "All important backend/frontend files exist", "ok": required["ok"], "details": f"Missing files: {required['missing_count']}"},
         {"item": "Backend import style is consistent", "ok": imports["ok"], "details": f"Import risks: {imports['risk_count']}"},
@@ -170,10 +208,16 @@ def generate_cleanup_checklist() -> Dict[str, Any]:
 
 
 def run_stabilization_scan(run_build: bool = False) -> Dict[str, Any]:
-    cached_at = _SCAN_CACHE["created_at"]
-    cached_scan = _SCAN_CACHE["scan"]
-    if not run_build and cached_at and cached_scan and (datetime.now() - cached_at).total_seconds() < 15:
-        return cached_scan
+    with _SCAN_CACHE_LOCK:
+        cached_at = _SCAN_CACHE["created_at"]
+        cached_scan = _SCAN_CACHE["scan"]
+        if (
+            not run_build
+            and cached_at
+            and cached_scan
+            and (datetime.now() - cached_at).total_seconds() < 15
+        ):
+            return copy.deepcopy(cached_scan)
     required = check_required_files()
     imports = check_import_style_risks()
     risks = scan_code_risks()
@@ -189,16 +233,20 @@ def run_stabilization_scan(run_build: bool = False) -> Dict[str, Any]:
         status = "review_recommended"
     elif risks["finding_count"] > 80 or duplicates["duplicate_group_count"]:
         status = "cleanup_recommended"
+    checklist = generate_cleanup_checklist(required, imports, risks, duplicates)
     scan = {"status": status, "generated_at": _now(), "required_files": required, "import_risks": imports,
-            "code_risks": risks, "duplicate_risk_zones": duplicates, "cleanup_checklist": generate_cleanup_checklist(),
+            "code_risks": risks, "duplicate_risk_zones": duplicates, "cleanup_checklist": checklist,
             "backend_compile": compile_result, "frontend_build": frontend}
     if not run_build:
-        _SCAN_CACHE.update({"created_at": datetime.now(), "scan": scan})
+        with _SCAN_CACHE_LOCK:
+            _SCAN_CACHE.update({"created_at": datetime.now(), "scan": copy.deepcopy(scan)})
     return scan
 
 
-def render_stabilization_report(run_build: bool = False) -> str:
-    scan = run_stabilization_scan(run_build)
+def render_stabilization_report(
+    run_build: bool = False, scan: Dict[str, Any] | None = None
+) -> str:
+    scan = scan or run_stabilization_scan(run_build)
     checklist = "\n".join(f"- [{'x' if item['ok'] else ' '}] {item['item']} — {item['details']}" for item in scan["cleanup_checklist"]["items"])
     missing = "\n".join(f"- {item}" for item in scan["required_files"]["missing"]) or "No missing important files."
     imports = "\n".join(f"- {item['file']}: {item['risk']}" for item in scan["import_risks"]["risks"]) or "No import style risks detected."
@@ -269,7 +317,22 @@ Duplicate Groups: {scan['duplicate_risk_zones']['duplicate_group_count']}
 
 
 def save_stabilization_report(run_build: bool = False) -> Dict[str, Any]:
-    report = render_stabilization_report(run_build)
-    path = STABILIZATION_DIR / f"orion_v4_1_stabilization_report_{datetime.now():%Y%m%d_%H%M%S}.md"
-    path.write_text(report, encoding="utf-8")
-    return {"status": "saved", "path": str(path), "report": report, "generated_at": _now()}
+    scan = run_stabilization_scan(run_build)
+    report = render_stabilization_report(run_build, scan=scan)
+    STABILIZATION_DIR.mkdir(parents=True, exist_ok=True)
+    path = STABILIZATION_DIR / (
+        f"orion_v4_1_stabilization_report_{datetime.now():%Y%m%d_%H%M%S_%f}.md"
+    )
+    with tempfile.NamedTemporaryFile(
+        "w", encoding="utf-8", dir=STABILIZATION_DIR, delete=False
+    ) as handle:
+        handle.write(report)
+        temporary_path = Path(handle.name)
+    os.replace(temporary_path, path)
+    return {
+        "status": "saved",
+        "path": str(path),
+        "report": report,
+        "scan": scan,
+        "generated_at": _now(),
+    }

@@ -3,6 +3,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .workspace_manager import get_workspace_record
+
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BACKEND_DIR / "data"
@@ -164,13 +166,24 @@ def validate_setting_value(key: str, value: str) -> str:
                 f"Invalid value for {clean_key}. Allowed values: {', '.join(options)}"
             )
 
-    if clean_key == "default_workspace_id" and clean_value and not clean_value.isdigit():
-        raise ValueError("default_workspace_id must be empty or a number.")
+    if clean_key == "default_workspace_id" and clean_value:
+        if not clean_value.isdigit() or int(clean_value) < 1:
+            raise ValueError("default_workspace_id must be empty or a positive number.")
+        if not get_workspace_record(int(clean_value)):
+            raise ValueError(f"Workspace not found: {clean_value}")
 
     if clean_key == "display_name":
+        if not clean_value:
+            raise ValueError("display_name cannot be empty.")
         if len(clean_value) > 80:
             raise ValueError("display_name must be 80 characters or fewer.")
-        if any(secret_word in clean_value.lower() for secret_word in ["api_key", "token", "password"]):
+        if any(character in clean_value for character in "\r\n\t"):
+            raise ValueError("display_name must be a single line.")
+        lowered = clean_value.lower()
+        if any(
+            secret_word in lowered
+            for secret_word in ["api_key", "token", "password", "secret", "sk-"]
+        ):
             raise ValueError("display_name must not contain secret-like values.")
 
     return clean_value

@@ -22,7 +22,6 @@ DB_PATH = DATA_DIR / "orion_vectors.sqlite"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 EMBEDDING_MODEL = "text-embedding-3-small"
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) if os.getenv("OPENAI_API_KEY") else None
 
 
 def get_connection():
@@ -63,10 +62,13 @@ def create_embedding(text: str) -> List[float]:
     clean_text = text.strip()
     if not clean_text:
         raise ValueError("Cannot create embedding for empty text.")
-    if client is None:
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key or "YOUR_API_KEY" in api_key.upper() or "PLACEHOLDER" in api_key.upper():
         raise ValueError("OPENAI_API_KEY is required to create vector embeddings.")
 
-    response = client.embeddings.create(
+    # Resolve configuration at call time because some launchers load dotenv
+    # after importing their tool modules.
+    response = OpenAI(api_key=api_key).embeddings.create(
         model=EMBEDDING_MODEL,
         input=clean_text[:8000],
     )
@@ -141,6 +143,7 @@ def upsert_vector_item(
 
 def list_vector_items(limit: int = 50) -> List[Dict[str, Any]]:
     init_vector_db()
+    limit = max(1, min(int(limit), 1000))
     with get_connection() as conn:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
@@ -157,8 +160,9 @@ def list_vector_items(limit: int = 50) -> List[Dict[str, Any]]:
     for row in rows:
         item = dict(row)
         try:
-            item["metadata"] = json.loads(item.pop("metadata_json"))
-        except json.JSONDecodeError:
+            metadata = json.loads(item.pop("metadata_json"))
+            item["metadata"] = metadata if isinstance(metadata, dict) else {}
+        except (json.JSONDecodeError, TypeError):
             item["metadata"] = {}
         items.append(item)
 
@@ -170,6 +174,7 @@ def semantic_search(query: str, limit: int = 8) -> List[Dict[str, Any]]:
     clean_query = query.strip()
     if not clean_query:
         return []
+    limit = max(1, min(int(limit), 100))
 
     query_embedding = create_embedding(clean_query)
 
@@ -187,12 +192,16 @@ def semantic_search(query: str, limit: int = 8) -> List[Dict[str, Any]]:
         item = dict(row)
         try:
             embedding = json.loads(item["embedding_json"])
+            if not isinstance(embedding, list):
+                continue
             score = cosine_similarity(query_embedding, embedding)
-        except Exception:
-            score = 0.0
+        except (json.JSONDecodeError, TypeError, ValueError):
+            continue
         try:
             metadata = json.loads(item.get("metadata_json", "{}"))
-        except json.JSONDecodeError:
+            if not isinstance(metadata, dict):
+                metadata = {}
+        except (json.JSONDecodeError, TypeError):
             metadata = {}
         scored.append(
             {
@@ -303,8 +312,18 @@ def rebuild_vector_index() -> Dict[str, Any]:
     init_vector_db()
     memory_result = index_recent_memories_to_vectors(limit=80)
     knowledge_result = index_knowledge_documents_to_vectors(limit=80)
+    indexed_count = memory_result["indexed_count"] + knowledge_result["indexed_count"]
+    failed_count = memory_result["failed_count"] + knowledge_result["failed_count"]
+    if failed_count and not indexed_count:
+        status = "failed"
+    elif failed_count:
+        status = "partial"
+    else:
+        status = "rebuilt"
     return {
-        "status": "rebuilt",
+        "status": status,
+        "indexed_count": indexed_count,
+        "failed_count": failed_count,
         "memory": memory_result,
         "knowledge": knowledge_result,
     }
