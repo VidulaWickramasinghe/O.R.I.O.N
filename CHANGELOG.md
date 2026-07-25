@@ -1,3 +1,13 @@
+## v6.5 — Safety Review Board + Feature Approval Workflow
+
+### Added
+
+- Local feature risk scoring, review decisions, required controls, development eligibility, reports, and approval packages.
+
+### Safety
+
+- Governance decisions only; no implementation, GitHub issue changes, pushes, publishing, deletion, or approval bypass.
+
 ## v6.4 — Roadmap Planner + Future Feature Governance
 
 ### Added
