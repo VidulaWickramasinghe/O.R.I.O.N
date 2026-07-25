@@ -15,6 +15,7 @@ from openai import OpenAI
 
 from core.knowledge_base import list_knowledge_documents, read_document_chunks
 from core.persistent_memory import list_recent_memory
+from core.database import managed_connection
 
 DATA_DIR = BACKEND_DIR / "data"
 DB_PATH = DATA_DIR / "orion_vectors.sqlite"
@@ -25,7 +26,7 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    return managed_connection(DB_PATH)
 
 
 def init_vector_db() -> None:

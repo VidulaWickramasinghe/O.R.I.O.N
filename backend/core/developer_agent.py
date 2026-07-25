@@ -11,6 +11,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from core.approvals import create_approval_request
+from core.database import managed_connection
 from core.workspace_manager import (
     detect_workspace_stack,
     get_workspace_record,
@@ -53,7 +54,7 @@ IGNORED_SCAN_PARTS = {
 
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    return managed_connection(DB_PATH)
 
 
 def init_developer_agent_db() -> None:
