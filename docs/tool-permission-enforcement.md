@@ -43,6 +43,8 @@ GET /api/tools/permissions/{tool_name}
 ## Safety
 
 - Disabled plugins block mapped tools.
+- Unknown or unmapped tool names are denied by default.
+- Protected tool execution is blocked if its required audit record cannot be saved.
 - Blocked tool attempts are logged to the activity stream.
 - Plugin Registry, User Settings, Approval System, and Dashboard Intelligence remain protected.
 - v3.7 does not dynamically execute third-party plugin code.
