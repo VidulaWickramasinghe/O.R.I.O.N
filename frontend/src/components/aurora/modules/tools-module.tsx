@@ -47,7 +47,7 @@ export function ToolsModule({
     <ModuleShell
       title={title}
       description={description}
-      badge={`${approvals.filter((item: any) => item.status === "pending").length} pending`}
+      badge={`${approvals.filter((item) => item.status === "pending").length} pending`}
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {approvals.length === 0 ? (
@@ -55,7 +55,7 @@ export function ToolsModule({
             No approval requests yet.
           </div>
         ) : (
-          approvals.map((approval: any) => (
+          approvals.map((approval) => (
             <div
               key={approval.id}
               className="rounded-3xl border border-white/10 bg-black/30 p-5"
