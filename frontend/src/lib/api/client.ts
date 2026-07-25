@@ -95,12 +95,17 @@ export async function apiRequest<T>(method: string, path: string, options: ApiRe
   if (options.body !== undefined && !isFormData && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
 
   try {
+    const body = options.body;
+    const requestInit = { ...options };
+    delete requestInit.body;
+    delete requestInit.query;
+    delete requestInit.timeoutMs;
     const response = await fetch(apiUrl(path, options.query), {
-      ...options,
+      ...requestInit as RequestInit,
       method,
       headers,
       signal: controller.signal,
-      body: options.body === undefined ? undefined : isFormData ? options.body : JSON.stringify(options.body),
+      body: body === undefined ? undefined : isFormData ? body as FormData : JSON.stringify(body),
     });
     const payload = await responsePayload(response);
     if (!response.ok) throw errorFromResponse(response, payload);

@@ -29,7 +29,9 @@ and runtime origin in `frontend/src/lib/config/runtime.ts`.
 | `/system`, `/settings` | Status/doctor/sidecar/plugins/profile | Offline and partial failures remain panel-local. |
 | `/demo`, `/portfolio`, `/public-demo` | Demo and release presentation routes | Demo/static/live sources must be visibly distinguished. |
 | `/governance` | Maintenance, patch, roadmap, safety review | Preserve eligibility, review, freeze, and package constraints. |
-| `/agents`, `/analytics`, `/console` | No dedicated API | Capability-unavailable views only; no fake controls or live values. |
+| `/agents` | Mission and activity records | Read-only operational attribution; lifecycle controls stay unavailable because there is no agent-control API. |
+| `/analytics` | Missions, approvals, tool audit, activity, dashboard intelligence | KPIs, trends, date filtering, and partial-degradation states use real backend records. |
+| `/console` | No dedicated API | Capability-unavailable view only; never expose a fake or unrestricted terminal. |
 
 ## Request lifecycle
 

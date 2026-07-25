@@ -64,6 +64,42 @@ body {
   font-family: Geist, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+.aurora-panel {
+  background: rgba(15, 21, 32, 0.90);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
+}
+
+.aurora-card {
+  background: rgba(9, 14, 22, 0.78);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: background var(--motion-standard), border-color var(--motion-standard), transform var(--motion-standard);
+}
+
+.aurora-card:hover {
+  background: rgba(20, 27, 40, 0.84);
+  border-color: color-mix(in srgb, var(--feature-accent, var(--accent-cyan)) 32%, transparent);
+}
+
+.aurora-input {
+  min-height: 44px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  padding: 0 2.25rem 0 .875rem;
+  color: var(--text-primary);
+}
+
+.aurora-status { display: inline-flex; min-height: 28px; align-items: center; border-radius: 999px; padding: 0 .625rem; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+.aurora-status-info { border: 1px solid rgba(91,157,255,.28); background: var(--info-bg); color: #9fc5ff; }
+.aurora-accent-blue { --feature-accent: var(--accent-blue); }
+.aurora-accent-cyan { --feature-accent: var(--accent-cyan); }
+.aurora-accent-teal { --feature-accent: var(--accent-teal); }
+.aurora-accent-amber { --feature-accent: var(--warning); }
+.aurora-accent-violet { --feature-accent: var(--accent-violet); }
+
 /* React Flow Overrides */
 .react-flow {
   --xy-background-color: transparent;
