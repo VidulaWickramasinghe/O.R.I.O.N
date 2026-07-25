@@ -1,32 +1,3 @@
 "use client";
-
-import { Bot } from "lucide-react";
-import { useUiStore, OrbState } from "@/store/ui-store";
-
-const gradients: Record<OrbState, string> = {
-  idle: "from-[#4F8BFF] via-[#61DFFF] to-[#7B5CFF]",
-  thinking: "from-[#7B5CFF] via-[#61DFFF] to-[#4F8BFF]",
-  executing: "from-[#4F8BFF] via-[#18E299] to-[#61DFFF]",
-  speaking: "from-[#61DFFF] via-[#7B5CFF] to-[#4F8BFF]",
-  success: "from-[#18E299] via-[#61DFFF] to-[#4F8BFF]",
-  warning: "from-[#FFC857] via-[#61DFFF] to-[#7B5CFF]",
-  danger: "from-[#FF5D73] via-[#FFC857] to-[#7B5CFF]",
-};
-
-export function AiOrb() {
-  const orbState = useUiStore((state) => state.orbState);
-  return (
-    <div className="fixed bottom-5 right-5 z-40 hidden items-end gap-3 lg:flex">
-      <div className="rounded-2xl border border-white/10 bg-[#11151D]/85 px-4 py-3 text-xs text-slate-300 shadow-2xl backdrop-blur-xl">
-        <p className="font-bold text-white">O.R.I.O.N. is {orbState}</p>
-        <p className="mt-1 text-slate-500">Think. Plan. Act. Learn.</p>
-      </div>
-      <div className={`relative flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br ${gradients[orbState]} shadow-[0_0_42px_rgba(97,223,255,0.45)]`}>
-        <div className="absolute inset-[-10px] animate-pulse rounded-full border border-[#61DFFF]/30" />
-        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/30 bg-[#05070B]/55 text-white backdrop-blur-md">
-          <Bot size={28} />
-        </div>
-      </div>
-    </div>
-  );
-}
+import { Bot, X } from "lucide-react"; import { useUiStore } from "@/store/ui-store";
+export function AiOrb(){const state=useUiStore(s=>s.orbState);const open=useUiStore(s=>s.assistantOpen);const contextOpen=useUiStore(s=>s.contextOpen);const setOpen=useUiStore(s=>s.setAssistantOpen);return <div className={`fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] ${contextOpen?"xl:right-[360px]":"xl:right-5"} right-3 z-30 flex items-end gap-2 lg:bottom-5 lg:right-5`}><div className={`${open?"block":"hidden"} w-[min(320px,calc(100vw-5rem))] rounded-2xl border border-white/10 bg-slate-950/95 p-4 shadow-2xl`}><div className="flex items-center justify-between"><p className="font-semibold">O.R.I.O.N. Assistant</p><button aria-label="Minimise assistant" onClick={()=>setOpen(false)}><X size={16}/></button></div><p className="mt-2 text-sm text-slate-400">State: <span className="capitalize text-cyan-200">{state}</span></p><a href="/assistant" className="aurora-button mt-4">Open assistant</a></div><button aria-label={`${open?"Minimise":"Open"} O.R.I.O.N. assistant; current state ${state}`} aria-expanded={open} onClick={()=>setOpen(!open)} className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-cyan-200/30 bg-gradient-to-br from-blue-500 via-cyan-400 to-violet-500 text-slate-950 shadow-[0_0_28px_rgba(34,211,238,.3)] transition hover:scale-105 motion-reduce:transform-none"><Bot/></button></div>}
