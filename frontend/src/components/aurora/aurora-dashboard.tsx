@@ -390,7 +390,7 @@ function ProjectMatrix({ projects }: { projects: ProjectItem[] }) {
       ? projects.slice(0, 4)
       : [
           {
-            key: "orion-ai",
+            key: "orion-core",
             name: "Orion AI Platform",
             type: "Core AI Operating System",
             status: "active",
