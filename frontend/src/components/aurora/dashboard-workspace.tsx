@@ -41,6 +41,8 @@ import { PluginSystemPanel } from "@/components/aurora/panels/PluginSystemPanel"
 import { SecurityPolicyPanel } from "@/components/aurora/panels/SecurityPolicyPanel";
 import { ToolAuditPanel } from "@/components/aurora/panels/ToolAuditPanel";
 import { ToolPermissionPanel } from "@/components/aurora/panels/ToolPermissionPanel";
+import { PublicLandingPanel } from "@/components/aurora/panels/PublicLandingPanel";
+import { UIPolishPanel } from "@/components/aurora/panels/UIPolishPanel";
 import { UserSettingsPanel } from "@/components/aurora/panels/UserSettingsPanel";
 import { GlassPanel } from "./glass-panel";
 import { StatusChip } from "./status-chip";
@@ -208,6 +210,8 @@ export function DashboardWorkspace() {
     "Tool Audit Center",
     "Guided Walkthrough",
     "Presenter Controls",
+    "Public Landing Page",
+    "UI Polish",
   ]);
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
@@ -253,7 +257,8 @@ export function DashboardWorkspace() {
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
     recordingModeState, loadRecordingModeStateFromStore, startRecordingModeFromStore, stopRecordingModeFromStore, setRecordingSceneFromStore, toggleRecordingLargeCalloutFromStore, toggleRecordingHideNoisyPanelsFromStore, toggleRecordingTimerFromStore, toggleRecordingChecklistFromStore, resetRecordingModeFromStore,
     demoWalkthroughState, loadDemoWalkthroughStateFromStore, startDemoWalkthroughFromStore, stopDemoWalkthroughFromStore, nextDemoWalkthroughStepFromStore, previousDemoWalkthroughStepFromStore, resetDemoWalkthroughFromStore,
-    panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
+    publicLandingResult, publicLandingLoading, loadPublicLandingStatusFromStore, savePublicLandingReportFromStore, uiPolishResult, uiPolishLoading, loadUIPolishStatusFromStore, saveUIPolishReportFromStore,
+        panelLayout, loadPanelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, loadActiveDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
   } = useAuroraStore();
   const [dashboardIntelligenceMessage, setDashboardIntelligenceMessage] = useState("");
   const [notificationMessage, setNotificationMessage] = useState("");
@@ -473,6 +478,14 @@ export function DashboardWorkspace() {
               onMoveDown={movePanelDown}
               onReset={resetPanelLayout}
             />
+          )}
+
+          {widgets.includes("Public Landing Page") && panelVisible("public-landing") && (
+            <SafePanel panelId="public-landing"><PublicLandingPanel result={publicLandingResult} loading={publicLandingLoading} onCheck={loadPublicLandingStatusFromStore} onSave={savePublicLandingReportFromStore} /></SafePanel>
+          )}
+
+          {widgets.includes("UI Polish") && panelVisible("ui-polish") && (
+            <SafePanel panelId="ui-polish"><UIPolishPanel result={uiPolishResult} loading={uiPolishLoading} onCheck={loadUIPolishStatusFromStore} onSave={saveUIPolishReportFromStore} /></SafePanel>
           )}
 
           {widgets.includes("Presenter Controls") && panelVisible("presenter-controls") && (

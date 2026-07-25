@@ -1092,3 +1092,17 @@
 - Safe notes
 - Activity log
 - SQLite session memory
+
+## Public demo and responsive showcase hardening
+
+### Added
+
+- Responsive, static-export-compatible `/public-demo` portfolio experience.
+- Reusable hero, section, feature, and screenshot presentation components.
+- Public landing and UI polish API checks, local report tools, and Aurora panels.
+- Atomic, collision-safe readiness report generation.
+
+### Safety
+
+- Public presentation remains local until manually published.
+- Readiness checks do not push, publish, expose credentials, or alter tool behavior.

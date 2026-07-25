@@ -816,5 +816,40 @@ class DashboardIntelligenceTests(unittest.TestCase):
         self.assertEqual(response.intelligence_score, 80)
 
 
+class PublicPresentationTests(unittest.TestCase):
+    def test_public_landing_requires_static_export_configuration(self) -> None:
+        from core import public_landing
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for relative in public_landing.EXPECTED_FRONTEND_FILES:
+                path = root / relative
+                if relative == "public/screenshots":
+                    path.mkdir(parents=True, exist_ok=True)
+                    continue
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("export default {}", encoding="utf-8")
+            with patch.object(public_landing, "FRONTEND_DIR", root):
+                scan = public_landing.inspect_public_landing()
+            self.assertFalse(scan["static_export_ready"])
+            self.assertEqual(scan["status"], "review_needed")
+
+    def test_ui_polish_scans_all_component_sources(self) -> None:
+        from core import ui_polish
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            for index, relative in enumerate(ui_polish.EXPECTED_FILES):
+                path = root / relative
+                path.parent.mkdir(parents=True, exist_ok=True)
+                marker = ui_polish.RESPONSIVE_MARKERS[index] if index < len(ui_polish.RESPONSIVE_MARKERS) else ""
+                path.write_text(marker, encoding="utf-8")
+            # The final marker can live in any component, not only page.tsx.
+            last = root / ui_polish.EXPECTED_FILES[-1]
+            last.write_text(last.read_text() + ui_polish.RESPONSIVE_MARKERS[-1], encoding="utf-8")
+            with patch.object(ui_polish, "FRONTEND_DIR", root):
+                scan = ui_polish.inspect_ui_polish()
+            self.assertTrue(scan["mobile_ready"])
+            self.assertEqual(scan["status"], "ready")
+
+
 if __name__ == "__main__":
     unittest.main()

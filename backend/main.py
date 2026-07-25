@@ -210,6 +210,15 @@ from tools.github_launch_tools import (
     save_github_launch_artifacts as save_github_launch_artifacts_tool,
 )
 
+from tools.public_landing_tools import (
+    get_public_landing_report as get_public_landing_report_tool,
+    save_public_landing_report as save_public_landing_report_tool,
+)
+from tools.ui_polish_tools import (
+    get_ui_polish_report as get_ui_polish_report_tool,
+    save_ui_polish_report as save_ui_polish_report_tool,
+)
+
 
 load_dotenv(dotenv_path="backend/.env")
 
@@ -308,6 +317,10 @@ orion = Agent(
         generate_final_launch_package_tool,
         get_github_launch_report_tool,
         save_github_launch_artifacts_tool,
+        get_public_landing_report_tool,
+        save_public_landing_report_tool,
+        get_ui_polish_report_tool,
+        save_ui_polish_report_tool,
     ],
 )
 

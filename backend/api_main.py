@@ -253,6 +253,12 @@ from core.github_launch import (
     render_github_launch_report,
     save_github_launch_artifacts,
 )
+from core.public_landing import (
+    inspect_public_landing,
+    render_public_landing_report,
+    save_public_landing_report,
+)
+from core.ui_polish import inspect_ui_polish, render_ui_polish_report, save_ui_polish_report
 from core.frontend_refactor import (
     inspect_frontend_architecture,
     render_frontend_refactor_report,
@@ -436,6 +442,15 @@ from tools.github_launch_tools import (
     save_github_launch_artifacts as save_github_launch_artifacts_tool,
 )
 
+from tools.public_landing_tools import (
+    get_public_landing_report as get_public_landing_report_tool,
+    save_public_landing_report as save_public_landing_report_tool,
+)
+from tools.ui_polish_tools import (
+    get_ui_polish_report as get_ui_polish_report_tool,
+    save_ui_polish_report as save_ui_polish_report_tool,
+)
+
 
 class QualityGateRequest(BaseModel):
     run_builds: bool = False
@@ -564,6 +579,36 @@ class GitHubLaunchResponse(BaseModel):
     templates: Dict[str, str] = Field(default_factory=dict)
     summary_path: str = ""
     safety: Dict[str, Any] = Field(default_factory=dict)
+
+
+class PublicLandingResponse(BaseModel):
+    status: str
+    generated_at: str
+    route: str
+    files: List[Dict[str, Any]]
+    missing: List[Dict[str, Any]]
+    missing_count: int
+    route_exists: bool
+    screenshot_dir_exists: bool
+    screenshot_count: int
+    static_export_ready: bool
+    safety: Dict[str, Any]
+    report: str
+    path: str = ""
+
+
+class UIPolishResponse(BaseModel):
+    status: str
+    generated_at: str
+    files: List[Dict[str, Any]]
+    missing: List[Dict[str, Any]]
+    missing_count: int
+    responsive_markers: List[Dict[str, Any]]
+    responsive_marker_count: int
+    mobile_ready: bool
+    safety: Dict[str, Any]
+    report: str
+    path: str = ""
 
 
 class SystemDoctorCheck(BaseModel):
@@ -744,6 +789,10 @@ orion = Agent(
         generate_final_launch_package_tool,
         get_github_launch_report_tool,
         save_github_launch_artifacts_tool,
+        get_public_landing_report_tool,
+        save_public_landing_report_tool,
+        get_ui_polish_report_tool,
+        save_ui_polish_report_tool,
     ],
 )
 
@@ -2027,8 +2076,6 @@ def reject_request(approval_id: int):
         "result": "Rejected by user.",
     }
 
-    internal_prompt = f"""
-You are O.R.I.O.N. running a controlled mission execution cycle.
 
 @app.post("/api/missions/{mission_id}/run-next", response_model=MissionRunResponse)
 async def run_next_mission_step(mission_id: int):
@@ -2338,6 +2385,12 @@ def github_release_notes(workspace_id: int, request: GitHubReleaseRequest):
         artifact_path=result["artifact_path"],
     )
 
+    return GitHubReleaseResponse(
+        workspace_id=workspace_id,
+        status="generated",
+        content=result["content"],
+        artifact_path=result["artifact_path"],
+    )
 
 @app.post("/api/workspaces/{workspace_id}/github-release/checklist", response_model=GitHubReleaseResponse)
 def github_release_checklist(workspace_id: int, request: GitHubReleaseRequest):
@@ -2359,12 +2412,6 @@ def github_release_checklist(workspace_id: int, request: GitHubReleaseRequest):
         artifact_path=result["artifact_path"],
     )
 
-    return GitHubReleaseResponse(
-        workspace_id=workspace_id,
-        status="generated",
-        content=result["content"],
-        artifact_path=result["artifact_path"],
-    )
 
 @app.post("/api/workspaces/{workspace_id}/github-release/commit-message", response_model=GitHubReleaseResponse)
 def github_release_commit_message(workspace_id: int, request: GitHubReleaseRequest):
@@ -2610,6 +2657,11 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open URL: {request.url}",
+            "O.R.I.O.N.",
+        )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):
@@ -2634,6 +2686,10 @@ def desktop_open_url(request: DesktopUrlRequest):
             message=str(error),
         )
 
+@app.get("/api/demo/status", response_model=DemoStatusResponse)
+def demo_status():
+    state = load_demo_state()
+    readiness_report = generate_demo_readiness_report()
 
 @app.get("/api/demo/status", response_model=DemoStatusResponse)
 def demo_status():
@@ -3704,6 +3760,34 @@ def github_launch_artifacts_save(request: GitHubLaunchSaveRequest):
     result = save_github_launch_artifacts(write_templates=request.write_templates)
     log_activity("GITHUB_LAUNCH_ARTIFACTS", "Saved local launch drafts.", "O.R.I.O.N.")
     return GitHubLaunchResponse(**result)
+
+
+@app.get("/api/public-landing/status", response_model=PublicLandingResponse)
+def public_landing_status():
+    scan = inspect_public_landing()
+    return PublicLandingResponse(**scan, report=render_public_landing_report(scan))
+
+
+@app.post("/api/public-landing/report/save", response_model=PublicLandingResponse)
+def public_landing_report_save():
+    saved = save_public_landing_report()
+    scan = saved["scan"]
+    log_activity("PUBLIC_LANDING_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
+    return PublicLandingResponse(**scan, report=saved["report"], path=saved["path"])
+
+
+@app.get("/api/ui-polish/status", response_model=UIPolishResponse)
+def ui_polish_status():
+    scan = inspect_ui_polish()
+    return UIPolishResponse(**scan, report=render_ui_polish_report(scan))
+
+
+@app.post("/api/ui-polish/report/save", response_model=UIPolishResponse)
+def ui_polish_report_save():
+    saved = save_ui_polish_report()
+    scan = saved["scan"]
+    log_activity("UI_POLISH_REPORT", f"Saved: {saved['path']}", "O.R.I.O.N.")
+    return UIPolishResponse(**scan, report=saved["report"], path=saved["path"])
 
 
 @app.get("/api/system/doctor", response_model=SystemDoctorResponse)

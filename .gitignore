@@ -89,3 +89,5 @@ Thumbs.db
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+backend/data/public_landing/
+backend/data/ui_polish/
