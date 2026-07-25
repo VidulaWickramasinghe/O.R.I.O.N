@@ -12,8 +12,10 @@ from core import (
     backend_sidecar,
     developer_agent,
     frontend_refactor,
+    github_polish,
     notification_engine,
     plugin_registry,
+    portfolio_showcase,
     public_release,
     release_candidate,
     release_verification,
@@ -218,6 +220,82 @@ class ReleaseVerificationTests(unittest.TestCase):
             self.assertTrue(Path(first["summary_path"]).is_file())
             self.assertTrue(Path(second["summary_path"]).is_file())
             self.assertFalse(any(path.name.startswith("tmp") for path in output.iterdir()))
+
+
+class RepositoryPolishTests(unittest.TestCase):
+    def test_secret_scan_reports_location_without_secret_value(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / "config.py"
+            source.write_text(
+                'OPENAI_API_KEY="sk-do-not-leak-this-value"\n', encoding="utf-8"
+            )
+            with patch.object(github_polish, "PROJECT_ROOT", root), patch.object(
+                github_polish, "_tracked_files", return_value=(source,)
+            ):
+                result = github_polish.scan_for_sensitive_patterns()
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["finding_count"], 1)
+        self.assertEqual(result["findings"][0]["path"], "config.py")
+        self.assertNotIn("sk-do-not-leak", repr(result))
+
+    def test_example_credentials_are_not_reported(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            source = root / ".env.example"
+            source.write_text("OPENAI_API_KEY=your-api-key\n", encoding="utf-8")
+            with patch.object(github_polish, "PROJECT_ROOT", root), patch.object(
+                github_polish, "_tracked_files", return_value=(source,)
+            ):
+                result = github_polish.scan_for_sensitive_patterns()
+
+        self.assertTrue(result["ok"])
+
+    def test_github_polish_save_reuses_one_snapshot(self) -> None:
+        checklist = {
+            "status": "ready",
+            "generated_at": "now",
+            "passed": 0,
+            "failed": 0,
+            "checks": [],
+            "secrets": {"findings": []},
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(github_polish, "POLISH_DIR", Path(temp_dir)), patch.object(
+                github_polish,
+                "generate_github_polish_checklist",
+                return_value=checklist,
+            ) as generate:
+                result = github_polish.save_github_polish_artifacts()
+
+        generate.assert_called_once_with()
+        self.assertIs(result["checklist"], checklist)
+
+    def test_portfolio_report_save_is_atomic_and_snapshot_consistent(self) -> None:
+        scan = {
+            "status": "ready",
+            "generated_at": "now",
+            "expected_count": 0,
+            "existing_count": 0,
+            "missing_count": 0,
+            "screenshots": [],
+            "existing": [],
+            "missing": [],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            with patch.object(portfolio_showcase, "SHOWCASE_DIR", output), patch.object(
+                portfolio_showcase,
+                "inspect_portfolio_showcase",
+                return_value=scan,
+            ) as inspect:
+                result = portfolio_showcase.save_portfolio_showcase_report()
+
+            self.assertTrue(Path(result["path"]).is_file())
+            self.assertIs(result["scan"], scan)
+            self.assertEqual(list(output.glob("PORTFOLIO_SHOWCASE_REPORT_*.md")), [Path(result["path"])])
+        inspect.assert_called_once_with()
 
 
 class SecurityPolicyTests(unittest.TestCase):

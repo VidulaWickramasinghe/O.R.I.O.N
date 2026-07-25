@@ -3485,13 +3485,15 @@ def public_release_report():
 @app.get("/api/github-polish/status", response_model=GitHubPolishResponse)
 def github_polish_status():
     result = generate_github_polish_checklist()
-    return GitHubPolishResponse(**result, report=render_github_polish_report())
+    return GitHubPolishResponse(
+        **result, report=render_github_polish_report(result)
+    )
 
 
 @app.post("/api/github-polish/artifacts/save", response_model=GitHubPolishResponse)
 def github_polish_artifacts_save():
     saved = save_github_polish_artifacts()
-    result = generate_github_polish_checklist()
+    result = saved["checklist"]
     return GitHubPolishResponse(
         **result,
         report=saved["report"],
@@ -3502,13 +3504,15 @@ def github_polish_artifacts_save():
 @app.get("/api/portfolio-showcase/status", response_model=PortfolioShowcaseResponse)
 def portfolio_showcase_status():
     scan = inspect_portfolio_showcase()
-    return PortfolioShowcaseResponse(**scan, report=render_portfolio_showcase_report())
+    return PortfolioShowcaseResponse(
+        **scan, report=render_portfolio_showcase_report(scan)
+    )
 
 
 @app.post("/api/portfolio-showcase/report/save", response_model=PortfolioShowcaseResponse)
 def portfolio_showcase_report_save():
     saved = save_portfolio_showcase_report()
-    scan = inspect_portfolio_showcase()
+    scan = saved["scan"]
     return PortfolioShowcaseResponse(**scan, report=saved["report"], path=saved["path"])
 
 
