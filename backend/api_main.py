@@ -3519,13 +3519,15 @@ def portfolio_showcase_report_save():
 @app.get("/api/demo-walkthrough/status", response_model=DemoWalkthroughResponse)
 def demo_walkthrough_status():
     scan = inspect_demo_walkthrough()
-    return DemoWalkthroughResponse(**scan, report=render_demo_walkthrough_report())
+    return DemoWalkthroughResponse(
+        **scan, report=render_demo_walkthrough_report(scan)
+    )
 
 
 @app.post("/api/demo-walkthrough/report/save", response_model=DemoWalkthroughResponse)
 def demo_walkthrough_report_save():
     saved = save_demo_walkthrough_report_core()
-    scan = inspect_demo_walkthrough()
+    scan = saved["scan"]
     log_activity("DEMO_WALKTHROUGH_REPORT", f"Demo walkthrough report saved: {saved['path']}", "O.R.I.O.N.")
     return DemoWalkthroughResponse(**scan, report=saved["report"], path=saved["path"])
 
@@ -3533,13 +3535,15 @@ def demo_walkthrough_report_save():
 @app.get("/api/demo-recording/status", response_model=DemoRecordingResponse)
 def demo_recording_status():
     scan = inspect_demo_recording_readiness()
-    return DemoRecordingResponse(**scan, report=render_demo_recording_report())
+    return DemoRecordingResponse(
+        **scan, report=render_demo_recording_report(scan)
+    )
 
 
 @app.post("/api/demo-recording/report/save", response_model=DemoRecordingResponse)
 def demo_recording_report_save():
     saved = save_demo_recording_report_core()
-    scan = inspect_demo_recording_readiness()
+    scan = saved["scan"]
     log_activity("DEMO_RECORDING_REPORT", f"Demo recording report saved: {saved['path']}", "O.R.I.O.N.")
     return DemoRecordingResponse(**scan, report=saved["report"], path=saved["path"])
 

@@ -11,6 +11,8 @@ from unittest.mock import Mock, patch
 from core import (
     backend_sidecar,
     developer_agent,
+    demo_recording,
+    demo_walkthrough,
     frontend_refactor,
     github_polish,
     notification_engine,
@@ -296,6 +298,47 @@ class RepositoryPolishTests(unittest.TestCase):
             self.assertIs(result["scan"], scan)
             self.assertEqual(list(output.glob("PORTFOLIO_SHOWCASE_REPORT_*.md")), [Path(result["path"])])
         inspect.assert_called_once_with()
+
+
+class DemoPresentationTests(unittest.TestCase):
+    def test_walkthrough_save_uses_one_atomic_snapshot(self) -> None:
+        scan = demo_walkthrough.inspect_demo_walkthrough()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            with patch.object(demo_walkthrough, "DEMO_DIR", output), patch.object(
+                demo_walkthrough,
+                "inspect_demo_walkthrough",
+                return_value=scan,
+            ) as inspect:
+                result = demo_walkthrough.save_demo_walkthrough_report()
+
+            self.assertTrue(Path(result["path"]).is_file())
+            self.assertIs(result["scan"], scan)
+            self.assertEqual(len(list(output.glob("DEMO_WALKTHROUGH_REPORT_*.md"))), 1)
+        inspect.assert_called_once_with()
+
+    def test_recording_save_uses_one_atomic_snapshot(self) -> None:
+        scan = demo_recording.inspect_demo_recording_readiness()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir)
+            with patch.object(demo_recording, "RECORDING_DIR", output), patch.object(
+                demo_recording,
+                "inspect_demo_recording_readiness",
+                return_value=scan,
+            ) as inspect:
+                result = demo_recording.save_demo_recording_report()
+
+            self.assertTrue(Path(result["path"]).is_file())
+            self.assertIs(result["scan"], scan)
+            self.assertEqual(len(list(output.glob("DEMO_RECORDING_REPORT_*.md"))), 1)
+        inspect.assert_called_once_with()
+
+    def test_recording_status_is_computed_from_checks(self) -> None:
+        with patch.object(demo_recording, "RECORDING_SCENES", ()):
+            scan = demo_recording.inspect_demo_recording_readiness()
+
+        self.assertEqual(scan["status"], "review_needed")
+        self.assertEqual(scan["failed"], 1)
 
 
 class SecurityPolicyTests(unittest.TestCase):

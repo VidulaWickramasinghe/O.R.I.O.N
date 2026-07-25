@@ -264,7 +264,23 @@ export function DashboardWorkspace() {
   const [releaseCandidateMessage, setReleaseCandidateMessage] = useState("");
   const [stabilizationMessage, setStabilizationMessage] = useState("");
 
-  const panelVisible = (id: string) => panelLayout.length === 0 || panelLayout.some((item) => item.id === id && item.visible);
+  const cleanRecordingPanels = new Set([
+    "dashboard-intelligence", "dashboard-view-selector", "presenter-controls",
+    "portfolio-case-study", "portfolio-demo", "screenshot-gallery",
+    "quality-gate", "public-release", "github-polish",
+  ]);
+  const panelVisible = (id: string) => {
+    if (
+      recordingModeState.enabled &&
+      recordingModeState.hideNoisyPanels &&
+      !cleanRecordingPanels.has(id)
+    ) {
+      return false;
+    }
+    return panelLayout.length === 0 || panelLayout.some(
+      (item) => item.id === id && item.visible
+    );
+  };
 
   function toggle(item: string) {
     setWidgets((current) =>
