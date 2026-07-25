@@ -8,12 +8,89 @@ from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from core import (
+    backend_sidecar,
     developer_agent,
     notification_engine,
+    plugin_registry,
     user_settings,
     vector_memory,
     workflow_blueprints,
 )
+
+
+class PluginRegistryTests(unittest.TestCase):
+    def test_builtin_sync_preserves_state_and_uses_json_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = Path(temp_dir) / "plugins.sqlite"
+            with patch.object(plugin_registry, "DB_PATH", db_path):
+                plugin_registry.init_plugin_registry_db()
+                plugin_registry.set_plugin_enabled("portfolio_demo", False)
+                plugin_registry.sync_builtin_plugins()
+
+                plugin = plugin_registry.get_plugin("portfolio_demo")
+                self.assertIsNotNone(plugin)
+                self.assertFalse(plugin["enabled"])
+                self.assertEqual(plugin["permissions"], ["demo_generate"])
+
+    def test_required_safety_plugins_cannot_be_disabled(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(
+                plugin_registry, "DB_PATH", Path(temp_dir) / "plugins.sqlite"
+            ):
+                with self.assertRaisesRegex(ValueError, "cannot be disabled"):
+                    plugin_registry.set_plugin_enabled("plugin_registry", False)
+
+    def test_builtin_sync_restores_required_plugin_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(
+                plugin_registry, "DB_PATH", Path(temp_dir) / "plugins.sqlite"
+            ):
+                plugin_registry.init_plugin_registry_db()
+                with plugin_registry.get_connection() as connection:
+                    connection.execute(
+                        "UPDATE plugins SET enabled = 'false' WHERE key = ?",
+                        ("approval_system",),
+                    )
+                    connection.commit()
+
+                plugin_registry.sync_builtin_plugins()
+                plugin = plugin_registry.get_plugin("approval_system")
+
+        self.assertIsNotNone(plugin)
+        self.assertTrue(plugin["enabled"])
+
+
+class BackendSidecarTests(unittest.TestCase):
+    def test_sidecar_rejects_non_loopback_bind(self) -> None:
+        with patch.object(backend_sidecar.subprocess, "Popen") as popen:
+            with self.assertRaisesRegex(ValueError, "loopback"):
+                backend_sidecar.start_backend_sidecar("0.0.0.0", 8000)
+        popen.assert_not_called()
+
+    def test_stop_refuses_unverified_stale_pid(self) -> None:
+        state = {**backend_sidecar.DEFAULT_STATE, "pid": 4242}
+        status = {
+            **state,
+            "pid_running": True,
+            "managed_process": False,
+            "port_open": False,
+            "log_file": "log",
+            "state_file": "state",
+        }
+        with patch.object(backend_sidecar, "load_sidecar_state", return_value=state):
+            with patch.object(backend_sidecar, "save_sidecar_state"):
+                with patch.object(backend_sidecar, "is_pid_running", return_value=True):
+                    with patch.object(
+                        backend_sidecar, "is_managed_backend_process", return_value=False
+                    ):
+                        with patch.object(
+                            backend_sidecar, "get_sidecar_status", return_value=status
+                        ):
+                            with patch.object(backend_sidecar.os, "killpg") as killpg:
+                                result = backend_sidecar.stop_backend_sidecar()
+
+        killpg.assert_not_called()
+        self.assertEqual(result["status"], "stop_blocked")
 
 
 class VectorMemoryTests(unittest.TestCase):

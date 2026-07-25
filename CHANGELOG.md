@@ -1,3 +1,23 @@
+## v6.2 — Plugin Registry and Desktop Sidecar Safety
+
+### Improved
+
+- Added the missing built-in Plugin Registry metadata entry and prevented core
+  approval, registry, enforcement, audit, and security-policy plugins from being
+  disabled through metadata controls.
+- Hardened backend sidecar state persistence with atomic writes and recovery from
+  malformed state files.
+- Restricted sidecar startup to loopback interfaces and valid TCP ports.
+- Added process identity verification before stopping a stored PID, preventing a
+  stale or altered state file from terminating an unrelated process.
+- Prevented sidecar restart from continuing after a blocked stop operation and
+  avoided attempting to stop the API process before its own response is returned.
+
+### Tests
+
+- Added regression coverage for plugin state preservation, protected safety
+  plugins, loopback-only sidecar startup, and stale-PID termination protection.
+
 ## v6.2 — Dashboard, Reminder, and Profile Safety Hardening
 
 ### Improved

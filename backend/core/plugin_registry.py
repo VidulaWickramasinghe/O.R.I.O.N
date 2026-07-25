@@ -202,6 +202,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {
+        "key": "plugin_registry",
+        "name": "Plugin Registry",
+        "description": "Built-in plugin metadata, permissions, risk classification, and status controls.",
+        "category": "safety",
+        "risk_level": "high",
+        "permissions": ["plugin_read", "plugin_state_update"],
+        "default_enabled": True,
+    },
+    {
         "key": "tool_permission_enforcement",
         "name": "Tool Permission Enforcement",
         "description": "Checks plugin enabled/disabled state before protected tools execute.",
@@ -288,6 +297,16 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
     {"key": "demo_recording", "name": "Demo Recording Mode", "description": "Presenter controls, recording layout, scene presets, and demo recording readiness.", "category": "release", "risk_level": "low", "permissions": ["recording_mode", "presenter_controls", "demo_readiness"], "default_enabled": True},
     {"key": "demo_walkthrough", "name": "Demo Walkthrough", "description": "Guided portfolio walkthrough, demo steps, and presentation-mode reporting.", "category": "release", "risk_level": "low", "permissions": ["demo_mode", "guided_walkthrough", "presentation"], "default_enabled": True},
 ]
+
+# Disabling these entries would make the registry claim its own safety controls
+# are inactive even though they are required to enforce every other plugin.
+REQUIRED_ENABLED_PLUGINS = {
+    "approval_system",
+    "plugin_registry",
+    "tool_permission_enforcement",
+    "tool_audit_center",
+    "security_policy_profiles",
+}
 
 
 def get_connection():
@@ -376,6 +395,10 @@ def sync_builtin_plugins() -> None:
                         now,
                     ),
                 )
+        conn.executemany(
+            "UPDATE plugins SET enabled = 'true', updated_at = ? WHERE key = ?",
+            [(now, plugin_key) for plugin_key in REQUIRED_ENABLED_PLUGINS],
+        )
         conn.commit()
 
 
@@ -427,6 +450,9 @@ def list_plugins(
 
 def get_plugin(plugin_key: str) -> Optional[Dict[str, Any]]:
     init_plugin_registry_db()
+    clean_key = str(plugin_key).strip()
+    if not clean_key or len(clean_key) > 100:
+        return None
     with get_connection() as conn:
         conn.row_factory = sqlite3.Row
         row = conn.execute(
@@ -435,16 +461,19 @@ def get_plugin(plugin_key: str) -> Optional[Dict[str, Any]]:
             FROM plugins
             WHERE key = ?
             """,
-            (plugin_key,),
+            (clean_key,),
         ).fetchone()
     return _row_to_plugin(row) if row else None
 
 
 def set_plugin_enabled(plugin_key: str, enabled: bool) -> Dict[str, Any]:
     init_plugin_registry_db()
-    plugin = get_plugin(plugin_key)
+    clean_key = str(plugin_key).strip()
+    plugin = get_plugin(clean_key)
     if not plugin:
-        raise ValueError(f"Plugin not found: {plugin_key}")
+        raise ValueError(f"Plugin not found: {clean_key}")
+    if clean_key in REQUIRED_ENABLED_PLUGINS and not enabled:
+        raise ValueError(f"Required safety plugin cannot be disabled: {clean_key}")
 
     now = _now()
     with get_connection() as conn:
@@ -454,11 +483,11 @@ def set_plugin_enabled(plugin_key: str, enabled: bool) -> Dict[str, Any]:
             SET enabled = ?, updated_at = ?
             WHERE key = ?
             """,
-            ("true" if enabled else "false", now, plugin_key),
+            ("true" if enabled else "false", now, clean_key),
         )
         conn.commit()
 
-    updated = get_plugin(plugin_key)
+    updated = get_plugin(clean_key)
     if not updated:
         raise ValueError("Plugin update failed.")
     return updated

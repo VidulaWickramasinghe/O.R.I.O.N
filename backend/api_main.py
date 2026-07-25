@@ -1564,14 +1564,6 @@ def health():
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
-@app.get("/api/health")
-def health():
-    return {
-        "status": "healthy",
-        "system": "O.R.I.O.N.",
-        "version": "6.2.0",
-        "message": "O.R.I.O.N. Mission Control backend is operational.",
-    }
 
 @app.get("/api/mission")
 def mission():
@@ -1688,128 +1680,11 @@ def mission():
         ],
     }
 
-@app.get("/api/mission")
-def mission():
-    return {
-        "name": "O.R.I.O.N.",
-        "full_name": "Operational Response and Intelligent Orchestration Network",
-        "interface": "Aurora OS",
-        "tagline": "Think. Plan. Act. Learn.",
-        "release": "v6.2 Patch Release Manager + Hotfix Workflow",
-        "capabilities": [
-            "AI chat console",
-            "Project memory",
-            "Safe developer tools",
-            "Voice mode",
-            "Wake phrase mode",
-            "Live activity timeline",
-            "Tool-level instrumentation",
-            "Project launcher",
-            "Mission Planner System",
-            "Command Approval System",
-            "Controlled Autonomous Mission Execution Loop",
-            "Mission Run History",
-            "Mission Execution Reports",
-            "Workspace context retrieval",
-            "Project context retrieval",
-            "Memory context retrieval",
-            "Mission context retrieval",
-            "Controlled multi-step mission execution",
-            "Desktop control approvals",
-            "Open workspace in VS Code",
-            "Open workspace folder",
-            "Start workspace development server",
-            "Open approved URLs in browser",
-            "Portfolio demo mode",
-            "Demo readiness report",
-            "Portfolio release pack generation",
-            "Local Knowledge Base",
-            "Document indexing and search",
-            "Knowledge-aware context retrieval",
-            "Aurora OS Knowledge Base panel",
-            "Vector Memory",
-            "Semantic search",
-            "Embedding-based context retrieval",
-            "Meaning-aware memory and knowledge search",
-            "Workflow Blueprints",
-            "Reusable mission templates",
-            "Blueprint-to-mission generation",
-            "Standard release, research, bug-fix, and portfolio workflows",
-            "Agentic Workspace Developer Mode",
-            "Workspace inspection and diagnosis",
-            "Approval-gated patch planning",
-            "Developer report generation",
-            "Safe workspace file patching with backup",
-            "Dashboard Intelligence",
-            "System intelligence score",
-            "Mission and workspace analytics",
-            "Memory, knowledge, vector, approval, and activity metrics",
-            "Readiness recommendations",
-            "Notification + Reminder Engine",
-            "Secure User Profiles + Settings",
-            "Plugin System + Tool Registry",
-            "Local reminders",
-            "Startup briefing",
-            "Due task tracking",
-            "Notification event log",
-            "Secure local user profile settings",
-            "Safety level configuration",
-            "Default workspace preference",
-            "Voice, theme, and model preferences",
-            "Settings-aware context retrieval",
-            "Plugin System + Tool Registry",
-            "Plugin permissions and risk levels",
-            "Enable/disable plugin state",
-            "Plugin registry reports",
-            "Modular tool architecture foundation",
-            "Packaged desktop app shell",
-            "Tauri desktop wrapper",
-            "Static Aurora OS frontend export",
-            "Desktop shell backend status",
-            "Local desktop launch scripts",
-            "Backend sidecar manager",
-            "One-click desktop launch",
-            "Sidecar status panel",
-            "Local desktop shortcut installer",
-            "Backend process health tracking",
-            "Tool Permission Enforcement",
-            "Plugin-controlled tool access",
-            "Blocked tool logging",
-            "Tool-to-plugin permission matrix",
-            "High-risk tool visibility",
-            "Tool Audit Center",
-            "Allowed/blocked tool event history",
-            "Security decision reports",
-            "Expanded plugin enforcement coverage",
-            "Audit-aware Dashboard Intelligence",
-            "Security Policy Profiles",
-            "Strict, Balanced, and Developer Lab risk modes",
-            "Policy-controlled plugin states",
-            "Security policy event history",
-            "Risk-aware Dashboard Intelligence",
-        ],
-        "safety_model": [
-            "No uncontrolled destructive commands",
-            "Safe project directory access",
-            "Approved developer command execution only",
-            "Approved desktop actions only",
-            "Activity and tool execution logging",
-            "Mission run history records every controlled execution cycle",
-            "Multi-step mission mode stops on approval, completion, error, or repeated step detection",
-            "Desktop control actions must pass through the Command Approval System",
-            "Portfolio demo mode uses generated release artifacts and readiness reporting",
-            "Local knowledge indexing reads supported local files only and skips heavy folders",
-            "Local reminders stay inside Aurora OS without external calendar, email, SMS, or push integrations",
-        ],
-    }
 
 @app.get("/api/activity", response_model=ActivityResponse)
 def activity():
     return ActivityResponse(events=get_recent_activity())
 
-@app.get("/api/activity", response_model=ActivityResponse)
-def activity():
-    return ActivityResponse(events=get_recent_activity())
 
 @app.post("/api/activity/clear")
 def clear_activity_route():
@@ -1817,11 +1692,6 @@ def clear_activity_route():
     log_activity("SYSTEM", "Activity timeline cleared.", "Aurora OS")
     return {"status": "cleared"}
 
-@app.post("/api/activity/clear")
-def clear_activity_route():
-    clear_activity()
-    log_activity("SYSTEM", "Activity timeline cleared.", "Aurora OS")
-    return {"status": "cleared"}
 
 @app.get("/api/projects", response_model=ProjectsResponse)
 def projects():
@@ -1832,14 +1702,6 @@ def projects():
     )
     return ProjectsResponse(projects=load_project_items())
 
-@app.get("/api/projects", response_model=ProjectsResponse)
-def projects():
-    log_activity(
-        "PROJECTS_VIEW",
-        "Aurora OS requested the project launcher list.",
-        "Aurora OS",
-    )
-    return ProjectsResponse(projects=load_project_items())
 
 @app.get("/api/projects/{project_key}", response_model=ProjectItem)
 def project_detail(project_key: str):
@@ -1863,14 +1725,6 @@ def project_detail(project_key: str):
         updated_at=None,
     )
 
-    return ProjectItem(
-        key=project_key,
-        name="Project not found",
-        type="Unknown",
-        status="missing",
-        description="No project found with that key.",
-        updated_at=None,
-    )
 
 @app.get("/api/memory", response_model=MemoryResponse)
 def memory_items():
@@ -1881,14 +1735,120 @@ def memory_items():
     )
     return MemoryResponse(items=list_recent_memory(limit=20))
 
-@app.get("/api/memory/search", response_model=MemoryResponse)
-def memory_search(q: str):
-    log_activity(
-        "MEMORY_SEARCH",
-        f"Aurora OS searched memory for: {q}",
-        "Aurora OS",
-    )
-    return MemoryResponse(items=search_memory_items(query=q, limit=20))
+@app.get("/api/mission")
+def mission():
+    return {
+        "name": "O.R.I.O.N.",
+        "full_name": "Operational Response and Intelligent Orchestration Network",
+        "interface": "Aurora OS",
+        "tagline": "Think. Plan. Act. Learn.",
+        "release": "v6.2 Patch Release Manager + Hotfix Workflow",
+        "capabilities": [
+            "AI chat console",
+            "Project memory",
+            "Safe developer tools",
+            "Voice mode",
+            "Wake phrase mode",
+            "Live activity timeline",
+            "Tool-level instrumentation",
+            "Project launcher",
+            "Mission Planner System",
+            "Command Approval System",
+            "Controlled Autonomous Mission Execution Loop",
+            "Mission Run History",
+            "Mission Execution Reports",
+            "Workspace context retrieval",
+            "Project context retrieval",
+            "Memory context retrieval",
+            "Mission context retrieval",
+            "Controlled multi-step mission execution",
+            "Desktop control approvals",
+            "Open workspace in VS Code",
+            "Open workspace folder",
+            "Start workspace development server",
+            "Open approved URLs in browser",
+            "Portfolio demo mode",
+            "Demo readiness report",
+            "Portfolio release pack generation",
+            "Local Knowledge Base",
+            "Document indexing and search",
+            "Knowledge-aware context retrieval",
+            "Aurora OS Knowledge Base panel",
+            "Vector Memory",
+            "Semantic search",
+            "Embedding-based context retrieval",
+            "Meaning-aware memory and knowledge search",
+            "Workflow Blueprints",
+            "Reusable mission templates",
+            "Blueprint-to-mission generation",
+            "Standard release, research, bug-fix, and portfolio workflows",
+            "Agentic Workspace Developer Mode",
+            "Workspace inspection and diagnosis",
+            "Approval-gated patch planning",
+            "Developer report generation",
+            "Safe workspace file patching with backup",
+            "Dashboard Intelligence",
+            "System intelligence score",
+            "Mission and workspace analytics",
+            "Memory, knowledge, vector, approval, and activity metrics",
+            "Readiness recommendations",
+            "Notification + Reminder Engine",
+            "Secure User Profiles + Settings",
+            "Plugin System + Tool Registry",
+            "Local reminders",
+            "Startup briefing",
+            "Due task tracking",
+            "Notification event log",
+            "Secure local user profile settings",
+            "Safety level configuration",
+            "Default workspace preference",
+            "Voice, theme, and model preferences",
+            "Settings-aware context retrieval",
+            "Plugin System + Tool Registry",
+            "Plugin permissions and risk levels",
+            "Enable/disable plugin state",
+            "Plugin registry reports",
+            "Modular tool architecture foundation",
+            "Packaged desktop app shell",
+            "Tauri desktop wrapper",
+            "Static Aurora OS frontend export",
+            "Desktop shell backend status",
+            "Local desktop launch scripts",
+            "Backend sidecar manager",
+            "One-click desktop launch",
+            "Sidecar status panel",
+            "Local desktop shortcut installer",
+            "Backend process health tracking",
+            "Tool Permission Enforcement",
+            "Plugin-controlled tool access",
+            "Blocked tool logging",
+            "Tool-to-plugin permission matrix",
+            "High-risk tool visibility",
+            "Tool Audit Center",
+            "Allowed/blocked tool event history",
+            "Security decision reports",
+            "Expanded plugin enforcement coverage",
+            "Audit-aware Dashboard Intelligence",
+            "Security Policy Profiles",
+            "Strict, Balanced, and Developer Lab risk modes",
+            "Policy-controlled plugin states",
+            "Security policy event history",
+            "Risk-aware Dashboard Intelligence",
+        ],
+        "safety_model": [
+            "No uncontrolled destructive commands",
+            "Safe project directory access",
+            "Approved developer command execution only",
+            "Approved desktop actions only",
+            "Activity and tool execution logging",
+            "Mission run history records every controlled execution cycle",
+            "Multi-step mission mode stops on approval, completion, error, or repeated step detection",
+            "Desktop control actions must pass through the Command Approval System",
+            "Portfolio demo mode uses generated release artifacts and readiness reporting",
+            "Local knowledge indexing reads supported local files only and skips heavy folders",
+            "Local reminders stay inside Aurora OS without external calendar, email, SMS, or push integrations",
+        ],
+    }
 
 @app.get("/api/memory/search", response_model=MemoryResponse)
 def memory_search(q: str):
@@ -1899,14 +1859,6 @@ def memory_search(q: str):
     )
     return MemoryResponse(items=search_memory_items(query=q, limit=20))
 
-@app.get("/api/missions", response_model=MissionsResponse)
-def missions():
-    log_activity(
-        "MISSIONS_VIEW",
-        "Aurora OS requested mission planner records.",
-        "Aurora OS",
-    )
-    return MissionsResponse(missions=list_mission_records(limit=20))
 
 @app.get("/api/missions", response_model=MissionsResponse)
 def missions():
@@ -1917,9 +1869,6 @@ def missions():
     )
     return MissionsResponse(missions=list_mission_records(limit=20))
 
-@app.get("/api/missions/{mission_id}", response_model=MissionDetailItem)
-def mission_detail(mission_id: int):
-    mission_record = get_mission_record(mission_id)
 
 @app.get("/api/missions/{mission_id}", response_model=MissionDetailItem)
 def mission_detail(mission_id: int):
@@ -2263,8 +2212,6 @@ Rules:
             result=output,
         )
 
-    except Exception as error:
-        error_message = str(error)
 
 @app.post("/api/missions/{mission_id}/run-batch", response_model=MultiStepMissionRunResponse)
 async def run_mission_batch(mission_id: int, request: MultiStepMissionRunRequest):
@@ -2639,10 +2586,10 @@ def desktop_open_vscode(workspace_id: int):
             message=str(error),
         )
 
-    except Exception as error:
-        return DesktopActionResponse(
-            status="failed",
-            message=str(error),
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open workspace folder {workspace_id}.",
+            "O.R.I.O.N.",
         )
 
 @app.post("/api/desktop/workspaces/{workspace_id}/open-folder", response_model=DesktopActionResponse)
@@ -2692,10 +2639,10 @@ def desktop_start_dev(workspace_id: int):
             message=str(error),
         )
 
-    except Exception as error:
-        return DesktopActionResponse(
-            status="failed",
-            message=str(error),
+        log_activity(
+            "DESKTOP_APPROVAL_CREATED",
+            f"Approval created to open URL: {request.url}",
+            "O.R.I.O.N.",
         )
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
@@ -3545,7 +3492,7 @@ def _sidecar_response(status_data: Dict[str, Any]) -> BackendSidecarStatusRespon
         port_open=bool(status_data.get("port_open", False)),
         log_file=status_data.get("log_file", ""),
         state_file=status_data.get("state_file", ""),
-        report=render_sidecar_report(),
+        report=render_sidecar_report(status_data),
     )
 
 
