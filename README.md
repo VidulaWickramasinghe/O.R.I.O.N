@@ -9,7 +9,7 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v6.2 — Patch Release Manager + Hotfix Workflow**
+**v6.5 — Safety Review Board + Feature Approval Workflow**
 
 ## Quick Setup
 
