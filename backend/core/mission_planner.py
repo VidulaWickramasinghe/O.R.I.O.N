@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
+from core.database import managed_connection
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BACKEND_DIR / "data"
 DB_PATH = DATA_DIR / "orion_missions.sqlite"
@@ -12,7 +13,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def get_connection():
-    return sqlite3.connect(DB_PATH)
+    return managed_connection(DB_PATH)
 
 
 def init_mission_db() -> None:
