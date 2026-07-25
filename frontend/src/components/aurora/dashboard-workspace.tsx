@@ -287,7 +287,7 @@ export function DashboardWorkspace() {
       void useAuroraStore.getState().refreshAll();
     }, 5000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore]);
 
   function metricValue(
     source: Record<string, unknown> | undefined,
