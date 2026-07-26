@@ -49,6 +49,12 @@ services:
 Aurora OS is available at `http://localhost:3000`; the local API is available
 at `http://127.0.0.1:8000`.
 
+### Vercel FastAPI deployment
+
+The repository declares `backend.api_main:app` as its Vercel Python entrypoint
+in `pyproject.toml`. Configure `OPENAI_API_KEY` and `ORION_ALLOWED_ORIGINS` in
+the Vercel project environment before deploying the backend.
+
 ## Quick Setup
 
 Install backend and frontend dependencies, prepare the local environment file,

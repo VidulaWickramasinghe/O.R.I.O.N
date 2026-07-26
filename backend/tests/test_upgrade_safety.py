@@ -2,6 +2,7 @@
 
 import os
 import tempfile
+import tomllib
 import unittest
 from datetime import datetime
 from pathlib import Path
@@ -109,6 +110,18 @@ class StabilizationManagerTests(unittest.TestCase):
         self.assertEqual(result["risks"][0]["file"], "unsafe.py")
 
 
+class DeploymentConfigurationTests(unittest.TestCase):
+    def test_vercel_fastapi_entrypoint_is_explicit(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+        with (project_root / "pyproject.toml").open("rb") as config_file:
+            config = tomllib.load(config_file)
+
+        self.assertEqual(
+            config["tool"]["vercel"]["entrypoint"],
+            "backend.api_main:app",
+        )
+
+
 class FrontendRefactorTests(unittest.TestCase):
     def test_frontend_dev_command_recovers_empty_manifests(self) -> None:
         root = Path(__file__).resolve().parents[2] / "frontend"
@@ -168,6 +181,7 @@ class FrontendRefactorTests(unittest.TestCase):
                 violations.append(str(path.relative_to(frontend_root)))
 
         self.assertEqual(violations, [])
+
 
     def test_frontend_service_inventory_is_complete(self) -> None:
         scan = frontend_refactor.inspect_frontend_architecture()
