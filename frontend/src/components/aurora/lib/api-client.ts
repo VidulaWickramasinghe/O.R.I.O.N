@@ -1,7 +1,7 @@
-import { apiGet, apiPost } from "@/lib/api/client";
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 type RequestOptions = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
 };
 
@@ -9,9 +9,22 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const method = options.method || "GET";
-  if (method === "GET") return apiGet<T>(path);
-  return apiPost<T>(path, options.body);
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: options.method || "GET",
+    headers:
+      options.body === undefined
+        ? undefined
+        : {
+            "Content-Type": "application/json",
+          },
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+  }
+
+  return response.json() as Promise<T>;
 }
 
 export const api = {

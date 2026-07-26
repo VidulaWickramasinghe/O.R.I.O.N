@@ -1,3 +1,18 @@
 "use client";
-import Link from "next/link"; import { useEffect, useMemo, useState } from "react"; import { Search, X } from "lucide-react"; import { navItems } from "@/lib/aurora-data"; import { useUiStore } from "@/store/ui-store";
-export function CommandPalette(){const open=useUiStore(s=>s.commandOpen);const setOpen=useUiStore(s=>s.setCommandOpen);const [query,setQuery]=useState("");useEffect(()=>{const handler=(event:KeyboardEvent)=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==="k"){event.preventDefault();setOpen(true)}if(event.key==="Escape")setOpen(false)};window.addEventListener("keydown",handler);return()=>window.removeEventListener("keydown",handler)},[setOpen]);const results=useMemo(()=>navItems.filter(item=>item.label.toLowerCase().includes(query.toLowerCase())),[query]);if(!open)return null;return <div role="dialog" aria-modal="true" aria-label="Command palette" className="fixed inset-0 z-[70] flex items-start justify-center bg-black/70 p-3 pt-[10vh] backdrop-blur-sm" onClick={()=>setOpen(false)}><div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl" onClick={event=>event.stopPropagation()}><label className="flex min-h-14 items-center gap-3 border-b border-white/10 px-4"><Search size={18} className="text-cyan-300"/><span className="sr-only">Search navigation</span><input autoFocus value={query} onChange={event=>setQuery(event.target.value)} placeholder="Search navigation and safe actions…" className="min-w-0 flex-1 bg-transparent text-sm outline-none"/><button aria-label="Close command palette" onClick={()=>setOpen(false)}><X size={18}/></button></label><div className="max-h-[60vh] overflow-y-auto p-2">{results.length?results.map(item=>{const Icon=item.icon;return <Link key={item.href} href={item.href} onClick={()=>setOpen(false)} className="flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm text-slate-300 hover:bg-cyan-300/10 hover:text-white"><Icon size={17}/>{item.label}</Link>}):<p className="p-6 text-center text-sm text-slate-500">No matching route. High-risk actions are never run directly from search.</p>}</div></div></div>}
+import { useEffect } from "react";
+import { Command, FolderPlus, Logs, Search, Shield, Terminal, Workflow } from "lucide-react";
+import { useUiStore } from "@/store/ui-store";
+
+const commands = [
+  { label: "Create Project", icon: FolderPlus }, { label: "Run Agent", icon: Workflow }, { label: "Search Memory", icon: Search }, { label: "Open Logs", icon: Logs }, { label: "Open Terminal", icon: Terminal }, { label: "Switch Model", icon: Command }, { label: "Security Review", icon: Shield },
+];
+export function CommandPalette() {
+  const open = useUiStore((state) => state.commandOpen);
+  const setOpen = useUiStore((state) => state.setCommandOpen);
+  useEffect(() => {
+    const handler = (event: KeyboardEvent) => { if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setOpen(true); } };
+    window.addEventListener("keydown", handler); return () => window.removeEventListener("keydown", handler);
+  }, [setOpen]);
+  if (!open) return null;
+  return <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 pt-24 backdrop-blur-sm" onClick={() => setOpen(false)}><div className="w-full max-w-2xl rounded-[18px] border border-white/10 bg-[#11151D]/95 p-3 shadow-2xl" onClick={(e) => e.stopPropagation()}><div className="flex items-center gap-3 border-b border-white/10 px-3 py-3 text-slate-400"><Search size={18}/><input autoFocus className="flex-1 bg-transparent text-sm outline-none" placeholder="Run an Aurora command..." /></div><div className="mt-2 grid gap-1">{commands.map((item) => { const Icon = item.icon; return <button key={item.label} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-3 text-left text-sm text-slate-300 hover:bg-[#4F8BFF]/12 hover:text-white"><Icon size={17}/>{item.label}</button>; })}</div></div></div>;
+}

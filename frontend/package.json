@@ -1,16 +1,17 @@
 {
   "name": "frontend",
-  "version": "0.1.0",
+  "version": "6.7.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/prepare-dev.mjs && next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "tauri": "tauri",
     "desktop:dev": "tauri dev",
     "desktop:build": "tauri build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev:turbo": "node scripts/prepare-dev.mjs && next dev"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",
