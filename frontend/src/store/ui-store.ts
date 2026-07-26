@@ -1,6 +1,46 @@
 "use client";
+
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
-export type OrbState = "idle"|"listening"|"thinking"|"executing"|"waiting"|"warning"|"offline"|"speaking"|"success"|"danger";
-type UiState={commandOpen:boolean;notificationsOpen:boolean;sidebarCollapsed:boolean;contextOpen:boolean;mobileNavOpen:boolean;assistantOpen:boolean;orbState:OrbState;setCommandOpen:(v:boolean)=>void;setNotificationsOpen:(v:boolean)=>void;toggleSidebar:()=>void;setContextOpen:(v:boolean)=>void;setMobileNavOpen:(v:boolean)=>void;setAssistantOpen:(v:boolean)=>void;setOrbState:(v:OrbState)=>void};
-export const useUiStore=create<UiState>()(persist((set)=>({commandOpen:false,notificationsOpen:false,sidebarCollapsed:false,contextOpen:false,mobileNavOpen:false,assistantOpen:false,orbState:"idle",setCommandOpen:(commandOpen)=>set({commandOpen}),setNotificationsOpen:(notificationsOpen)=>set({notificationsOpen}),toggleSidebar:()=>set(s=>({sidebarCollapsed:!s.sidebarCollapsed})),setContextOpen:(contextOpen)=>set({contextOpen}),setMobileNavOpen:(mobileNavOpen)=>set({mobileNavOpen}),setAssistantOpen:(assistantOpen)=>set({assistantOpen}),setOrbState:(orbState)=>set({orbState})}),{name:"aurora-ui-preferences",partialize:(s)=>({sidebarCollapsed:s.sidebarCollapsed,contextOpen:s.contextOpen}),skipHydration:true}));
+
+export type OrbState = "idle" | "thinking" | "executing" | "speaking" | "success" | "warning" | "danger";
+export type SidebarMode = "expanded" | "compact" | "hidden";
+
+type UiState = {
+  commandOpen: boolean;
+  notificationsOpen: boolean;
+  sidebarMode: SidebarMode;
+  mobileSidebarOpen: boolean;
+  contextOpen: boolean;
+  orbState: OrbState;
+  setCommandOpen: (open: boolean) => void;
+  setNotificationsOpen: (open: boolean) => void;
+  setSidebarMode: (mode: SidebarMode) => void;
+  cycleSidebarMode: () => void;
+  setMobileSidebarOpen: (open: boolean) => void;
+  setContextOpen: (open: boolean) => void;
+  setOrbState: (state: OrbState) => void;
+};
+
+export const useUiStore = create<UiState>((set) => ({
+  commandOpen: false,
+  notificationsOpen: false,
+  sidebarMode: "expanded",
+  mobileSidebarOpen: false,
+  contextOpen: true,
+  orbState: "idle",
+  setCommandOpen: (commandOpen) => set({ commandOpen }),
+  setNotificationsOpen: (notificationsOpen) => set({ notificationsOpen }),
+  setSidebarMode: (sidebarMode) => set({ sidebarMode }),
+  cycleSidebarMode: () =>
+    set((state) => ({
+      sidebarMode:
+        state.sidebarMode === "expanded"
+          ? "compact"
+          : state.sidebarMode === "compact"
+            ? "hidden"
+            : "expanded",
+    })),
+  setMobileSidebarOpen: (mobileSidebarOpen) => set({ mobileSidebarOpen }),
+  setContextOpen: (contextOpen) => set({ contextOpen }),
+  setOrbState: (orbState) => set({ orbState }),
+}));

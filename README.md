@@ -9,7 +9,25 @@ The project includes a futuristic web dashboard called **Aurora OS**, which acts
 **Think. Plan. Act. Learn.**
 
 ## Current Release
-**v6.5 — Safety Review Board + Feature Approval Workflow**
+**v6.7 — Aurora Mission Control UI Rebuild**
+
+### Aurora OS v6.7
+
+The current frontend introduces a responsive mission-control shell with
+expanded, compact, and hidden desktop navigation modes. Navigation groups and
+sidebar preferences persist locally, while the mobile drawer remains
+independent. The rebuilt dashboard includes interactive performance analytics,
+mission context, configurable widgets, and dedicated operational workspaces for
+Settings, System, Security, Workflows, and Console.
+
+Frontend validation from the canonical project directory:
+
+```bash
+cd ~/O.R.I.O.N/frontend/
+npm ci
+npm run typecheck
+npm run build
+```
 
 ## Quick Setup
 
@@ -30,6 +48,12 @@ services:
 
 Aurora OS is available at `http://localhost:3000`; the local API is available
 at `http://127.0.0.1:8000`.
+
+### Vercel FastAPI deployment
+
+The repository declares `backend.api_main:app` as its Vercel Python entrypoint
+in `pyproject.toml`. Configure `OPENAI_API_KEY` and `ORION_ALLOWED_ORIGINS` in
+the Vercel project environment before deploying the backend.
 
 ## Quick Setup
 
