@@ -110,6 +110,32 @@ class StabilizationManagerTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_frontend_dev_command_recovers_empty_manifests(self) -> None:
+        root = Path(__file__).resolve().parents[2] / "frontend"
+        package = (root / "package.json").read_text(encoding="utf-8")
+        recovery = (root / "scripts" / "prepare-dev.mjs").read_text(encoding="utf-8")
+
+        self.assertIn("node scripts/prepare-dev.mjs && next dev --webpack", package)
+        self.assertIn('entry.name.includes("manifest")', recovery)
+        self.assertIn("await rm(cacheDirectory", recovery)
+        self.assertIn("await rm(developmentCacheDirectory", recovery)
+
+    def test_memory_cards_do_not_nest_interactive_buttons(self) -> None:
+        memory_vault = (
+            Path(__file__).resolve().parents[2]
+            / "frontend"
+            / "src"
+            / "components"
+            / "memory"
+            / "memory-vault.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('<article key={memory.id} role="button"', memory_vault)
+        self.assertNotIn(
+            '<button key={memory.id} onClick={() => selectMemory(memory.id)}',
+            memory_vault,
+        )
+
     def test_dashboard_restores_preferences_without_stale_hook_references(self) -> None:
         dashboard = (
             Path(__file__).resolve().parents[2]

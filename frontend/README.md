@@ -70,3 +70,20 @@ npm run desktop:build
 - `src/components/aurora/context-panel.tsx`
 - `src/store/ui-store.ts`
 - `src/app/globals.css`
+
+## Development cache recovery
+
+The default development command uses the webpack development server because it
+is more reliable when `~/O.R.I.O.N/` is hosted on a bind-mounted or network-backed
+workspace. Before startup, it detects an empty Next.js manifest and removes the
+corrupted `.next` cache automatically. It also clears `.next/dev` on every
+startup so interrupted route compilation cannot retain stale module handlers:
+
+```bash
+cd ~/O.R.I.O.N/frontend/
+npm run dev
+```
+
+On a fast local filesystem, Turbopack remains available explicitly with
+`npm run dev:turbo`. If a development server was interrupted while writing its
+cache, stop every running Next.js process before restarting it.
