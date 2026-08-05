@@ -205,9 +205,22 @@ const GOVERNANCE_WIDGETS = [
   "Tool Audit Center",
 ];
 
-type DashboardMode = "overview" | "operations" | "developer" | "governance";
 
-export function DashboardWorkspace({ forceGovernanceMode = false }: { forceGovernanceMode?: boolean } = {}) {
+const SECURITY_WIDGETS = [
+  "Dashboard Intelligence",
+  "Dashboard Views",
+  "Plugin System",
+  "Security Policy",
+  "Tool Permission Enforcement",
+  "Tool Audit Center",
+  "Safety Review Board",
+  "User Profile + Settings",
+];
+
+
+type DashboardMode = "overview" | "operations" | "developer" | "governance" | "security";
+
+export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityMode = false }: { forceGovernanceMode?: boolean; forceSecurityMode?: boolean } = {}) {
   const loadDemoWalkthroughStateFromStore = useAuroraStore(
     (state) => state.loadDemoWalkthroughStateFromStore,
   );
@@ -215,9 +228,9 @@ export function DashboardWorkspace({ forceGovernanceMode = false }: { forceGover
     (state) => state.loadRecordingModeStateFromStore,
   );
   const [widgets, setWidgets] = useState<string[]>(() =>
-    forceGovernanceMode ? GOVERNANCE_WIDGETS : DEFAULT_WIDGETS,
+    forceGovernanceMode ? GOVERNANCE_WIDGETS : forceSecurityMode ? SECURITY_WIDGETS : DEFAULT_WIDGETS,
   );
-  const [dashboardMode, setDashboardMode] = useState<DashboardMode>(forceGovernanceMode ? "governance" : "overview");
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>(forceGovernanceMode ? "governance" : forceSecurityMode ? "security" : "overview");
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [activityPaused, setActivityPaused] = useState(false);
   const [compactMetrics, setCompactMetrics] = useState(false);
@@ -394,8 +407,14 @@ export function DashboardWorkspace({ forceGovernanceMode = false }: { forceGover
       setDashboardMode("governance");
       setWidgets(GOVERNANCE_WIDGETS);
       applyDashboardViewPreset("release-view");
+      return;
     }
-  }, [forceGovernanceMode, applyDashboardViewPreset]);
+    if (forceSecurityMode) {
+      setDashboardMode("security");
+      setWidgets(SECURITY_WIDGETS);
+      applyDashboardViewPreset("security-view");
+    }
+  }, [forceGovernanceMode, forceSecurityMode, applyDashboardViewPreset]);
 
   const refreshDashboard = () => {
     void loadKnowledgeDocuments();
@@ -411,21 +430,23 @@ export function DashboardWorkspace({ forceGovernanceMode = false }: { forceGover
 
   const modeOptions = forceGovernanceMode
     ? ([["governance", "Governance"]] as const)
-    : ([
-        ["overview", "Overview"],
-        ["operations", "Operations"],
-        ["developer", "Developer"],
-      ] as const);
+    : forceSecurityMode
+      ? ([["security", "Security"]] as const)
+      : ([
+          ["overview", "Overview"],
+          ["operations", "Operations"],
+          ["developer", "Developer"],
+        ] as const);
 
   return (
     <div className="space-y-5 pb-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-600">
-            <span>Mission control</span><ChevronRight size={12} /><span className="text-cyan-300/80">{forceGovernanceMode ? "Release governance" : "Command overview"}</span>
+            <span>Mission control</span><ChevronRight size={12} /><span className="text-cyan-300/80">{forceGovernanceMode ? "Release governance" : forceSecurityMode ? "Security control" : "Command overview"}</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{forceGovernanceMode ? "Governance controls are ready." : "Good evening, Wichel."}</h1>
-          <p className="mt-2 text-sm text-slate-500">{displayDate || "Loading date"} · {forceGovernanceMode ? "Release, roadmap, safety, audit, and patch controls are active." : "O.R.I.O.N. is ready to think, plan and act."}</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{forceGovernanceMode ? "Governance controls are ready." : forceSecurityMode ? "Security controls are active." : "Good evening, Wichel."}</h1>
+          <p className="mt-2 text-sm text-slate-500">{displayDate || "Loading date"} · {forceGovernanceMode ? "Release, roadmap, safety, audit, and patch controls are active." : forceSecurityMode ? "Plugins, policy profiles, permission matrix, and audit controls are active." : "O.R.I.O.N. is ready to think, plan and act."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-2xl border border-white/[0.07] bg-white/[0.025] p-1">
@@ -530,7 +551,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false }: { forceGover
 
       {widgets.includes("Analytics") && <AnalyticsOverview />}
 
-      {!forceGovernanceMode && (
+      {!forceGovernanceMode && !forceSecurityMode && (
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,.65fr)]">
         <div className="space-y-5">
           {widgets.includes("Quick Actions") && (
@@ -580,7 +601,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false }: { forceGover
       )}
 
       <section className="pt-2">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Advanced workspace</p><h2 className="mt-2 text-lg font-semibold text-white">{forceGovernanceMode ? "Governance control modules" : "Operational modules"}</h2><p className="mt-1 text-sm text-slate-600">{forceGovernanceMode ? "Release, safety, roadmap, patch, audit, and governance panels are forced visible on this route." : "API-backed controls and specialist panels selected for the current dashboard mode."}</p></div><button onClick={() => setCustomizerOpen(true)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/[0.04] hover:text-white"><SlidersHorizontal size={13} /> Manage modules</button></div>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Advanced workspace</p><h2 className="mt-2 text-lg font-semibold text-white">{forceGovernanceMode ? "Governance control modules" : forceSecurityMode ? "Security control modules" : "Operational modules"}</h2><p className="mt-1 text-sm text-slate-600">{forceGovernanceMode ? "Release, safety, roadmap, patch, audit, and governance panels are forced visible on this route." : forceSecurityMode ? "Plugin registry, policy profiles, permission enforcement, audit history, and safety review panels are forced visible on this route." : "API-backed controls and specialist panels selected for the current dashboard mode."}</p></div><button onClick={() => setCustomizerOpen(true)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/[0.04] hover:text-white"><SlidersHorizontal size={13} /> Manage modules</button></div>
         <div className="grid gap-5 2xl:grid-cols-2">
           <div className="space-y-5">
             {widgets.includes("Dashboard Intelligence") && panelVisible("dashboard-intelligence") && <SafePanel panelId="dashboard-intelligence"><DashboardIntelligencePanel intelligence={dashboardIntelligence} loading={dashboardIntelligenceLoading} message={dashboardIntelligenceMessage} onRefresh={loadDashboardIntelligence} /></SafePanel>}
