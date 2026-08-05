@@ -1,7 +1,10 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { AuroraQueryProvider } from "@/components/aurora/providers/query-provider";
-import { LegacyVoiceWorkspace } from "@/components/aurora/legacy/legacy-modules";
+import { VoiceWorkspace } from "@/components/aurora/modules/voice-workspace";
 
 export default function Page() {
-  return <AuroraQueryProvider><AppShell><LegacyVoiceWorkspace /></AppShell></AuroraQueryProvider>;
+  return (
+    <AppShell>
+      <VoiceWorkspace />
+    </AppShell>
+  );
 }
