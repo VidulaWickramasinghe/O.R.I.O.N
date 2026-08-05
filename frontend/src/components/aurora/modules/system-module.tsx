@@ -28,7 +28,7 @@ export function SystemModule() {
     <ModuleShell
       title="Production Health"
       description="Installer, dependency, environment, backend, frontend, and release-readiness diagnostics."
-      badge={doctor?.status || "v6.2 hardening"}
+      badge={doctor?.status || "v6.5 hardening"}
     >
       <div className="rounded-3xl border border-cyan-400/20 bg-cyan-400/[0.04] p-5">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">

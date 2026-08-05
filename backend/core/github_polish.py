@@ -236,7 +236,7 @@ def render_github_polish_report(checklist: Dict[str, Any] | None = None) -> str:
         f"- {item['path']}: {item['category']}"
         for item in checklist["secrets"]["findings"]
     ) or "None"
-    return f"""# O.R.I.O.N. v6.2 GitHub Repository Polish Report
+    return f"""# O.R.I.O.N. v6.5 GitHub Repository Polish Report
 
 Generated: {checklist['generated_at']}
 Status: {checklist['status']}

@@ -11,7 +11,7 @@ report="$report_dir/orion_quality_gate_${timestamp}.md"
 temporary_report="$(mktemp "$report_dir/.quality-gate.XXXXXX")"
 trap 'rm -f "$temporary_report"' EXIT
 
-printf '# O.R.I.O.N. v6.2 Quality Gate Report\n\nGenerated: %s\n\n' \
+printf '# O.R.I.O.N. v6.5 Quality Gate Report\n\nGenerated: %s\n\n' \
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >"$temporary_report"
 
 failed=0

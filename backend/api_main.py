@@ -281,6 +281,12 @@ from core.post_release_maintenance import (
     render_maintenance_report,
     save_maintenance_report,
 )
+from core.changelog_intelligence import (
+    generate_maintenance_communication_pack,
+    render_changelog_intelligence_report,
+    save_changelog_intelligence_artifacts,
+)
+
 from core.roadmap_planner import (
     add_future_feature,
     generate_governance_checklist,
@@ -732,7 +738,7 @@ class SystemDoctorResponse(BaseModel):
 
 
 class PatchReleaseStartRequest(BaseModel):
-    patch_version: str = Field(default="v6.2.1", pattern=r"^v6\.2\.[1-9][0-9]*$")
+    patch_version: str = Field(default="v6.5.1", pattern=r"^v6\.5\.[1-9][0-9]*$")
     patch_type: Literal["maintenance", "bugfix", "hotfix"] = "maintenance"
     reason: str = Field(default="Post-release maintenance patch.", min_length=1, max_length=500)
 
@@ -786,7 +792,7 @@ async def app_lifespan(_app: FastAPI):
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v6.2.0 started with the Patch Release Manager enabled.",
+        "O.R.I.O.N. API v6.5.0 started with the Patch Release Manager enabled.",
         "API",
     )
     yield
@@ -795,7 +801,7 @@ async def app_lifespan(_app: FastAPI):
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="6.2.0",
+    version="6.5.0",
     lifespan=app_lifespan,
 )
 
@@ -1265,6 +1271,9 @@ class ToolPermissionItem(BaseModel):
     category: str
     permissions: List[str]
     protected: bool
+    allowed: bool
+    policy_blocked: bool
+    block_reason: str
 
 
 class ToolPermissionResponse(BaseModel):
@@ -1735,7 +1744,7 @@ class DashboardIntelligenceResponse(BaseModel):
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "6.2.0",
+        "version": "6.5.0",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -1796,7 +1805,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="6.2",
+        version="6.5",
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -1844,6 +1853,12 @@ def status():
             "Autonomous Release Candidate + System Freeze",
             "Stabilization, Bug Fixing + Codebase Cleanup",
             "GitHub Repository Polish + Portfolio Launch Prep",
+        "Safety Review Board + Feature Approval Workflow",
+        "Roadmap Planner + Future Feature Governance",
+        "Changelog Intelligence + Release Notes Composer",
+        "Post-Release Maintenance + Issue Triage Mode",
+        "Stable Public Release + Version Lock",
+        "Production Readiness Snapshot + Final Release Candidate v2",
         ],
     )
 
@@ -1853,7 +1868,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "6.2.0",
+        "version": "6.5.0",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -1865,7 +1880,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v6.2 Patch Release Manager + Hotfix Workflow",
+        "release": "v6.5 Patch Release Manager + Hotfix Workflow",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -2853,7 +2868,7 @@ def demo_status():
 
     return DemoStatusResponse(
         demo_mode=state.get("demo_mode", False),
-        release_version=state.get("release_version", "v2.5"),
+        release_version=state.get("release_version", "v6.5"),
         project_name=state.get("project_name", "O.R.I.O.N."),
         interface_name=state.get("interface_name", "Aurora OS"),
         tagline=state.get("tagline", "Think. Plan. Act. Learn."),
@@ -2876,7 +2891,7 @@ def demo_mode(request: DemoModeRequest):
 
     return DemoStatusResponse(
         demo_mode=state.get("demo_mode", False),
-        release_version=state.get("release_version", "v2.5"),
+        release_version=state.get("release_version", "v6.5"),
         project_name=state.get("project_name", "O.R.I.O.N."),
         interface_name=state.get("interface_name", "Aurora OS"),
         tagline=state.get("tagline", "Think. Plan. Act. Learn."),
@@ -3732,7 +3747,7 @@ def desktop_shell_status():
     return DesktopShellStatusResponse(
         status="online",
         app_name="O.R.I.O.N. Aurora OS",
-        shell_version="6.2.0",
+        shell_version="6.5.0",
         backend_url="http://127.0.0.1:8000",
         frontend_mode="tauri_static_shell",
         message="Desktop shell connected to O.R.I.O.N. backend with sidecar support.",
@@ -4036,6 +4051,95 @@ def post_release_maintenance_patch_plan():
     return generate_patch_plan()
 
 
+
+class ChangelogIntelligenceResponse(BaseModel):
+    status: str
+    generated_at: str
+    release_version: str
+    release_name: str
+    patch_version: str
+    patch_type: str
+    passed: int
+    failed: int
+    checks: List[Dict[str, Any]]
+    patch_plan: Dict[str, Any]
+    changelog_entry: str
+    github_release_notes: str
+    public_summary: str
+    raw_patch_notes: str
+    safety: Dict[str, Any]
+    report: str
+    report_path: str = ""
+    changelog_path: str = ""
+    github_notes_path: str = ""
+    public_summary_path: str = ""
+    raw_patch_notes_path: str = ""
+    summary_path: str = ""
+
+
+
+@app.get("/api/changelog-intelligence/status", response_model=ChangelogIntelligenceResponse)
+def changelog_intelligence_status():
+    pack = generate_maintenance_communication_pack()
+    report = render_changelog_intelligence_report()
+
+    return ChangelogIntelligenceResponse(
+        status=pack["status"],
+        generated_at=pack["generated_at"],
+        release_version=pack["release_version"],
+        release_name=pack["release_name"],
+        patch_version=pack["patch_version"],
+        patch_type=pack["patch_type"],
+        passed=pack["passed"],
+        failed=pack["failed"],
+        checks=pack["checks"],
+        patch_plan=pack["patch_plan"],
+        changelog_entry=pack["changelog_entry"],
+        github_release_notes=pack["github_release_notes"],
+        public_summary=pack["public_summary"],
+        raw_patch_notes=pack["raw_patch_notes"],
+        safety=pack["safety"],
+        report=report,
+    )
+
+
+@app.post("/api/changelog-intelligence/artifacts/save", response_model=ChangelogIntelligenceResponse)
+def changelog_intelligence_artifacts_save():
+    result = save_changelog_intelligence_artifacts()
+    pack = generate_maintenance_communication_pack()
+
+    log_activity(
+        "CHANGELOG_INTELLIGENCE_ARTIFACTS",
+        f"Changelog intelligence artifacts saved: {result['summary_path']}",
+        "O.R.I.O.N.",
+    )
+
+    return ChangelogIntelligenceResponse(
+        status=result["status"],
+        generated_at=result["generated_at"],
+        release_version=result["release_version"],
+        release_name=pack["release_name"],
+        patch_version=result["patch_version"],
+        patch_type=result["patch_type"],
+        passed=result["passed"],
+        failed=result["failed"],
+        checks=pack["checks"],
+        patch_plan=pack["patch_plan"],
+        changelog_entry=result["changelog_entry"],
+        github_release_notes=result["github_release_notes"],
+        public_summary=result["public_summary"],
+        raw_patch_notes=pack["raw_patch_notes"],
+        safety=result["safety"],
+        report=result["report"],
+        report_path=result["report_path"],
+        changelog_path=result["changelog_path"],
+        github_notes_path=result["github_notes_path"],
+        public_summary_path=result["public_summary_path"],
+        raw_patch_notes_path=result["raw_patch_notes_path"],
+        summary_path=result["summary_path"],
+    )
+
+
 @app.get("/api/roadmap-planner/status")
 def roadmap_planner_status():
     governance = generate_governance_checklist()
@@ -4105,7 +4209,7 @@ def safety_review_board_package():
 
 @app.get("/api/patch-release/status")
 def patch_release_status():
-    """Return the local-only v6.2 patch-release readiness checklist."""
+    """Return the local-only v6.5 patch-release readiness checklist."""
     checklist = generate_hotfix_checklist()
     log_activity("PATCH_RELEASE_STATUS", "Patch release status requested.", "Aurora OS")
     return {**checklist, "report": render_patch_release_report()}

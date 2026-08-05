@@ -9,4 +9,4 @@ export const PUBLIC_LANDING_SECTIONS = [
 ] as const;
 
 export const PUBLIC_LANDING_EXPORT_PATH = "/public-demo";
-export const PUBLIC_LANDING_VERSION = "v6.2";
+export const PUBLIC_LANDING_VERSION = "v6.5";

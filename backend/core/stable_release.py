@@ -13,7 +13,7 @@ from core.release_verification import generate_release_verification_snapshot
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "backend" / "data" / "stable_release"
 LOCK = OUT / "orion_version_lock.json"
-RELEASE_VERSION = "v6.2"
+RELEASE_VERSION = "v6.5"
 RELEASE_NAME = "Stable Public Release + Version Lock"
 DEFAULT = {"locked": False, "release_version": RELEASE_VERSION, "release_name": RELEASE_NAME, "release_status": "unlocked", "locked_at": "", "unlocked_at": "", "lock_reason": "", "updated_at": ""}
 

@@ -81,7 +81,7 @@ def inspect_public_landing() -> Dict[str, Any]:
 def render_public_landing_report(scan: Dict[str, Any] | None = None) -> str:
     scan = scan or inspect_public_landing()
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
-    return f"""# O.R.I.O.N. v6.2 Public Demo Website Report
+    return f"""# O.R.I.O.N. v6.5 Public Demo Website Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}

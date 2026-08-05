@@ -57,7 +57,7 @@ def render_demo_recording_report(scan: Dict[str, Any] | None = None) -> str:
     )
     scenes = "\n".join(f"- {scene}" for scene in scan["scenes"])
     safety = scan["safety"]
-    return f"""# O.R.I.O.N. v6.2 Demo Recording Mode Report
+    return f"""# O.R.I.O.N. v6.5 Demo Recording Mode Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}

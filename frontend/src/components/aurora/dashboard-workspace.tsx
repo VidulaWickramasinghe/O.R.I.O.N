@@ -71,6 +71,14 @@ import type { WorkspaceItem } from "@/types/orion";
 import { DashboardIntelligencePanel } from "@/components/aurora/panels/DashboardIntelligencePanel";
 import { ReleaseCandidatePanel } from "@/components/aurora/panels/ReleaseCandidatePanel";
 import { StabilizationPanel } from "@/components/aurora/panels/StabilizationPanel";
+import { StableReleasePanel } from "@/components/aurora/panels/StableReleasePanel";
+import { PostReleaseMaintenancePanel } from "@/components/aurora/panels/PostReleaseMaintenancePanel";
+import { PatchReleasePanel } from "@/components/aurora/panels/PatchReleasePanel";
+import { RoadmapPlannerPanel } from "@/components/aurora/panels/RoadmapPlannerPanel";
+import { SafetyReviewBoardPanel } from "@/components/aurora/panels/SafetyReviewBoardPanel";
+import { ProductionReadinessPanel } from "@/components/aurora/panels/ProductionReadinessPanel";
+import { PublicLandingPanel } from "@/components/aurora/panels/PublicLandingPanel";
+import { UIPolishPanel } from "@/components/aurora/panels/UIPolishPanel";
 
 function restoreDashboardPreferences() {
   const store = useAuroraStore.getState();
@@ -180,6 +188,14 @@ export function DashboardWorkspace() {
     "Backend Sidecar",
     "Guided Walkthrough",
     "Presenter Controls",
+    "Production Readiness",
+    "Stable Public Release",
+    "Post-Release Maintenance",
+    "Patch Release",
+    "Roadmap Planner",
+    "Safety Review Board",
+    "Public Landing Page",
+    "UI Polish",
   ]);
   const [dashboardMode, setDashboardMode] = useState<"overview" | "operations" | "developer">("overview");
   const [customizerOpen, setCustomizerOpen] = useState(false);
@@ -216,7 +232,15 @@ export function DashboardWorkspace() {
     securityProfiles, securityPolicyEvents, securityPolicyActive, securityPolicyReport,
     securityPolicyLoadingKey, releaseCandidateStatus, releaseCandidatePackage,
     releaseCandidateLoading, stabilizationResult, stabilizationLoading,
-    frontendRefactorResult, frontendRefactorLoading, desktopShellStatus,
+    frontendRefactorResult, frontendRefactorLoading,
+    publicLandingResult, publicLandingLoading, uiPolishResult, uiPolishLoading,
+    productionReadinessResult, finalReleaseCandidateV2, productionReadinessLoading,
+    stableReleaseStatus, stableReleasePackage, stableReleaseLoading,
+    postReleaseMaintenanceResult, knownIssues, patchPlan, postReleaseMaintenanceLoading,
+    patchReleaseStatus, patchReleasePackage, patchReleaseLoading,
+    roadmapPlannerResult, futureFeatures, roadmapPackage, roadmapPlannerLoading,
+    safetyReviewBoardResult, featureReviews, safetyReviewPackage, safetyReviewBoardLoading,
+    desktopShellStatus,
     desktopShellLoading, backendSidecarStatus, backendSidecarLoading, reminders,
     notificationEvents, startupBriefing, reminderTitle, reminderDueAt, reminderLoading,
     userSettingsProfile, settingsLoadingKey, setReminderTitle, setReminderDueAt,
@@ -226,6 +250,14 @@ export function DashboardWorkspace() {
     unfreezeReleaseCandidateFromStore, generateReleaseCandidatePackageFromStore,
     runStabilizationScanFromStore, saveStabilizationReportFromStore,
     runFrontendRefactorScanFromStore, saveFrontendRefactorReportFromStore,
+    loadPublicLandingStatusFromStore, savePublicLandingReportFromStore,
+    loadUIPolishStatusFromStore, saveUIPolishReportFromStore,
+    loadProductionReadinessStatusFromStore, saveProductionReadinessReportFromStore, generateFinalReleaseCandidateV2FromStore,
+    loadStableReleaseStatusFromStore, lockStableReleaseFromStore, unlockStableReleaseFromStore, saveStableReleaseReportFromStore, generateStableReleasePackageFromStore,
+    loadPostReleaseMaintenanceStatusFromStore, savePostReleaseMaintenanceReportFromStore, loadKnownIssuesFromStore, addKnownIssueFromStore,
+    loadPatchReleaseStatusFromStore, startPatchReleaseFromStore, completePatchReleaseFromStore, savePatchReleaseReportFromStore, generatePatchReleasePackageFromStore,
+    loadRoadmapPlannerStatusFromStore, saveRoadmapPlannerReportFromStore, loadFutureFeaturesFromStore, addFutureFeatureFromStore, generateRoadmapPackageFromStore,
+    loadSafetyReviewBoardStatusFromStore, saveSafetyReviewBoardReportFromStore, loadFeatureReviewsFromStore, createFeatureReviewFromStore, generateSafetyReviewPackageFromStore,
     runBackendSidecarActionFromStore, createReminderFromStore,
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
     recordingModeState, startRecordingModeFromStore, stopRecordingModeFromStore, setRecordingSceneFromStore, toggleRecordingLargeCalloutFromStore, toggleRecordingHideNoisyPanelsFromStore, toggleRecordingTimerFromStore, toggleRecordingChecklistFromStore, resetRecordingModeFromStore,
@@ -520,6 +552,12 @@ export function DashboardWorkspace() {
             {widgets.includes("Frontend Refactor") && panelVisible("frontend-refactor") && <SafePanel panelId="frontend-refactor"><FrontendRefactorPanel result={frontendRefactorResult} loading={frontendRefactorLoading} onScan={runFrontendRefactorScanFromStore} onSaveReport={saveFrontendRefactorReportFromStore} /></SafePanel>}
             {widgets.includes("Stabilization Manager") && panelVisible("stabilization") && <SafePanel panelId="stabilization"><StabilizationPanel result={stabilizationResult} loading={stabilizationLoading} message={stabilizationMessage} runAction={(action, runBuild) => action === "scan" ? runStabilizationScanFromStore(runBuild) : saveStabilizationReportFromStore(runBuild)} /></SafePanel>}
             {widgets.includes("Release Candidate") && panelVisible("release-candidate") && <SafePanel panelId="release-candidate"><ReleaseCandidatePanel status={releaseCandidateStatus} latestPackage={releaseCandidatePackage} loading={releaseCandidateLoading} message={releaseCandidateMessage} runAction={(action) => action === "freeze" ? freezeReleaseCandidateFromStore() : action === "unfreeze" ? unfreezeReleaseCandidateFromStore() : generateReleaseCandidatePackageFromStore()} /></SafePanel>}
+            {widgets.includes("Production Readiness") && panelVisible("production-readiness") && <SafePanel panelId="production-readiness"><ProductionReadinessPanel result={productionReadinessResult} candidate={finalReleaseCandidateV2} loading={productionReadinessLoading} onCheck={loadProductionReadinessStatusFromStore} onSave={saveProductionReadinessReportFromStore} onGenerate={generateFinalReleaseCandidateV2FromStore} /></SafePanel>}
+            {widgets.includes("Stable Public Release") && panelVisible("stable-release") && <SafePanel panelId="stable-release"><StableReleasePanel status={stableReleaseStatus} pkg={stableReleasePackage} loading={stableReleaseLoading} onCheck={loadStableReleaseStatusFromStore} onLock={lockStableReleaseFromStore} onUnlock={unlockStableReleaseFromStore} onSave={saveStableReleaseReportFromStore} onPackage={generateStableReleasePackageFromStore} /></SafePanel>}
+            {widgets.includes("Post-Release Maintenance") && panelVisible("post-release-maintenance") && <SafePanel panelId="post-release-maintenance"><PostReleaseMaintenancePanel result={postReleaseMaintenanceResult} issues={knownIssues} plan={patchPlan} loading={postReleaseMaintenanceLoading} onCheck={loadPostReleaseMaintenanceStatusFromStore} onSave={savePostReleaseMaintenanceReportFromStore} onLoad={loadKnownIssuesFromStore} onAdd={addKnownIssueFromStore} onPlan={loadPostReleaseMaintenanceStatusFromStore} /></SafePanel>}
+            {widgets.includes("Patch Release") && panelVisible("patch-release") && <SafePanel panelId="patch-release"><PatchReleasePanel status={patchReleaseStatus} pkg={patchReleasePackage} loading={patchReleaseLoading} onCheck={loadPatchReleaseStatusFromStore} onStart={startPatchReleaseFromStore} onComplete={completePatchReleaseFromStore} onSave={savePatchReleaseReportFromStore} onPackage={generatePatchReleasePackageFromStore} /></SafePanel>}
+            {widgets.includes("Roadmap Planner") && panelVisible("roadmap-planner") && <SafePanel panelId="roadmap-planner"><RoadmapPlannerPanel result={roadmapPlannerResult} features={futureFeatures} pkg={roadmapPackage} loading={roadmapPlannerLoading} onCheck={loadRoadmapPlannerStatusFromStore} onSave={saveRoadmapPlannerReportFromStore} onLoad={loadFutureFeaturesFromStore} onAdd={addFutureFeatureFromStore} onPackage={generateRoadmapPackageFromStore} /></SafePanel>}
+            {widgets.includes("Safety Review Board") && panelVisible("safety-review-board") && <SafePanel panelId="safety-review-board"><SafetyReviewBoardPanel result={safetyReviewBoardResult} reviews={featureReviews} pkg={safetyReviewPackage} loading={safetyReviewBoardLoading} onCheck={loadSafetyReviewBoardStatusFromStore} onSave={saveSafetyReviewBoardReportFromStore} onLoad={loadFeatureReviewsFromStore} onReview={createFeatureReviewFromStore} onPackage={generateSafetyReviewPackageFromStore} /></SafePanel>}
           </div>
           <div className="space-y-5">
             {widgets.includes("Dashboard Views") && panelVisible("dashboard-view-selector") && <SafePanel panelId="dashboard-view-selector"><DashboardViewSelectorPanel activeDashboardView={activeDashboardView} onApplyView={applyDashboardViewPreset} /></SafePanel>}
@@ -534,6 +572,8 @@ export function DashboardWorkspace() {
             {widgets.includes("Backend Sidecar") && panelVisible("backend-sidecar") && <SafePanel panelId="backend-sidecar"><BackendSidecarPanel status={backendSidecarStatus} loading={backendSidecarLoading} message={backendSidecarMessage} refreshStatus={loadBackendSidecarStatus} runAction={runBackendSidecarActionFromStore} /></SafePanel>}
             {widgets.includes("Tool Permission Enforcement") && panelVisible("tool-permission") && <SafePanel panelId="tool-permission"><ToolPermissionPanel matrix={toolPermissionMatrix} metrics={toolPermissionMetrics} report={toolPermissionReport} metricValue={metricValue} /></SafePanel>}
             {widgets.includes("Tool Audit Center") && panelVisible("tool-audit") && <SafePanel panelId="tool-audit"><ToolAuditPanel events={toolAuditEvents} metrics={toolAuditMetrics} report={toolAuditReport} metricValue={metricValue} /></SafePanel>}
+            {widgets.includes("Public Landing Page") && panelVisible("public-landing") && <SafePanel panelId="public-landing"><PublicLandingPanel result={publicLandingResult} loading={publicLandingLoading} onCheck={loadPublicLandingStatusFromStore} onSave={savePublicLandingReportFromStore} /></SafePanel>}
+            {widgets.includes("UI Polish") && panelVisible("ui-polish") && <SafePanel panelId="ui-polish"><UIPolishPanel result={uiPolishResult} loading={uiPolishLoading} onCheck={loadUIPolishStatusFromStore} onSave={saveUIPolishReportFromStore} /></SafePanel>}
           </div>
         </div>
       </section>

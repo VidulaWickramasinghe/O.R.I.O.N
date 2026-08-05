@@ -8,7 +8,7 @@ from core.stable_release import generate_stable_release_checklist, load_version_
 from core.production_readiness import generate_production_readiness_snapshot
 from core.release_verification import generate_release_verification_snapshot
 
-ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'backend/data/post_release_maintenance'; ISSUES=OUT/'known_issues.json'; RELEASE_VERSION='v6.2'; _LOCK=threading.RLock(); DEFAULT={'issues':[],'updated_at':''}; PRIORITIES={'critical','high','medium','low'}
+ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'backend/data/post_release_maintenance'; ISSUES=OUT/'known_issues.json'; RELEASE_VERSION='v6.5'; _LOCK=threading.RLock(); DEFAULT={'issues':[],'updated_at':''}; PRIORITIES={'critical','high','medium','low'}
 def _now(): return datetime.now().isoformat(timespec='seconds')
 def _stamp(): return datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 def _atomic(path:Path,content:str):
@@ -48,7 +48,7 @@ def add_known_issue(title,body='',source='manual'):
  return issue
 def generate_patch_plan(issues_data=None):
  data=issues_data or load_known_issues(); issues=[x.copy() for x in data['issues'] if x.get('status')=='open']; counts={p:sum(x['priority']==p for x in issues) for p in PRIORITIES}
- return {'status':'patch_needed' if issues else 'clean','generated_at':_now(),'recommended_patch':'v6.2.1' if issues else 'no_patch_needed','open_count':len(issues),**{f'{p}_count':counts[p] for p in ('critical','high','medium','low')},'open_issues':issues,'patch_steps':['Review and reproduce open issues.','Resolve critical and high risks first.','Patch one risk area at a time.','Add regression coverage.','Run backend, frontend, and quality-gate checks.','Commit only reviewed changes.']}
+ return {'status':'patch_needed' if issues else 'clean','generated_at':_now(),'recommended_patch':'v6.5.1' if issues else 'no_patch_needed','open_count':len(issues),**{f'{p}_count':counts[p] for p in ('critical','high','medium','low')},'open_issues':issues,'patch_steps':['Review and reproduce open issues.','Resolve critical and high risks first.','Patch one risk area at a time.','Add regression coverage.','Run backend, frontend, and quality-gate checks.','Commit only reviewed changes.']}
 def generate_maintenance_snapshot():
  stable=generate_stable_release_checklist(); production=generate_production_readiness_snapshot(); verification=generate_release_verification_snapshot(); version_lock=load_version_lock(); plan=generate_patch_plan()
  raw=[('Stable release lock active',version_lock.get('locked') is True,f"Locked: {version_lock.get('locked')}"),('Stable baseline ready',stable.get('status')=='stable_release_ready',f"Status: {stable.get('status')}"),('Production snapshot available',production.get('status') in {'production_ready','release_candidate','review_needed'},f"Status: {production.get('status')}"),('Release verification passed',verification.get('status')=='passed',f"Status: {verification.get('status')}"),('No open critical issues',plan['critical_count']==0,f"Critical: {plan['critical_count']}")]; checks=[{'name':n,'ok':bool(ok),'details':details} for n,ok,details in raw]; passed=sum(x['ok'] for x in checks)

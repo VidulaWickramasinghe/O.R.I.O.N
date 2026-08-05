@@ -183,3 +183,35 @@ export type RoadmapPackage={status:string;generated_at:string;release_version:st
 export type FeatureReview={id:string;feature_id:string;feature_title:string;reviewer:string;decision:string;recommended_decision:string;risk_score:number;risk_level:string;risk_factors:string[];required_controls:string[];notes:string;development_eligible:boolean;created_at:string;updated_at:string};
 export type SafetyReviewBoardResult={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;checks:ProductionReadinessCheck[];roadmap_plan:RoadmapPlan;reviews:FeatureReview[];pending_features:FutureFeature[];safety_review_features:FutureFeature[];approved_count:number;rejected_count:number;needs_changes_count:number;pending_count:number;safety_review_pending_count:number;safety:Record<string,unknown>;report:string;path:string};
 export type SafetyReviewPackage={status:string;generated_at:string;release_version:string;release_name:string;passed:number;failed:number;approved_count:number;rejected_count:number;needs_changes_count:number;pending_count:number;safety_review_pending_count:number;report_path:string;approval_plan_path:string;summary_path:string;safety:Record<string,unknown>};
+
+export type ChangelogIntelligenceCheck = {
+  name: string;
+  ok: boolean;
+  details: string;
+};
+
+export type ChangelogIntelligenceResult = {
+  status: string;
+  generated_at: string;
+  release_version: string;
+  release_name: string;
+  patch_version: string;
+  patch_type: string;
+  passed: number;
+  failed: number;
+  checks: ChangelogIntelligenceCheck[];
+  patch_plan: Record<string, unknown>;
+  changelog_entry: string;
+  github_release_notes: string;
+  public_summary: string;
+  raw_patch_notes: string;
+  safety: Record<string, unknown>;
+  report: string;
+  report_path: string;
+  changelog_path: string;
+  github_notes_path: string;
+  public_summary_path: string;
+  raw_patch_notes_path: string;
+  summary_path: string;
+};
+
