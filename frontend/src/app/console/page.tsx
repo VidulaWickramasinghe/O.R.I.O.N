@@ -1,6 +1,10 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { ConsoleWorkspace } from "@/components/aurora/operations-workspaces";
+import { ConsoleLiveWorkspace } from "@/components/aurora/modules/console-workspace";
 
 export default function Page() {
-  return <AppShell><ConsoleWorkspace /></AppShell>;
+  return (
+    <AppShell>
+      <ConsoleLiveWorkspace />
+    </AppShell>
+  );
 }
