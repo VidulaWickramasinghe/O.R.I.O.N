@@ -47,6 +47,7 @@ import { createWorkflowMission, getWorkflowBlueprint, getWorkflowBlueprints } fr
 import { FrontendRefactorPanel } from "@/components/aurora/panels/FrontendRefactorPanel";
 import { DashboardLayoutPanel } from "@/components/aurora/panels/DashboardLayoutPanel";
 import { DashboardViewSelectorPanel } from "@/components/aurora/panels/DashboardViewSelectorPanel";
+import { ChangelogIntelligencePanel } from "@/components/aurora/panels/ChangelogIntelligencePanel";
 import { OfflineBanner } from "@/components/aurora/resilience/OfflineBanner";
 import { PanelErrorBoundary } from "@/components/aurora/resilience/PanelErrorBoundary";
 import { getPanelDefinition } from "@/lib/panelRegistry";
@@ -167,37 +168,56 @@ type DeveloperInspectResult = {
 
 
 
-export function DashboardWorkspace() {
+const DEFAULT_WIDGETS = [
+  "Hero",
+  "Metrics",
+  "Analytics",
+  "Quick Actions",
+  "Models",
+  "Timeline",
+  "Dashboard Intelligence",
+  "Notification Engine",
+  "Security Policy",
+  "Desktop Shell",
+  "Backend Sidecar",
+  "Guided Walkthrough",
+  "Presenter Controls",
+];
+
+const GOVERNANCE_WIDGETS = [
+  "Dashboard Intelligence",
+  "Dashboard Views",
+  "Release Candidate",
+  "Changelog Intelligence",
+  "Stable Public Release",
+  "Post-Release Maintenance",
+  "Patch Release",
+  "Roadmap Planner",
+  "Safety Review Board",
+  "Production Readiness",
+  "Final Launch",
+  "GitHub Launch",
+  "Public Landing Page",
+  "UI Polish",
+  "Plugin System",
+  "Security Policy",
+  "Tool Permission Enforcement",
+  "Tool Audit Center",
+];
+
+type DashboardMode = "overview" | "operations" | "developer" | "governance";
+
+export function DashboardWorkspace({ forceGovernanceMode = false }: { forceGovernanceMode?: boolean } = {}) {
   const loadDemoWalkthroughStateFromStore = useAuroraStore(
     (state) => state.loadDemoWalkthroughStateFromStore,
   );
   const loadRecordingModeStateFromStore = useAuroraStore(
     (state) => state.loadRecordingModeStateFromStore,
   );
-  const [widgets, setWidgets] = useState([
-    "Hero",
-    "Metrics",
-    "Analytics",
-    "Quick Actions",
-    "Models",
-    "Timeline",
-    "Dashboard Intelligence",
-    "Notification Engine",
-    "Security Policy",
-    "Desktop Shell",
-    "Backend Sidecar",
-    "Guided Walkthrough",
-    "Presenter Controls",
-    "Production Readiness",
-    "Stable Public Release",
-    "Post-Release Maintenance",
-    "Patch Release",
-    "Roadmap Planner",
-    "Safety Review Board",
-    "Public Landing Page",
-    "UI Polish",
-  ]);
-  const [dashboardMode, setDashboardMode] = useState<"overview" | "operations" | "developer">("overview");
+  const [widgets, setWidgets] = useState<string[]>(() =>
+    forceGovernanceMode ? GOVERNANCE_WIDGETS : DEFAULT_WIDGETS,
+  );
+  const [dashboardMode, setDashboardMode] = useState<DashboardMode>(forceGovernanceMode ? "governance" : "overview");
   const [customizerOpen, setCustomizerOpen] = useState(false);
   const [activityPaused, setActivityPaused] = useState(false);
   const [compactMetrics, setCompactMetrics] = useState(false);
@@ -349,21 +369,33 @@ export function DashboardWorkspace() {
   const widgetGroups = [
     { title: "Overview", items: ["Hero", "Metrics", "Analytics", "Quick Actions", "Models", "Timeline"] },
     { title: "Intelligence", items: ["Dashboard Intelligence", "Knowledge Base", "Semantic Memory", "Workflow Blueprints"] },
-    { title: "Development", items: ["Developer Mode", "Frontend Refactor", "Stabilization Manager", "Release Candidate"] },
+    { title: "Development", items: ["Developer Mode", "Frontend Refactor", "Stabilization Manager", "Release Candidate", "Changelog Intelligence"] },
     { title: "Operations", items: ["Notification Engine", "Plugin System", "Security Policy", "Desktop Shell", "Backend Sidecar", "Tool Permission Enforcement", "Tool Audit Center"] },
     { title: "Presentation", items: ["Dashboard Views", "Dashboard Layout", "Guided Walkthrough", "Presenter Controls", "User Settings"] },
   ];
 
-  const applyMode = (mode: "overview" | "operations" | "developer") => {
+  const applyMode = (mode: DashboardMode) => {
     setDashboardMode(mode);
-    if (mode === "overview") {
-      setWidgets(["Hero", "Metrics", "Analytics", "Quick Actions", "Models", "Timeline", "Dashboard Intelligence", "Notification Engine", "Security Policy", "Desktop Shell", "Backend Sidecar", "Guided Walkthrough", "Presenter Controls"]);
+
+    if (mode === "governance") {
+      setWidgets(GOVERNANCE_WIDGETS);
+      applyDashboardViewPreset("release-view");
+    } else if (mode === "overview") {
+      setWidgets(DEFAULT_WIDGETS);
     } else if (mode === "operations") {
       setWidgets(["Hero", "Metrics", "Analytics", "Timeline", "Dashboard Intelligence", "Notification Engine", "Plugin System", "Security Policy", "Desktop Shell", "Backend Sidecar", "Tool Permission Enforcement", "Tool Audit Center", "Release Candidate", "Stabilization Manager"]);
     } else {
       setWidgets(["Hero", "Metrics", "Analytics", "Quick Actions", "Models", "Developer Mode", "Knowledge Base", "Semantic Memory", "Workflow Blueprints", "Frontend Refactor", "Stabilization Manager", "Backend Sidecar", "Tool Audit Center"]);
     }
   };
+
+  useEffect(() => {
+    if (forceGovernanceMode) {
+      setDashboardMode("governance");
+      setWidgets(GOVERNANCE_WIDGETS);
+      applyDashboardViewPreset("release-view");
+    }
+  }, [forceGovernanceMode, applyDashboardViewPreset]);
 
   const refreshDashboard = () => {
     void loadKnowledgeDocuments();
@@ -377,23 +409,27 @@ export function DashboardWorkspace() {
   const activeAgents = agents.filter((agent) => agent.status === "Running").length;
   const intelligenceScore = dashboardIntelligence ? Number(dashboardIntelligence.intelligence_score) : 92;
 
+  const modeOptions = forceGovernanceMode
+    ? ([["governance", "Governance"]] as const)
+    : ([
+        ["overview", "Overview"],
+        ["operations", "Operations"],
+        ["developer", "Developer"],
+      ] as const);
+
   return (
     <div className="space-y-5 pb-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-600">
-            <span>Mission control</span><ChevronRight size={12} /><span className="text-cyan-300/80">Command overview</span>
+            <span>Mission control</span><ChevronRight size={12} /><span className="text-cyan-300/80">{forceGovernanceMode ? "Release governance" : "Command overview"}</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">Good evening, Wichel.</h1>
-          <p className="mt-2 text-sm text-slate-500">{displayDate || "Loading date"} · O.R.I.O.N. is ready to think, plan and act.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{forceGovernanceMode ? "Governance controls are ready." : "Good evening, Wichel."}</h1>
+          <p className="mt-2 text-sm text-slate-500">{displayDate || "Loading date"} · {forceGovernanceMode ? "Release, roadmap, safety, audit, and patch controls are active." : "O.R.I.O.N. is ready to think, plan and act."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-2xl border border-white/[0.07] bg-white/[0.025] p-1">
-            {([
-              ["overview", "Overview"],
-              ["operations", "Operations"],
-              ["developer", "Developer"],
-            ] as const).map(([value, label]) => (
+            {modeOptions.map(([value, label]) => (
               <button key={value} onClick={() => applyMode(value)} className={`rounded-xl px-3 py-2 text-xs font-semibold transition ${dashboardMode === value ? "bg-white/[0.09] text-white shadow-sm" : "text-slate-500 hover:text-slate-300"}`}>{label}</button>
             ))}
           </div>
@@ -494,6 +530,7 @@ export function DashboardWorkspace() {
 
       {widgets.includes("Analytics") && <AnalyticsOverview />}
 
+      {!forceGovernanceMode && (
       <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,.65fr)]">
         <div className="space-y-5">
           {widgets.includes("Quick Actions") && (
@@ -540,8 +577,10 @@ export function DashboardWorkspace() {
         </div>
       </div>
 
+      )}
+
       <section className="pt-2">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Advanced workspace</p><h2 className="mt-2 text-lg font-semibold text-white">Operational modules</h2><p className="mt-1 text-sm text-slate-600">API-backed controls and specialist panels selected for the current dashboard mode.</p></div><button onClick={() => setCustomizerOpen(true)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/[0.04] hover:text-white"><SlidersHorizontal size={13} /> Manage modules</button></div>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Advanced workspace</p><h2 className="mt-2 text-lg font-semibold text-white">{forceGovernanceMode ? "Governance control modules" : "Operational modules"}</h2><p className="mt-1 text-sm text-slate-600">{forceGovernanceMode ? "Release, safety, roadmap, patch, audit, and governance panels are forced visible on this route." : "API-backed controls and specialist panels selected for the current dashboard mode."}</p></div><button onClick={() => setCustomizerOpen(true)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/[0.04] hover:text-white"><SlidersHorizontal size={13} /> Manage modules</button></div>
         <div className="grid gap-5 2xl:grid-cols-2">
           <div className="space-y-5">
             {widgets.includes("Dashboard Intelligence") && panelVisible("dashboard-intelligence") && <SafePanel panelId="dashboard-intelligence"><DashboardIntelligencePanel intelligence={dashboardIntelligence} loading={dashboardIntelligenceLoading} message={dashboardIntelligenceMessage} onRefresh={loadDashboardIntelligence} /></SafePanel>}
@@ -553,6 +592,13 @@ export function DashboardWorkspace() {
             {widgets.includes("Stabilization Manager") && panelVisible("stabilization") && <SafePanel panelId="stabilization"><StabilizationPanel result={stabilizationResult} loading={stabilizationLoading} message={stabilizationMessage} runAction={(action, runBuild) => action === "scan" ? runStabilizationScanFromStore(runBuild) : saveStabilizationReportFromStore(runBuild)} /></SafePanel>}
             {widgets.includes("Release Candidate") && panelVisible("release-candidate") && <SafePanel panelId="release-candidate"><ReleaseCandidatePanel status={releaseCandidateStatus} latestPackage={releaseCandidatePackage} loading={releaseCandidateLoading} message={releaseCandidateMessage} runAction={(action) => action === "freeze" ? freezeReleaseCandidateFromStore() : action === "unfreeze" ? unfreezeReleaseCandidateFromStore() : generateReleaseCandidatePackageFromStore()} /></SafePanel>}
             {widgets.includes("Production Readiness") && panelVisible("production-readiness") && <SafePanel panelId="production-readiness"><ProductionReadinessPanel result={productionReadinessResult} candidate={finalReleaseCandidateV2} loading={productionReadinessLoading} onCheck={loadProductionReadinessStatusFromStore} onSave={saveProductionReadinessReportFromStore} onGenerate={generateFinalReleaseCandidateV2FromStore} /></SafePanel>}
+            {widgets.includes("Changelog Intelligence") && panelVisible("changelog-intelligence") && (
+              <div id="changelog-intelligence" className="scroll-mt-6">
+                <SafePanel panelId="changelog-intelligence">
+                  <ChangelogIntelligencePanel />
+                </SafePanel>
+              </div>
+            )}
             {widgets.includes("Stable Public Release") && panelVisible("stable-release") && <SafePanel panelId="stable-release"><StableReleasePanel status={stableReleaseStatus} pkg={stableReleasePackage} loading={stableReleaseLoading} onCheck={loadStableReleaseStatusFromStore} onLock={lockStableReleaseFromStore} onUnlock={unlockStableReleaseFromStore} onSave={saveStableReleaseReportFromStore} onPackage={generateStableReleasePackageFromStore} /></SafePanel>}
             {widgets.includes("Post-Release Maintenance") && panelVisible("post-release-maintenance") && <SafePanel panelId="post-release-maintenance"><PostReleaseMaintenancePanel result={postReleaseMaintenanceResult} issues={knownIssues} plan={patchPlan} loading={postReleaseMaintenanceLoading} onCheck={loadPostReleaseMaintenanceStatusFromStore} onSave={savePostReleaseMaintenanceReportFromStore} onLoad={loadKnownIssuesFromStore} onAdd={addKnownIssueFromStore} onPlan={loadPostReleaseMaintenanceStatusFromStore} /></SafePanel>}
             {widgets.includes("Patch Release") && panelVisible("patch-release") && <SafePanel panelId="patch-release"><PatchReleasePanel status={patchReleaseStatus} pkg={patchReleasePackage} loading={patchReleaseLoading} onCheck={loadPatchReleaseStatusFromStore} onStart={startPatchReleaseFromStore} onComplete={completePatchReleaseFromStore} onSave={savePatchReleaseReportFromStore} onPackage={generatePatchReleasePackageFromStore} /></SafePanel>}

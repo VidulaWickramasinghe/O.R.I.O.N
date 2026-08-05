@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { AppShell } from "@/components/aurora/app-shell";
 import { DashboardWorkspace } from "@/components/aurora/dashboard-workspace";
+import { GovernanceReleaseViewActivator } from "@/components/aurora/GovernanceReleaseViewActivator";
 
 const governanceModules = [
   {
@@ -94,6 +95,7 @@ const governanceModules = [
 export default function GovernancePage() {
   return (
     <AppShell>
+      <GovernanceReleaseViewActivator />
       <main className="mx-auto w-full max-w-[1600px] space-y-6">
         <header className="rounded-3xl border border-cyan-300/15 bg-cyan-300/[0.04] p-5 sm:p-7">
           <p className="text-xs font-bold uppercase tracking-[.2em] text-cyan-300">
@@ -184,7 +186,7 @@ export default function GovernancePage() {
         </header>
 
         <section id="dashboard-workspace" className="scroll-mt-6">
-          <DashboardWorkspace />
+          <DashboardWorkspace forceGovernanceMode />
         </section>
       </main>
     </AppShell>
