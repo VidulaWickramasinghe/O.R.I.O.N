@@ -1,6 +1,10 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { WorkflowsWorkspace } from "@/components/aurora/operations-workspaces";
+import { WorkflowsLiveWorkspace } from "@/components/aurora/modules/workflows-workspace";
 
 export default function Page() {
-  return <AppShell><WorkflowsWorkspace /></AppShell>;
+  return (
+    <AppShell>
+      <WorkflowsLiveWorkspace />
+    </AppShell>
+  );
 }
