@@ -18,8 +18,8 @@ PATCH_STATE_FILE = PATCH_RELEASE_DIR / "patch_release_state.json"
 
 DEFAULT_PATCH_STATE: Dict[str, Any] = {
     "active": False,
-    "base_version": "v6.2",
-    "patch_version": "v6.2.1",
+    "base_version": "v6.5",
+    "patch_version": "v6.5.1",
     "patch_type": "maintenance",
     "started_at": "",
     "completed_at": "",
@@ -55,8 +55,8 @@ def _clean_reason(reason: str) -> str:
 
 def _validate_version(version: str) -> str:
     value = version.strip()
-    if not re.fullmatch(r"v6\.2\.[1-9][0-9]*", value):
-        raise ValueError("Patch version must match v6.2.N where N is at least 1.")
+    if not re.fullmatch(r"v6\.5\.[1-9][0-9]*", value):
+        raise ValueError("Patch version must match v6.5.N where N is at least 1.")
     return value
 
 
@@ -87,7 +87,7 @@ def save_patch_state(state: Dict[str, Any]) -> Dict[str, Any]:
     return saved
 
 
-def start_patch_release(patch_version: str = "v6.2.1", patch_type: str = "maintenance", reason: str = "Post-release maintenance patch.") -> Dict[str, Any]:
+def start_patch_release(patch_version: str = "v6.5.1", patch_type: str = "maintenance", reason: str = "Post-release maintenance patch.") -> Dict[str, Any]:
     if patch_type not in {"maintenance", "bugfix", "hotfix"}:
         raise ValueError("Patch type must be maintenance, bugfix, or hotfix.")
     return save_patch_state({**load_patch_state(), "active": True, "patch_version": _validate_version(patch_version), "patch_type": patch_type, "started_at": _now(), "completed_at": "", "reason": _clean_reason(reason)})
@@ -112,7 +112,7 @@ def classify_patch_type() -> Dict[str, Any]:
         patch_type, urgency = "none", "none"
     return {
         "patch_type": patch_type,
-        "patch_version": "v6.2.1" if plan["open_count"] else "no_patch_needed",
+        "patch_version": "v6.5.1" if plan["open_count"] else "no_patch_needed",
         "urgency": urgency,
         **{key: plan[key] for key in ("open_count", "critical_count", "high_count", "medium_count", "low_count")},
     }
@@ -167,7 +167,7 @@ def render_patch_release_report() -> str:
     checklist = generate_hotfix_checklist()
     checks = "\n".join(f"- [{'x' if check['ok'] else ' '}] {check['name']} — {check['details']}" for check in checklist["checks"])
     state, plan = checklist["patch_state"], checklist["patch_plan"]
-    return f"""# O.R.I.O.N. v6.2 Patch Release Manager Report
+    return f"""# O.R.I.O.N. v6.5 Patch Release Manager Report
 
 Generated: {checklist['generated_at']}
 Status: {checklist['status']}

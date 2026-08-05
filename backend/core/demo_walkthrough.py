@@ -45,7 +45,7 @@ def render_demo_walkthrough_report(scan: Dict[str, Any] | None = None) -> str:
         f"{index + 1}. {step}" for index, step in enumerate(scan["steps"])
     )
     safety = scan["safety"]
-    return f"""# O.R.I.O.N. v6.2 Guided Portfolio Walkthrough Report
+    return f"""# O.R.I.O.N. v6.5 Guided Portfolio Walkthrough Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}

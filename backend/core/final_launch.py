@@ -22,7 +22,7 @@ from core.stabilization_manager import run_stabilization_scan
 
 FINAL_LAUNCH_DIR = Path(__file__).resolve().parents[1] / "data" / "final_launch"
 FREEZE_STATE_FILE = FINAL_LAUNCH_DIR / "final_launch_freeze_state.json"
-RELEASE_VERSION = "v6.2"
+RELEASE_VERSION = "v6.5"
 RELEASE_NAME = "Final Public Launch Checklist + Repository Freeze"
 DEFAULT_FREEZE_STATE = {
     "frozen": False,
@@ -172,7 +172,7 @@ def render_final_launch_report(checklist: Dict[str, Any] | None = None) -> str:
         f"- [{'x' if check['ok'] else ' '}] {check['name']} — {check['details']}"
         for check in checklist["checks"]
     )
-    return f"""# O.R.I.O.N. v6.2 Final Public Launch Report
+    return f"""# O.R.I.O.N. v6.5 Final Public Launch Report
 
 Generated: {checklist['generated_at']}
 Status: {checklist['status']}

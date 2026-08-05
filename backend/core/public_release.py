@@ -61,7 +61,7 @@ def generate_public_release_package() -> Dict[str, Any]:
     }
     summary: Dict[str, Any] = {
         "status": "generated",
-        "version": "v6.2",
+        "version": "v6.5",
         "name": "Public Portfolio Release + Demo Package",
         "generated_at": _now(),
         "artifact_count": len(artifacts),
@@ -91,7 +91,7 @@ def get_latest_public_release_package() -> Dict[str, Any]:
             continue
     return {
         "status": "not_generated",
-        "version": "v6.2",
+        "version": "v6.5",
         "name": "Public Portfolio Release + Demo Package",
         "generated_at": _now(),
         "artifact_count": 0,
@@ -111,7 +111,7 @@ def render_public_release_report(package: Dict[str, Any] | None = None) -> str:
     artifact_lines = "\n".join(
         f"- {name}: {path}" for name, path in package["artifacts"].items()
     ) or "No public release artifacts have been generated."
-    return f"""# O.R.I.O.N. v6.2 Public Release Report
+    return f"""# O.R.I.O.N. v6.5 Public Release Report
 
 Generated: {package['generated_at']}
 Status: {package['status']}

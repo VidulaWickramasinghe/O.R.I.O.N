@@ -123,7 +123,7 @@ def render_release_verification_report(
         f"- [{'x' if check['ok'] else ' '}] {check['name']} — {check['details']}"
         for check in snapshot["checks"]
     )
-    return f"""# O.R.I.O.N. v6.2 Release Verification Report
+    return f"""# O.R.I.O.N. v6.5 Release Verification Report
 
 Generated: {snapshot['generated_at']}
 Status: {snapshot['status']}

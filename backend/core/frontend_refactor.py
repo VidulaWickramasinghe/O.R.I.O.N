@@ -138,7 +138,7 @@ def render_frontend_refactor_report(scan: Dict[str, Any] | None = None) -> str:
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     service_lines = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["service_files"])
     components = "\n".join(f"- {item}" for item in scan["components"][:100]) or "No components found."
-    return f"""# O.R.I.O.N. v6.2 Frontend Service Architecture Report
+    return f"""# O.R.I.O.N. v6.5 Frontend Service Architecture Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}

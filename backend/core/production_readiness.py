@@ -25,7 +25,7 @@ from core.ui_polish import inspect_ui_polish
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PRODUCTION_DIR = PROJECT_ROOT / "backend" / "data" / "production_readiness"
-RELEASE_VERSION = "v6.2"
+RELEASE_VERSION = "v6.5"
 RELEASE_NAME = "Production Readiness Snapshot + Final Release Candidate v2"
 
 

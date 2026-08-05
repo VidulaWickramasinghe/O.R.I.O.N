@@ -62,7 +62,7 @@ def render_ui_polish_report(scan: Dict[str, Any] | None = None) -> str:
     scan = scan or inspect_ui_polish()
     files = "\n".join(f"- [{'x' if item['exists'] else ' '}] {item['path']}" for item in scan["files"])
     markers = "\n".join(f"- [{'x' if item['present'] else ' '}] {item['marker']}" for item in scan["responsive_markers"])
-    return f"""# O.R.I.O.N. v6.2 UI Polish Report
+    return f"""# O.R.I.O.N. v6.5 UI Polish Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}

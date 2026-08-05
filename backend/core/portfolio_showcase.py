@@ -41,7 +41,7 @@ def render_portfolio_showcase_report(scan: Dict[str, Any] | None = None) -> str:
         f"- [{'x' if item['exists'] else ' '}] {item['file_name']}"
         for item in scan["screenshots"]
     )
-    return f"""# O.R.I.O.N. v6.2 Portfolio Showcase Report
+    return f"""# O.R.I.O.N. v6.5 Portfolio Showcase Report
 
 Generated: {scan['generated_at']}
 Status: {scan['status']}

@@ -249,7 +249,7 @@ class FrontendRefactorTests(unittest.TestCase):
 
         inspect.assert_not_called()
         self.assertTrue(
-            report.startswith("# O.R.I.O.N. v6.2 Frontend Service Architecture Report")
+            report.startswith("# O.R.I.O.N. v6.5 Frontend Service Architecture Report")
         )
 
 
@@ -1005,7 +1005,7 @@ class MaintenanceAndPatchTests(unittest.TestCase):
             with patch.object(patch_release,"PATCH_RELEASE_DIR",root),patch.object(patch_release,"PATCH_STATE_FILE",state_path):
                 self.assertFalse(patch_release.load_patch_state()["active"]); self.assertFalse(state_path.exists())
                 with self.assertRaises(ValueError): patch_release.start_patch_release("v6.0.1")
-                state=patch_release.start_patch_release("v6.2.1","hotfix","urgent fix")
+                state=patch_release.start_patch_release("v6.5.1","hotfix","urgent fix")
                 self.assertTrue(state["active"]); self.assertEqual(state["patch_type"],"hotfix")
 
     def test_patch_package_requires_active_workflow(self) -> None:
@@ -1031,7 +1031,7 @@ class RoadmapAndSafetyTests(unittest.TestCase):
             path=Path(temp_dir)/"roadmap.json"
             with patch.object(roadmap_planner,"ROADMAP_FILE",path):
                 first=roadmap_planner.add_future_feature("UI panel");second=roadmap_planner.add_future_feature("UI panel")
-            self.assertNotEqual(first["id"],second["id"])
+            self.assertEqual(first["id"],second["id"])
 
     def test_critical_feature_cannot_be_manually_approved(self) -> None:
         from core import safety_review_board

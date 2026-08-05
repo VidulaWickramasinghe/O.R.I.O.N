@@ -40,14 +40,14 @@ def _atomic_write(path: Path, content: str) -> None:
 
 
 def generate_readme_badges() -> str:
-    return """![Version](https://img.shields.io/badge/version-v6.2-cyan)
+    return """![Version](https://img.shields.io/badge/version-v6.5-cyan)
 ![Safety](https://img.shields.io/badge/safety-approval--gated-blue)
 ![License](https://img.shields.io/badge/license-see--LICENSE-lightgrey)
 """
 
 
 def generate_release_draft() -> str:
-    return """# O.R.I.O.N. v6.2 — Production Hardening
+    return """# O.R.I.O.N. v6.5 — Production Hardening
 
 O.R.I.O.N. is a local-first AI desktop agent with the Aurora OS dashboard,
 approval-gated tools, plugin permissions, audit logs, and release verification.
@@ -129,7 +129,7 @@ def render_github_launch_report(checklist: Dict[str, Any] | None = None) -> str:
         f"- [{'x' if check['ok'] else ' '}] {check['name']} — {check['details']}"
         for check in checklist["checks"]
     )
-    return f"""# O.R.I.O.N. v6.2 GitHub Launch Assistant Report
+    return f"""# O.R.I.O.N. v6.5 GitHub Launch Assistant Report
 
 Generated: {checklist['generated_at']}
 Status: {checklist['status']}
