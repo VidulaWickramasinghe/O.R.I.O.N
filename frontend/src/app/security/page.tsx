@@ -1,6 +1,10 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { SecurityWorkspace } from "@/components/aurora/operations-workspaces";
+import { DashboardWorkspace } from "@/components/aurora/dashboard-workspace";
 
 export default function Page() {
-  return <AppShell><SecurityWorkspace /></AppShell>;
+  return (
+    <AppShell>
+      <DashboardWorkspace forceSecurityMode />
+    </AppShell>
+  );
 }
