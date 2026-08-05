@@ -15,6 +15,7 @@ export const navItems = [
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/system", label: "System", icon: Gauge },
   { href: "/security", label: "Security", icon: Shield },
+  { href: "/governance", label: "Governance", icon: Shield },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/demo", label: "Demo", icon: Package },
   { href: "/console", label: "Console", icon: Terminal },

@@ -27,7 +27,7 @@ import { useUiStore, type SidebarMode } from "@/store/ui-store";
 const groups = [
   { label: "Command", items: ["Dashboard", "Assistant", "Missions", "Agents"] },
   { label: "Intelligence", items: ["Memory", "Projects", "Workspaces", "Workflows", "Analytics"] },
-  { label: "Operations", items: ["Tools", "Browser", "Voice", "System", "Security", "Console"] },
+  { label: "Operations", items: ["Tools", "Browser", "Voice", "System", "Security", "Governance", "Console"] },
 ];
 
 const STORAGE_KEY = "orion-sidebar-mode";
