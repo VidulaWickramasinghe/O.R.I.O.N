@@ -1,3 +1,10 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { ToolExecutionMonitor } from "@/components/tools/tool-execution-monitor";
-export default function ToolsPage() { return <AppShell><ToolExecutionMonitor /></AppShell>; }
+import { ToolsWorkspace } from "@/components/aurora/modules/tools-workspace";
+
+export default function ToolsPage() {
+  return (
+    <AppShell>
+      <ToolsWorkspace />
+    </AppShell>
+  );
+}
