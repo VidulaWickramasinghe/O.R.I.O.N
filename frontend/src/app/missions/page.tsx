@@ -1,7 +1,13 @@
 import { AppShell } from "@/components/aurora/app-shell";
+import { MissionsWorkspace } from "@/components/aurora/modules/missions-workspace";
 import { AuroraQueryProvider } from "@/components/aurora/providers/query-provider";
-import { LegacyMissionsWorkspace } from "@/components/aurora/legacy/legacy-modules";
 
 export default function Page() {
-  return <AuroraQueryProvider><AppShell><LegacyMissionsWorkspace /></AppShell></AuroraQueryProvider>;
+  return (
+    <AuroraQueryProvider>
+      <AppShell>
+        <MissionsWorkspace />
+      </AppShell>
+    </AuroraQueryProvider>
+  );
 }
