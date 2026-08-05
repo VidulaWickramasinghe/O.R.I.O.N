@@ -101,3 +101,24 @@ backend/data/patch_release/
 
 backend/data/roadmap_planner/
 backend/data/safety_review_board/
+
+# Local IDE / personal workspace folders
+.idea/
+Personal_Finance_HUB/
+
+# Local sprint inspection, rehearsal, and backup data
+backend/data/*_sprint/
+backend/data/fix_sprint/
+backend/data/fix_sprint_backups/
+backend/data/rehearsal/
+backend/data/local_runtime_backups/
+
+# Generated changelog intelligence artifacts
+backend/data/changelog_intelligence/
+
+# Tauri generated files
+frontend/src-tauri/gen/
+frontend/src-tauri/Cargo.lock
+
+# Accidental root lockfile from running npm outside frontend
+/package-lock.json
