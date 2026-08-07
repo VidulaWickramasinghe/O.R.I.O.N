@@ -1,6 +1,10 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { SettingsWorkspace } from "@/components/aurora/operations-workspaces";
+import { SettingsLiveWorkspace } from "@/components/aurora/modules/settings-workspace";
 
-export default function Page() {
-  return <AppShell><SettingsWorkspace /></AppShell>;
+export default function SettingsPage() {
+  return (
+    <AppShell>
+      <SettingsLiveWorkspace />
+    </AppShell>
+  );
 }
