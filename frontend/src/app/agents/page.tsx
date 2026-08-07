@@ -1,3 +1,10 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { AgentControlCenter } from "@/components/agents/agent-control-center";
-export default function AgentsPage() { return <AppShell><AgentControlCenter /></AppShell>; }
+import { AgentsLiveWorkspace } from "@/components/aurora/modules/agents-workspace";
+
+export default function AgentsPage() {
+  return (
+    <AppShell>
+      <AgentsLiveWorkspace />
+    </AppShell>
+  );
+}
