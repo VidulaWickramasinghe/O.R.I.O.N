@@ -141,6 +141,94 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_ui_api_reality_audit_uses_live_shell_state(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        topbar = (
+            project_root
+            / "frontend/src/components/aurora/topbar.tsx"
+        ).read_text(encoding="utf-8")
+
+        notifications = (
+            project_root
+            / "frontend/src/components/aurora/notification-center.tsx"
+        ).read_text(encoding="utf-8")
+
+        shell = (
+            project_root
+            / "frontend/src/components/aurora/app-shell.tsx"
+        ).read_text(encoding="utf-8")
+
+        sidebar = (
+            project_root
+            / "frontend/src/components/aurora/sidebar.tsx"
+        ).read_text(encoding="utf-8")
+
+        dashboard = (
+            project_root
+            / "frontend/src/components/aurora/dashboard-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        aurora_data = (
+            project_root
+            / "frontend/src/lib/aurora-data.ts"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn(
+            "All systems nominal",
+            topbar,
+        )
+
+        self.assertIn(
+            "notificationEvents",
+            topbar,
+        )
+
+        self.assertIn(
+            "loadNotificationEvents",
+            notifications,
+        )
+
+        self.assertNotIn(
+            "export const notifications",
+            aurora_data,
+        )
+
+        self.assertIn(
+            "contextPreferenceLoaded",
+            shell,
+        )
+
+        self.assertNotIn(
+            "|| workspaces[0]",
+            sidebar,
+        )
+
+        self.assertNotIn(
+            "184ms",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "241ms",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "198ms",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "86ms",
+            dashboard,
+        )
+
+        self.assertIn(
+            "Runtime telemetry unavailable",
+            dashboard,
+        )
+
     def test_dashboard_reality_cleanup_removes_stale_fake_metrics(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 

@@ -22,12 +22,5 @@ export const navItems = [
   { href: "/console", label: "Console", icon: Terminal },
 ];
 
-export const notifications = [
-  { title: "Agent completed planning", detail: "Planner produced a safe execution plan.", tone: "success" as const },
-  { title: "Memory vault updated", detail: "3 new project memories indexed.", tone: "primary" as const },
-  { title: "Claude disconnected", detail: "Fallback model is ready.", tone: "warning" as const },
-  { title: "Workflow waiting for approval", detail: "Terminal command requires review.", tone: "danger" as const },
-];
-
 export const dashboardModels = ["GPT-5.5", "Claude", "Gemini", "Local LLM"];
 export const dashboardTimeline = ["Request", "Planning", "Memory", "Agent", "Tools", "Approval", "Complete"];

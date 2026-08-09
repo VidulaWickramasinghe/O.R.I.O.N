@@ -41,6 +41,18 @@ export function Topbar() {
   const applySecurityProfileFromStore = useAuroraStore(
     (state) => state.applySecurityProfileFromStore,
   );
+  const backendOnline = useAuroraStore(
+    (state) => state.backendOnline,
+  );
+  const notificationEvents = useAuroraStore(
+    (state) => state.notificationEvents,
+  );
+  const checkBackendHealth = useAuroraStore(
+    (state) => state.checkBackendHealth,
+  );
+  const loadNotificationEvents = useAuroraStore(
+    (state) => state.loadNotificationEvents,
+  );
 
   useEffect(() => {
     setNow(new Date());
@@ -51,6 +63,24 @@ export function Topbar() {
   useEffect(() => {
     void loadSecurityPolicy();
   }, [loadSecurityPolicy]);
+
+  useEffect(() => {
+    void Promise.all([
+      checkBackendHealth(),
+      loadNotificationEvents(),
+    ]);
+
+    const timer = window.setInterval(() => {
+      void Promise.all([
+        checkBackendHealth(),
+        loadNotificationEvents(),
+      ]);
+    }, 30000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [checkBackendHealth, loadNotificationEvents]);
 
   const activeProfileKey = String(
     securityPolicyActive?.active_profile ||
@@ -117,8 +147,20 @@ export function Topbar() {
 
       <div className="ml-auto flex items-center gap-2">
         <div className="hidden items-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-3 py-2 xl:flex">
-          <span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" /></span>
-          <span className="text-xs font-medium text-slate-300">All systems nominal</span>
+          <span className="relative flex h-2 w-2">
+            <span
+              className={`relative inline-flex h-2 w-2 rounded-full ${
+                backendOnline
+                  ? "bg-emerald-300"
+                  : "bg-amber-300"
+              }`}
+            />
+          </span>
+          <span className="text-xs font-medium text-slate-300">
+            {backendOnline
+              ? "Backend connected"
+              : "Backend unavailable"}
+          </span>
         </div>
 
         <div className="relative hidden lg:block">
@@ -238,7 +280,9 @@ export function Topbar() {
           className="relative rounded-xl border border-white/[0.08] bg-white/[0.035] p-2.5 text-slate-300 hover:bg-white/[0.06] hover:text-white"
         >
           <Bell size={18} />
-          <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-[#0b0e15] bg-rose-400" />
+          {notificationEvents.length > 0 && (
+            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-[#0b0e15] bg-rose-400" />
+          )}
         </button>
         <button
           type="button"
