@@ -27,9 +27,6 @@ export function PluginSystemPanel({
             Tool registry, plugin permissions, risk levels, and module status
           </p>
         </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.3
-        </span>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
@@ -122,7 +119,7 @@ export function PluginSystemPanel({
         </details>
 
         <p className="text-xs leading-5 text-slate-500">
-          Safety: v3.4 tracks plugin metadata, permissions, and enable/disable state. It does not dynamically execute third-party plugin code.
+          Safety: the Plugin Registry tracks plugin metadata, permissions, risk and enable/disable state. It does not dynamically execute arbitrary third-party plugin code.
         </p>
       </div>
     </GlassPanel>

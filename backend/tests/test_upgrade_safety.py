@@ -141,6 +141,89 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_dashboard_reality_cleanup_removes_stale_fake_metrics(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        dashboard = (
+            project_root
+            / "frontend/src/components/aurora/dashboard-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        plugin_panel = (
+            project_root
+            / "frontend/src/components/aurora/panels/PluginSystemPanel.tsx"
+        ).read_text(encoding="utf-8")
+
+        settings_panel = (
+            project_root
+            / "frontend/src/components/aurora/panels/UserSettingsPanel.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn(
+            ">v4.3<",
+            plugin_panel,
+        )
+
+        self.assertNotIn(
+            "Safety: v3.4",
+            plugin_panel,
+        )
+
+        self.assertNotIn(
+            ">v4.3<",
+            settings_panel,
+        )
+
+        self.assertNotIn(
+            "184 ms",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            'value="99.8%"',
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "1,482",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "12.8%",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "|| 1248",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "|| 12",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "2 due today",
+            dashboard,
+        )
+
+        self.assertIn(
+            "notification_metrics",
+            dashboard,
+        )
+
+        self.assertIn(
+            "plugin_metrics",
+            dashboard,
+        )
+
+        self.assertIn(
+            "memory_metrics",
+            dashboard,
+        )
+
     def test_mission_counts_use_live_backend_state(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
