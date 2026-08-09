@@ -1,3 +1,34 @@
+## v6.5 — Safety Review Board + Feature Approval Workflow
+
+### Added
+
+- Safety Review Board and feature approval workflow for governed future development.
+- Public handoff documentation for the O.R.I.O.N. v6.5 release baseline.
+- Public-facing Aurora OS release presentation, repository metadata, and launch readiness documentation.
+- Stable release, production readiness, final launch, and GitHub launch verification workflows.
+
+### Improved
+
+- Aurora OS backend-connected operational workspaces across missions, memory, tools, browser research, voice, projects, analytics, agents, settings, demo, and portfolio views.
+- Repository release hygiene for generated runtime and release artifacts.
+- Production Readiness now evaluates the complete release checklist correctly.
+
+### Verified
+
+- Production Readiness: `production_ready` — 100%, 15/15 checks.
+- Stable Release: `stable_release_ready` — 6/6 checks.
+- Final Launch: `launch_ready` — 11/11 checks.
+- GitHub Launch: `github_ready` — 9/9 checks.
+- Release Verification: 5/5 checks passed.
+- Backend regression suite: 66 tests passed.
+- Aurora OS production build completed successfully with 23 static routes generated.
+
+### Safety
+
+- O.R.I.O.N. remains local-first and user-controlled.
+- Risky tool and desktop actions remain approval-gated.
+- Release tooling does not automatically push code, publish releases, expose secrets, delete repository content, or bypass approvals.
+
 ## v6.2 — Frontend Service Layer Completion
 
 ### Improved
