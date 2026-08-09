@@ -141,6 +141,74 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_v6_5_2_release_metadata_is_aligned(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        orion_build = (
+            project_root
+            / "frontend/src/lib/orion-build.ts"
+        ).read_text(encoding="utf-8")
+
+        tauri = (
+            project_root
+            / "frontend/src-tauri/tauri.conf.json"
+        ).read_text(encoding="utf-8")
+
+        cargo = (
+            project_root
+            / "frontend/src-tauri/Cargo.toml"
+        ).read_text(encoding="utf-8")
+
+        patch_release = (
+            project_root
+            / "backend/core/patch_release.py"
+        ).read_text(encoding="utf-8")
+
+        maintenance = (
+            project_root
+            / "backend/core/post_release_maintenance.py"
+        ).read_text(encoding="utf-8")
+
+        changelog = (
+            project_root
+            / "CHANGELOG.md"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            'version: "6.5.2"',
+            orion_build,
+        )
+
+        self.assertIn(
+            '"version": "6.5.2"',
+            tauri,
+        )
+
+        self.assertIn(
+            'version = "6.5.2"',
+            cargo,
+        )
+
+        self.assertIn(
+            '"patch_version": "v6.5.2"',
+            patch_release,
+        )
+
+        self.assertIn(
+            'patch_version: str = "v6.5.2"',
+            patch_release,
+        )
+
+        self.assertIn(
+            "'recommended_patch':'v6.5.2'",
+            maintenance,
+        )
+
+        self.assertIn(
+            "## v6.5.2 — Plugin Management & UI Reality Patch",
+            changelog,
+        )
+
     def test_ui_api_reality_audit_uses_live_shell_state(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
@@ -821,7 +889,7 @@ class FrontendRefactorTests(unittest.TestCase):
             topbar,
         )
 
-    def test_v6_5_1_hydration_and_desktop_metadata(self) -> None:
+    def test_v6_5_2_hydration_and_desktop_metadata(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
         assistant = (
@@ -878,17 +946,17 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            '"version": "6.5.1"',
+            '"version": "6.5.2"',
             tauri,
         )
 
         self.assertIn(
-            'version = "6.5.1"',
+            'version = "6.5.2"',
             cargo,
         )
 
         self.assertIn(
-            'version: "6.5.1"',
+            'version: "6.5.2"',
             build,
         )
 
