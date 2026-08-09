@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -51,6 +52,12 @@ export function PluginsWorkspace() {
   const loadPlugins = useAuroraStore(
     (state) => state.loadPlugins,
   );
+  const toolPermissionMatrix = useAuroraStore(
+    (state) => state.toolPermissionMatrix,
+  );
+  const loadToolPermissions = useAuroraStore(
+    (state) => state.loadToolPermissions,
+  );
   const updatePluginStatusFromStore = useAuroraStore(
     (state) => state.updatePluginStatusFromStore,
   );
@@ -64,8 +71,11 @@ export function PluginsWorkspace() {
     useState("all");
 
   useEffect(() => {
-    void loadPlugins();
-  }, [loadPlugins]);
+    void Promise.all([
+      loadPlugins(),
+      loadToolPermissions(),
+    ]);
+  }, [loadPlugins, loadToolPermissions]);
 
   const categories = useMemo(() => {
     return Array.from(
@@ -152,14 +162,23 @@ export function PluginsWorkspace() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => void loadPlugins()}
-          className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
-        >
-          <RefreshCw size={14} />
-          Refresh registry
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/tools"
+            className="rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.04] px-4 py-2.5 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-300/[0.08]"
+          >
+            View Tool Permissions →
+          </Link>
+
+          <button
+            type="button"
+            onClick={() => void loadPlugins()}
+            className="flex items-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 py-2.5 text-xs font-semibold text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
+          >
+            <RefreshCw size={14} />
+            Refresh registry
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -266,6 +285,10 @@ export function PluginsWorkspace() {
           </GlassPanel>
         ) : (
           filteredPlugins.map((plugin) => {
+            const mappedTools = toolPermissionMatrix.filter(
+              (tool) => tool.plugin_key === plugin.key,
+            );
+
             const protectedPlugin =
               PROTECTED_PLUGIN_KEYS.has(plugin.key);
 
@@ -347,6 +370,53 @@ export function PluginsWorkspace() {
                       )
                     )}
                   </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-600">
+                      Mapped tools
+                    </p>
+
+                    <span className="text-[10px] text-slate-600">
+                      {mappedTools.length}
+                    </span>
+                  </div>
+
+                  {mappedTools.length === 0 ? (
+                    <p className="text-xs text-slate-600">
+                      No mapped tools registered for this plugin.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {mappedTools.map((tool) => (
+                        <div
+                          key={tool.tool_name}
+                          className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.07] bg-black/20 px-3 py-2"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-xs font-medium text-slate-300">
+                              {tool.tool_name}
+                            </p>
+
+                            <p className="mt-0.5 text-[10px] text-slate-600">
+                              {tool.risk_level} risk
+                            </p>
+                          </div>
+
+                          <span
+                            className={`rounded-full border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] ${
+                              tool.allowed
+                                ? "border-emerald-300/20 text-emerald-200"
+                                : "border-red-300/20 text-red-200"
+                            }`}
+                          >
+                            {tool.allowed ? "Allowed" : "Blocked"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-4">
