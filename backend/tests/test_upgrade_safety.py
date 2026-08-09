@@ -141,6 +141,69 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_plugin_management_page_is_available(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        page = (
+            project_root
+            / "frontend/src/app/plugins/page.tsx"
+        ).read_text(encoding="utf-8")
+
+        workspace = (
+            project_root
+            / "frontend/src/components/aurora/modules/plugins-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        navigation = (
+            project_root
+            / "frontend/src/lib/aurora-data.ts"
+        ).read_text(encoding="utf-8")
+
+        sidebar = (
+            project_root
+            / "frontend/src/components/aurora/sidebar.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            'href: "/plugins"',
+            navigation,
+        )
+
+        self.assertIn(
+            '"Plugins"',
+            sidebar,
+        )
+
+        self.assertIn(
+            "PluginsWorkspace",
+            page,
+        )
+
+        self.assertIn(
+            "loadPlugins",
+            workspace,
+        )
+
+        self.assertIn(
+            "updatePluginStatusFromStore",
+            workspace,
+        )
+
+        self.assertIn(
+            "PROTECTED_PLUGIN_KEYS",
+            workspace,
+        )
+
+        self.assertIn(
+            "plugin_registry",
+            workspace,
+        )
+
+        self.assertIn(
+            "tool_permission_enforcement",
+            workspace,
+        )
+
     def test_user_identity_is_backend_driven(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
