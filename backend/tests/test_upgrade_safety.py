@@ -123,6 +123,54 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_user_identity_is_backend_driven(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        dashboard = (
+            project_root
+            / "frontend/src/components/aurora/dashboard-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        sidebar = (
+            project_root
+            / "frontend/src/components/aurora/sidebar.tsx"
+        ).read_text(encoding="utf-8")
+
+        settings = (
+            project_root
+            / "backend/core/user_settings.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn(
+            "Good evening, Wichel.",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "Wichel Ashford",
+            sidebar,
+        )
+
+        self.assertIn(
+            "settings_map?.display_name",
+            dashboard,
+        )
+
+        self.assertIn(
+            "settings_map?.display_name",
+            sidebar,
+        )
+
+        self.assertIn(
+            "settings_map?.role_title",
+            sidebar,
+        )
+
+        self.assertIn(
+            '"role_title"',
+            settings,
+        )
+
     def test_live_context_panel_is_toggleable_and_persistent(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 

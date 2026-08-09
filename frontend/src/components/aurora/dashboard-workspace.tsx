@@ -613,6 +613,10 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
           ["developer", "Developer"],
         ] as const);
 
+  const displayName =
+    userSettingsProfile?.settings_map?.display_name ||
+    "O.R.I.O.N. User";
+
   return (
     <div className="space-y-5 pb-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -620,7 +624,13 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
           <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-600">
             <span>Mission control</span><ChevronRight size={12} /><span className="text-cyan-300/80">{forceGovernanceMode ? "Release governance" : forceSecurityMode ? "Security control" : "Command overview"}</span>
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">{forceGovernanceMode ? "Governance controls are ready." : forceSecurityMode ? "Security controls are active." : "Good evening, Wichel."}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+            {forceGovernanceMode
+              ? "Governance controls are ready."
+              : forceSecurityMode
+                ? "Security controls are active."
+                : `Good evening, ${displayName}.`}
+          </h1>
           <p className="mt-2 text-sm text-slate-500">{displayDate || "Loading date"} · {forceGovernanceMode ? "Release, roadmap, safety, audit, and patch controls are active." : forceSecurityMode ? "Plugins, policy profiles, permission matrix, and audit controls are active." : "O.R.I.O.N. is ready to think, plan and act."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
