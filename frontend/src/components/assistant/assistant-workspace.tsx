@@ -30,10 +30,11 @@ type BackendState = {
 };
 
 function nowLabel() {
-  return new Date().toLocaleTimeString([], {
+  return new Intl.DateTimeFormat("en-AU", {
     hour: "2-digit",
     minute: "2-digit",
-  });
+    hour12: true,
+  }).format(new Date());
 }
 
 function newId(prefix: string) {
@@ -47,7 +48,7 @@ export function AssistantWorkspace() {
       role: "system",
       content:
         "O.R.I.O.N. Assistant is ready to connect to the local backend. Messages are sent through /api/chat.",
-      time: nowLabel(),
+      time: "--:--",
     },
   ]);
 
@@ -149,6 +150,17 @@ export function AssistantWorkspace() {
   }
 
   useEffect(() => {
+    setMessages((current) =>
+      current.map((message) =>
+        message.id === "welcome"
+          ? {
+              ...message,
+              time: nowLabel(),
+            }
+          : message,
+      ),
+    );
+
     void loadBackendStatus();
   }, []);
 
