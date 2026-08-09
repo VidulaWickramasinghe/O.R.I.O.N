@@ -237,6 +237,49 @@ class FrontendRefactorTests(unittest.TestCase):
             settings,
         )
 
+    def test_topbar_security_mode_is_backend_driven(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        topbar = (
+            project_root
+            / "frontend/src/components/aurora/topbar.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "securityProfiles",
+            topbar,
+        )
+
+        self.assertIn(
+            "securityPolicyActive",
+            topbar,
+        )
+
+        self.assertIn(
+            "loadSecurityPolicy",
+            topbar,
+        )
+
+        self.assertIn(
+            "applySecurityProfileFromStore",
+            topbar,
+        )
+
+        self.assertIn(
+            "requestSecurityProfile",
+            topbar,
+        )
+
+        self.assertIn(
+            "confirmSecurityProfileChange",
+            topbar,
+        )
+
+        self.assertNotIn(
+            ">Approval mode<",
+            topbar,
+        )
+
     def test_live_context_panel_is_toggleable_and_persistent(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
