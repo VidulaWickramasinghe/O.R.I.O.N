@@ -21,9 +21,11 @@ import {
   X,
 } from "lucide-react";
 import { navItems } from "@/lib/aurora-data";
+import { getWorkspaces } from "@/lib/api/workspaces";
 import { cn } from "@/lib/utils";
 import { useAuroraStore } from "@/store/auroraStore";
 import { useUiStore, type SidebarMode } from "@/store/ui-store";
+import type { WorkspaceItem } from "@/types/orion";
 
 const groups = [
   { label: "Command", items: ["Dashboard", "Assistant", "Missions", "Agents"] },
@@ -46,6 +48,12 @@ export function Sidebar() {
   const loadUserSettingsProfile = useAuroraStore(
     (state) => state.loadUserSettingsProfile,
   );
+  const updateUserSettingFromStore = useAuroraStore(
+    (state) => state.updateUserSettingFromStore,
+  );
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
+  const [workspaceLoading, setWorkspaceLoading] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     Object.fromEntries(groups.map((group) => [group.label, true])),
   );
@@ -58,6 +66,36 @@ export function Sidebar() {
       void loadUserSettingsProfile();
     }
   }, [userSettingsProfile, loadUserSettingsProfile]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function load() {
+      setWorkspaceLoading(true);
+
+      try {
+        const response = await getWorkspaces();
+
+        if (mounted) {
+          setWorkspaces(response.workspaces || []);
+        }
+      } catch {
+        if (mounted) {
+          setWorkspaces([]);
+        }
+      } finally {
+        if (mounted) {
+          setWorkspaceLoading(false);
+        }
+      }
+    }
+
+    void load();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const storedMode = window.localStorage.getItem(STORAGE_KEY) as SidebarMode | null;
@@ -104,6 +142,46 @@ export function Sidebar() {
   const roleTitle =
     userSettingsProfile?.settings_map?.role_title ||
     "System Architect";
+
+  const defaultWorkspaceId =
+    userSettingsProfile?.settings_map?.default_workspace_id || "";
+
+  const selectedWorkspace =
+    workspaces.find(
+      (workspace) =>
+        String(workspace.id) === defaultWorkspaceId,
+    ) || workspaces[0] || null;
+
+  const environmentMode =
+    userSettingsProfile?.settings_map?.environment_mode ||
+    "production";
+
+  const environmentLabel =
+    environmentMode === "development"
+      ? "Development environment"
+      : environmentMode === "demo"
+        ? "Demo environment"
+        : "Production environment";
+
+  async function selectWorkspace(workspaceId: number) {
+    await updateUserSettingFromStore(
+      "default_workspace_id",
+      String(workspaceId),
+    );
+
+    setWorkspaceMenuOpen(false);
+  }
+
+  async function selectEnvironment(
+    environment: "production" | "development" | "demo",
+  ) {
+    await updateUserSettingFromStore(
+      "environment_mode",
+      environment,
+    );
+
+    setWorkspaceMenuOpen(false);
+  }
 
   return (
     <>
@@ -271,11 +349,132 @@ export function Sidebar() {
         <div className="shrink-0 border-t border-white/[0.07] p-3">
           {!compact ? (
             <>
-              <button className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3 text-left hover:bg-white/[0.055]">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-400/10 text-violet-200"><Sparkles size={17} /></div>
-                <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-white">Aurora Workspace</p><p className="truncate text-[10px] text-slate-500">Production environment</p></div>
-                <ChevronsUpDown size={14} className="text-slate-500" />
-              </button>
+              <div className="relative mb-3">
+                <button
+                  type="button"
+                  aria-expanded={workspaceMenuOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setWorkspaceMenuOpen((open) => !open)}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3 text-left transition hover:border-violet-300/20 hover:bg-white/[0.055]"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-400/10 text-violet-200">
+                    <Sparkles size={17} />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-semibold text-white">
+                      {selectedWorkspace?.name || "No workspace selected"}
+                    </p>
+
+                    <p className="truncate text-[10px] text-slate-500">
+                      {environmentLabel}
+                    </p>
+                  </div>
+
+                  <ChevronsUpDown
+                    size={14}
+                    className="text-slate-500"
+                  />
+                </button>
+
+                {workspaceMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute bottom-[calc(100%+8px)] left-0 z-[90] w-full rounded-2xl border border-white/[0.1] bg-[#0a0d14]/98 p-2 shadow-2xl backdrop-blur-2xl"
+                  >
+                    <div className="px-2 pb-2 pt-1">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-slate-600">
+                        Workspace
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      {workspaceLoading ? (
+                        <p className="px-3 py-2 text-xs text-slate-500">
+                          Loading workspaces…
+                        </p>
+                      ) : workspaces.length === 0 ? (
+                        <p className="px-3 py-2 text-xs text-slate-500">
+                          No registered workspaces
+                        </p>
+                      ) : (
+                        workspaces.map((workspace) => {
+                          const active =
+                            selectedWorkspace?.id === workspace.id;
+
+                          return (
+                            <button
+                              key={workspace.id}
+                              type="button"
+                              role="menuitem"
+                              onClick={() => void selectWorkspace(workspace.id)}
+                              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition ${
+                                active
+                                  ? "bg-cyan-300/[0.08] text-cyan-100"
+                                  : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
+                              }`}
+                            >
+                              <span className="truncate">
+                                {workspace.name}
+                              </span>
+
+                              {active && (
+                                <span className="text-[10px] text-cyan-300">
+                                  Active
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <div className="my-2 border-t border-white/[0.07]" />
+
+                    <div className="px-2 pb-2">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-slate-600">
+                        Environment
+                      </p>
+                    </div>
+
+                    {(
+                      [
+                        ["production", "Production"],
+                        ["development", "Development"],
+                        ["demo", "Demo"],
+                      ] as const
+                    ).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => void selectEnvironment(value)}
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition ${
+                          environmentMode === value
+                            ? "bg-violet-300/[0.08] text-violet-100"
+                            : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
+                        }`}
+                      >
+                        <span>{label}</span>
+
+                        {environmentMode === value && (
+                          <span className="text-[10px] text-violet-300">
+                            Active
+                          </span>
+                        )}
+                      </button>
+                    ))}
+
+                    <Link
+                      href="/workspaces"
+                      onClick={() => setWorkspaceMenuOpen(false)}
+                      className="mt-2 block rounded-xl px-3 py-2 text-xs text-cyan-300 transition hover:bg-cyan-300/[0.05]"
+                    >
+                      Manage workspaces →
+                    </Link>
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-3 rounded-2xl px-2 py-2">
                 <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-slate-200"><CircleUserRound size={19} /><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#080b12] bg-emerald-400" /></div>
                 <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-white">{displayName}</p><p className="truncate text-[10px] text-slate-500">{roleTitle}</p></div>

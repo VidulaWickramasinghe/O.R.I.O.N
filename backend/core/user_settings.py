@@ -16,6 +16,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_SETTINGS = {
     "display_name",
     "role_title",
+    "environment_mode",
     "default_workspace_id",
     "safety_level",
     "voice_mode",
@@ -29,6 +30,7 @@ ALLOWED_SETTINGS = {
 DEFAULT_SETTINGS = {
     "display_name": "O.R.I.O.N. User",
     "role_title": "System Architect",
+    "environment_mode": "production",
     "default_workspace_id": "",
     "safety_level": "strict",
     "voice_mode": "text_first",
@@ -42,6 +44,7 @@ DEFAULT_SETTINGS = {
 SETTING_DESCRIPTIONS = {
     "display_name": "Display name shown inside Aurora OS.",
     "role_title": "Role or title shown with the user profile inside Aurora OS.",
+    "environment_mode": "Active Aurora OS environment context.",
     "default_workspace_id": "Default registered workspace ID used for developer workflows.",
     "safety_level": "Controls how cautious O.R.I.O.N. should be. Recommended: strict.",
     "voice_mode": "Preferred voice behavior.",
@@ -53,6 +56,11 @@ SETTING_DESCRIPTIONS = {
 }
 
 SETTING_OPTIONS = {
+    "environment_mode": [
+        "production",
+        "development",
+        "demo",
+    ],
     "safety_level": ["strict", "balanced", "experimental"],
     "voice_mode": ["text_first", "voice_first", "muted"],
     "theme_mode": ["aurora_dark", "midnight", "glass_cyan"],

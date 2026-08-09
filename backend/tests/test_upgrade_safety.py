@@ -171,6 +171,54 @@ class FrontendRefactorTests(unittest.TestCase):
             settings,
         )
 
+    def test_workspace_environment_selector_is_live(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        sidebar = (
+            project_root
+            / "frontend/src/components/aurora/sidebar.tsx"
+        ).read_text(encoding="utf-8")
+
+        settings = (
+            project_root
+            / "backend/core/user_settings.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "getWorkspaces",
+            sidebar,
+        )
+
+        self.assertIn(
+            "default_workspace_id",
+            sidebar,
+        )
+
+        self.assertIn(
+            "environment_mode",
+            sidebar,
+        )
+
+        self.assertIn(
+            "selectWorkspace",
+            sidebar,
+        )
+
+        self.assertIn(
+            "selectEnvironment",
+            sidebar,
+        )
+
+        self.assertNotIn(
+            ">Aurora Workspace<",
+            sidebar,
+        )
+
+        self.assertIn(
+            '"environment_mode"',
+            settings,
+        )
+
     def test_live_context_panel_is_toggleable_and_persistent(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
