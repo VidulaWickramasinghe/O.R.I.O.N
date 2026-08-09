@@ -133,22 +133,25 @@ class FrontendRefactorTests(unittest.TestCase):
         self.assertIn("await rm(cacheDirectory", recovery)
         self.assertIn("await rm(developmentCacheDirectory", recovery)
 
-    def test_memory_cards_do_not_nest_interactive_buttons(self) -> None:
-        memory_vault = (
-            Path(__file__).resolve().parents[2]
-            / "frontend"
-            / "src"
-            / "components"
-            / "memory"
-            / "memory-vault.tsx"
-        ).read_text(encoding="utf-8")
-
-        self.assertIn('<article key={memory.id} role="button"', memory_vault)
-        self.assertNotIn(
-            '<button key={memory.id} onClick={() => selectMemory(memory.id)}',
-            memory_vault,
+    def test_memory_cards_do_not_nest_interactive_buttons(self):
+        project_root = Path(__file__).resolve().parents[2]
+        memory_source_path = project_root / "frontend/src/components/aurora/modules/memory-module.tsx"
+        self.assertTrue(
+            memory_source_path.exists(),
+            f"Expected live memory module at {memory_source_path}",
         )
+        memory_source = memory_source_path.read_text(encoding="utf-8")
 
+        self.assertNotIn(
+            'role="button"',
+            memory_source,
+            "Memory cards should not use clickable wrapper elements.",
+        )
+        self.assertNotIn(
+            "tabIndex={0}",
+            memory_source,
+            "Memory cards should not emulate buttons with tabIndex wrappers.",
+        )
     def test_dashboard_restores_preferences_without_stale_hook_references(self) -> None:
         dashboard = (
             Path(__file__).resolve().parents[2]
