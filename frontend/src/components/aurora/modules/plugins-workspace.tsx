@@ -86,7 +86,10 @@ export function PluginsWorkspace() {
         plugin.name.toLowerCase().includes(cleanQuery) ||
         plugin.key.toLowerCase().includes(cleanQuery) ||
         plugin.description.toLowerCase().includes(cleanQuery) ||
-        plugin.category.toLowerCase().includes(cleanQuery);
+        plugin.category.toLowerCase().includes(cleanQuery) ||
+        plugin.permissions.some((permission) =>
+          permission.toLowerCase().includes(cleanQuery),
+        );
 
       const matchesStatus =
         statusFilter === "all" ||
