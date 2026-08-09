@@ -358,6 +358,64 @@ class FrontendRefactorTests(unittest.TestCase):
             missions_api,
         )
 
+    def test_v6_5_1_shell_regression_guardrails(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        topbar = (
+            project_root
+            / "frontend/src/components/aurora/topbar.tsx"
+        ).read_text(encoding="utf-8")
+
+        sidebar = (
+            project_root
+            / "frontend/src/components/aurora/sidebar.tsx"
+        ).read_text(encoding="utf-8")
+
+        app_shell = (
+            project_root
+            / "frontend/src/components/aurora/app-shell.tsx"
+        ).read_text(encoding="utf-8")
+
+        gitignore = (
+            project_root
+            / ".gitignore"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "applySecurityProfileFromStore",
+            topbar,
+        )
+
+        self.assertIn(
+            "missionCount",
+            sidebar,
+        )
+
+        self.assertIn(
+            'href="/settings"',
+            sidebar,
+        )
+
+        self.assertIn(
+            "{contextOpen && (",
+            app_shell,
+        )
+
+        self.assertIn(
+            "backend/data/stabilization_reports/",
+            gitignore,
+        )
+
+        self.assertNotIn(
+            "Good evening, Wichel.",
+            sidebar + topbar + app_shell,
+        )
+
+        self.assertNotIn(
+            ">Approval mode<",
+            topbar,
+        )
+
     def test_live_context_panel_is_toggleable_and_persistent(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
