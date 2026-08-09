@@ -113,6 +113,9 @@ backend/data/fix_sprint_backups/
 backend/data/rehearsal/
 backend/data/local_runtime_backups/
 
+# O.R.I.O.N. generated mission reports
+backend/data/mission_reports/
+
 # Generated changelog intelligence artifacts
 backend/data/changelog_intelligence/
 

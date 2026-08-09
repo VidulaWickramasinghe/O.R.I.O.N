@@ -280,6 +280,84 @@ class FrontendRefactorTests(unittest.TestCase):
             topbar,
         )
 
+    def test_shell_personalization_controls_are_real(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        dashboard = (
+            project_root
+            / "frontend/src/components/aurora/dashboard-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        sidebar = (
+            project_root
+            / "frontend/src/components/aurora/sidebar.tsx"
+        ).read_text(encoding="utf-8")
+
+        gitignore = (
+            project_root
+            / ".gitignore"
+        ).read_text(encoding="utf-8")
+
+        missions_api = (
+            project_root
+            / "frontend/src/lib/api/missions.ts"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "currentHour < 12",
+            dashboard,
+        )
+
+        self.assertIn(
+            "currentHour < 18",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "`Good evening, ${displayName}.`",
+            dashboard,
+        )
+
+        self.assertIn(
+            'href="/settings"',
+            sidebar,
+        )
+
+        self.assertIn(
+            'aria-label="Open user settings"',
+            sidebar,
+        )
+
+        self.assertIn(
+            "backend/data/mission_reports/",
+            gitignore,
+        )
+
+        self.assertIn(
+            "getMissions",
+            sidebar,
+        )
+
+        self.assertIn(
+            "missionCount",
+            sidebar,
+        )
+
+        self.assertNotIn(
+            ">3</span>",
+            sidebar,
+        )
+
+        self.assertIn(
+            '"20+"',
+            sidebar,
+        )
+
+        self.assertIn(
+            '"/api/missions"',
+            missions_api,
+        )
+
     def test_live_context_panel_is_toggleable_and_persistent(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 

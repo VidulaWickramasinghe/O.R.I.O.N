@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { navItems } from "@/lib/aurora-data";
+import { getMissions } from "@/lib/api/missions";
 import { getWorkspaces } from "@/lib/api/workspaces";
 import { cn } from "@/lib/utils";
 import { useAuroraStore } from "@/store/auroraStore";
@@ -54,6 +55,7 @@ export function Sidebar() {
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [workspaceLoading, setWorkspaceLoading] = useState(false);
+  const [missionCount, setMissionCount] = useState(0);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     Object.fromEntries(groups.map((group) => [group.label, true])),
   );
@@ -91,6 +93,30 @@ export function Sidebar() {
     }
 
     void load();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadMissionCount() {
+      try {
+        const response = await getMissions();
+
+        if (mounted) {
+          setMissionCount(response.missions?.length || 0);
+        }
+      } catch {
+        if (mounted) {
+          setMissionCount(0);
+        }
+      }
+    }
+
+    void loadMissionCount();
 
     return () => {
       mounted = false;
@@ -310,7 +336,17 @@ export function Sidebar() {
                             {active && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,.8)]" />}
                             <Icon size={18} className={cn("shrink-0", active ? "text-cyan-200" : "text-slate-500 group-hover:text-slate-300")} />
                             <span className={cn("min-w-0 flex-1", compact && "lg:hidden")}>{item.label}</span>
-                            {item.label === "Missions" && <span className={cn("rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] text-cyan-200", compact && "lg:hidden")}>3</span>}
+                            {item.label === "Missions" && missionCount > 0 && (
+                              <span
+                                className={cn(
+                                  "rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] text-cyan-200",
+                                  compact && "lg:hidden",
+                                )}
+                                title={`${missionCount} mission${missionCount === 1 ? "" : "s"} loaded`}
+                              >
+                                {missionCount >= 20 ? "20+" : missionCount}
+                              </span>
+                            )}
                           </Link>
                         );
                       })}
@@ -475,11 +511,16 @@ export function Sidebar() {
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-3 rounded-2xl px-2 py-2">
+              <Link
+                href="/settings"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]"
+                aria-label="Open user settings"
+              >
                 <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-slate-200"><CircleUserRound size={19} /><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#080b12] bg-emerald-400" /></div>
                 <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-white">{displayName}</p><p className="truncate text-[10px] text-slate-500">{roleTitle}</p></div>
                 <Settings2 size={15} className="text-slate-500" />
-              </div>
+              </Link>
               <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
                 <span className="flex items-center gap-1.5"><ShieldCheck size={12} className="text-emerald-300" /> Secure</span>
                 <span className="flex items-center justify-end gap-1.5"><Cpu size={12} className="text-cyan-300" /> v6.7</span>

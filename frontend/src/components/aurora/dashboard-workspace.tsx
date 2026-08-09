@@ -617,6 +617,15 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     userSettingsProfile?.settings_map?.display_name ||
     "O.R.I.O.N. User";
 
+  const currentHour = new Date().getHours();
+
+  const greeting =
+    currentHour < 12
+      ? "Good morning"
+      : currentHour < 18
+        ? "Good afternoon"
+        : "Good evening";
+
   return (
     <div className="space-y-5 pb-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -629,7 +638,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
               ? "Governance controls are ready."
               : forceSecurityMode
                 ? "Security controls are active."
-                : `Good evening, ${displayName}.`}
+                : `${greeting}, ${displayName}.`}
           </h1>
           <p className="mt-2 text-sm text-slate-500">{displayDate || "Loading date"} · {forceGovernanceMode ? "Release, roadmap, safety, audit, and patch controls are active." : forceSecurityMode ? "Plugins, policy profiles, permission matrix, and audit controls are active." : "O.R.I.O.N. is ready to think, plan and act."}</p>
         </div>
