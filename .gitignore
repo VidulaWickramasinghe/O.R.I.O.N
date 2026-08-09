@@ -139,3 +139,7 @@ backend/data/demo_recording/
 backend/data/public_landing/
 backend/data/ui_polish/
 backend/data/portfolio_showcase/
+
+
+# O.R.I.O.N. generated stabilization reports
+backend/data/stabilization_reports/
