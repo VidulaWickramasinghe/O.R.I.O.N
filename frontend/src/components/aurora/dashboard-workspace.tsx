@@ -410,6 +410,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
   const [activityPaused, setActivityPaused] = useState(false);
   const [compactMetrics, setCompactMetrics] = useState(false);
   const [displayDate, setDisplayDate] = useState("");
+  const [greeting, setGreeting] = useState("Welcome");
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
   const [knowledgePath, setKnowledgePath] = useState("");
   const [knowledgeQuery, setKnowledgeQuery] = useState("");
@@ -524,7 +525,24 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
 
   useEffect(() => {
-    setDisplayDate(new Date().toLocaleDateString("en-AU", { weekday: "long", day: "numeric", month: "long" }));
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    setDisplayDate(
+      now.toLocaleDateString("en-AU", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+      }),
+    );
+
+    setGreeting(
+      currentHour < 12
+        ? "Good morning"
+        : currentHour < 18
+          ? "Good afternoon"
+          : "Good evening",
+    );
   }, []);
 
   useEffect(() => {
@@ -616,15 +634,6 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
   const displayName =
     userSettingsProfile?.settings_map?.display_name ||
     "O.R.I.O.N. User";
-
-  const currentHour = new Date().getHours();
-
-  const greeting =
-    currentHour < 12
-      ? "Good morning"
-      : currentHour < 18
-        ? "Good afternoon"
-        : "Good evening";
 
   return (
     <div className="space-y-5 pb-10">

@@ -416,6 +416,77 @@ class FrontendRefactorTests(unittest.TestCase):
             topbar,
         )
 
+    def test_v6_5_1_hydration_and_desktop_metadata(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        assistant = (
+            project_root
+            / "frontend/src/components/assistant/assistant-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        dashboard = (
+            project_root
+            / "frontend/src/components/aurora/dashboard-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        tauri = (
+            project_root
+            / "frontend/src-tauri/tauri.conf.json"
+        ).read_text(encoding="utf-8")
+
+        cargo = (
+            project_root
+            / "frontend/src-tauri/Cargo.toml"
+        ).read_text(encoding="utf-8")
+
+        build = (
+            project_root
+            / "frontend/src/lib/orion-build.ts"
+        ).read_text(encoding="utf-8")
+
+        initial_messages = assistant.split(
+            "const [messages, setMessages] = useState<ChatMessage[]>([",
+            1,
+        )[1].split(
+            "]);",
+            1,
+        )[0]
+
+        self.assertIn(
+            'time: "--:--"',
+            assistant,
+        )
+
+        self.assertNotIn(
+            "time: nowLabel(),",
+            initial_messages,
+        )
+
+        self.assertIn(
+            'const [greeting, setGreeting] = useState("Welcome")',
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "const currentHour = new Date().getHours();",
+            dashboard,
+        )
+
+        self.assertIn(
+            '"version": "6.5.1"',
+            tauri,
+        )
+
+        self.assertIn(
+            'version = "6.5.1"',
+            cargo,
+        )
+
+        self.assertIn(
+            'version: "6.5.1"',
+            build,
+        )
+
     def test_live_context_panel_is_toggleable_and_persistent(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
