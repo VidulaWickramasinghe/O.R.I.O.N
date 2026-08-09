@@ -792,7 +792,7 @@ async def app_lifespan(_app: FastAPI):
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v6.5.0 started with the Patch Release Manager enabled.",
+        "O.R.I.O.N. API v6.5.1 started with the Patch Release Manager enabled.",
         "API",
     )
     yield
@@ -801,7 +801,7 @@ async def app_lifespan(_app: FastAPI):
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="6.5.0",
+    version="6.5.1",
     lifespan=app_lifespan,
 )
 
@@ -1744,7 +1744,7 @@ class DashboardIntelligenceResponse(BaseModel):
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "6.5.0",
+        "version": "6.5.1",
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -1868,7 +1868,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "6.5.0",
+        "version": "6.5.1",
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -3747,7 +3747,7 @@ def desktop_shell_status():
     return DesktopShellStatusResponse(
         status="online",
         app_name="O.R.I.O.N. Aurora OS",
-        shell_version="6.5.0",
+        shell_version="6.5.1",
         backend_url="http://127.0.0.1:8000",
         frontend_mode="tauri_static_shell",
         message="Desktop shell connected to O.R.I.O.N. backend with sidecar support.",

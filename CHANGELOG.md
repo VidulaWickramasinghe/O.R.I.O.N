@@ -1,3 +1,41 @@
+## v6.5.1 — Dashboard Runtime & Stability Patch
+
+### Fixed
+
+- Fixed the Tool Permissions API response contract so permission-matrix responses include the required allowed, blocked, and reason fields.
+- Fixed the Live Context panel so it can be opened, closed, and persisted correctly while allowing the dashboard to reclaim available space.
+- Connected Aurora OS display name and role title to live backend user settings.
+- Added functional workspace and environment selectors backed by registered workspaces and persistent settings.
+- Fixed SQLite plugin-registry contention by adding bounded busy waits, idempotent initialization, and reduced unnecessary registry writes.
+- Connected the topbar Safety control to the real Security Policy backend.
+- Added confirmation before switching to less restrictive security profiles while preserving approval enforcement.
+- Replaced hardcoded shell identity and mission indicators with backend-driven state.
+- Added time-aware dashboard greetings.
+- Connected the profile footer to User Settings.
+- Added generated mission and stabilization report paths to repository hygiene rules.
+
+### Improved
+
+- Strengthened SQLite runtime stability under concurrent dashboard requests.
+- Improved Aurora OS shell consistency so visible interactive controls correspond to real functionality.
+- Added regression coverage for tool permissions, Live Context, user profile settings, workspace/environment controls, security profiles, SQLite registry behavior, and shell-state integration.
+- Improved runtime artifact hygiene for generated local reports.
+
+### Verified
+
+- Backend regression suite: **75/75 tests passed**.
+- Tool Permissions API returns HTTP 200 with the required response contract.
+- Local CORS supports both `http://localhost:3000` and `http://127.0.0.1:3000`.
+- Security profiles remain approval-gated.
+- Stable v6.5.0 release baseline remains unchanged.
+
+### Safety
+
+- Approval gates remain enforced.
+- Protected safety plugins remain protected.
+- Security-profile changes do not bypass approval enforcement.
+- Release tooling remains local-first and does not automatically push, publish, delete repository content, or expose secrets.
+
 ## v6.5 — Safety Review Board + Feature Approval Workflow
 
 ### Added
