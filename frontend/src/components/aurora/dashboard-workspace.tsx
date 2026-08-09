@@ -38,7 +38,6 @@ import {
 import { useAuroraStore } from "@/store/auroraStore";
 
 import { dashboardModels, dashboardTimeline } from "@/lib/aurora-data";
-import { projects } from "@/lib/project-data";
 import { createDeveloperPatchPlan, diagnoseDeveloperWorkspace, getDeveloperReports, inspectDeveloperWorkspace } from "@/lib/api/developer";
 import { getKnowledgeDocuments, indexKnowledgeFolder, searchKnowledge } from "@/lib/api/knowledge";
 import { getVectorItems, rebuildVectorIndex, searchVector } from "@/lib/api/vector";
@@ -716,7 +715,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
             <DashboardMetric label="Intelligence score" value={String(intelligenceScore)} detail="Excellent" trend="+4.2%" icon={<Gauge size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Agent telemetry" value="Unavailable" detail="No dedicated /api/agents runtime endpoint configured" trend={liveDashboard.sources.missions ? "Backend" : "Offline"} icon={<Bot size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Memory vectors" value={String(vectorItems.length || 1248)} detail={`${knowledgeDocuments.length} documents`} trend="+86" icon={<MemoryStick size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Active projects" value={String(projects.length)} detail="Across 3 workspaces" trend="Stable" icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Active projects" value={String(liveDashboard.missions.length)} detail="Across 3 workspaces" trend="Stable" icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Plugin registry" value={String(plugins.length || 12)} detail="All verified" trend="100%" icon={<Cpu size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Dev reports" value={String(developerReports.length)} detail="Latest scan clean" trend="+2" icon={<Code2 size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Reminders" value={String(reminders.length)} detail="2 due today" trend="Review" icon={<Clock3 size={17} />} compact={compactMetrics} />
