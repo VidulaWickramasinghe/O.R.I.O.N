@@ -311,6 +311,9 @@ REQUIRED_ENABLED_PLUGINS = {
     "security_policy_profiles",
 }
 
+_registry_initialized = False
+_registry_initialized_database: Optional[str] = None
+
 
 def get_connection():
     return managed_connection(DB_PATH)
@@ -321,6 +324,15 @@ def _now() -> str:
 
 
 def init_plugin_registry_db() -> None:
+    global _registry_initialized, _registry_initialized_database
+
+    database_key = str(DB_PATH)
+    if (
+        _registry_initialized
+        and _registry_initialized_database == database_key
+    ):
+        return
+
     with get_connection() as conn:
         conn.execute(
             """
@@ -338,8 +350,9 @@ def init_plugin_registry_db() -> None:
             )
             """
         )
-        conn.commit()
     sync_builtin_plugins()
+    _registry_initialized = True
+    _registry_initialized_database = database_key
 
 
 def sync_builtin_plugins() -> None:
@@ -349,7 +362,13 @@ def sync_builtin_plugins() -> None:
             permissions_json = json.dumps(plugin["permissions"])
             existing = conn.execute(
                 """
-                SELECT key
+                SELECT
+                    key,
+                    name,
+                    description,
+                    category,
+                    risk_level,
+                    permissions_json
                 FROM plugins
                 WHERE key = ?
                 """,
@@ -357,6 +376,19 @@ def sync_builtin_plugins() -> None:
             ).fetchone()
 
             if existing:
+                expected = (
+                    plugin["name"],
+                    plugin["description"],
+                    plugin["category"],
+                    plugin["risk_level"],
+                    permissions_json,
+                )
+
+                current = tuple(existing[1:6])
+
+                if current == expected:
+                    continue
+
                 conn.execute(
                     """
                     UPDATE plugins
@@ -399,7 +431,11 @@ def sync_builtin_plugins() -> None:
                     ),
                 )
         conn.executemany(
-            "UPDATE plugins SET enabled = 'true', updated_at = ? WHERE key = ?",
+            """
+            UPDATE plugins
+            SET enabled = 'true', updated_at = ?
+            WHERE key = ? AND enabled != 'true'
+            """,
             [(now, plugin_key) for plugin_key in REQUIRED_ENABLED_PLUGINS],
         )
         conn.commit()
