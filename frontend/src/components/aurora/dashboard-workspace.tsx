@@ -43,6 +43,10 @@ import { getKnowledgeDocuments, indexKnowledgeFolder, searchKnowledge } from "@/
 import { getVectorItems, rebuildVectorIndex, searchVector } from "@/lib/api/vector";
 import { getWorkspaces } from "@/lib/api/workspaces";
 import { createWorkflowMission, getWorkflowBlueprint, getWorkflowBlueprints } from "@/lib/api/workflows";
+import {
+  isMissionActive,
+  normalizeMissionStatus,
+} from "@/lib/mission-status";
 import { FrontendRefactorPanel } from "@/components/aurora/panels/FrontendRefactorPanel";
 import { DashboardLayoutPanel } from "@/components/aurora/panels/DashboardLayoutPanel";
 import { DashboardViewSelectorPanel } from "@/components/aurora/panels/DashboardViewSelectorPanel";
@@ -257,12 +261,10 @@ function dashboardApprovalPending(item: DashboardLiveApprovalItem) {
   return dashboardText(item.status, "").toLowerCase().includes("pending");
 }
 
-function dashboardMissionActive(item: DashboardLiveMissionItem) {
-  const status = dashboardText(item.status, "").toLowerCase();
-
-  return ["active", "running", "queued", "pending", "in_progress"].some((value) =>
-    status.includes(value),
-  );
+function dashboardMissionActive(
+  item: DashboardLiveMissionItem,
+) {
+  return isMissionActive(item.status);
 }
 
 function useLiveDashboardReality() {
@@ -365,6 +367,16 @@ function useLiveDashboardReality() {
 
   const pendingApprovals = approvals.filter(dashboardApprovalPending);
   const activeMissions = missions.filter(dashboardMissionActive);
+  const missionStatusCounts = missions.reduce<
+    Record<string, number>
+  >((counts, mission) => {
+    const status =
+      normalizeMissionStatus(mission.status) || "unknown";
+
+    counts[status] = (counts[status] || 0) + 1;
+
+    return counts;
+  }, {});
 
   const recentActivityItems = activity
     .slice(0, 4)
@@ -382,6 +394,7 @@ function useLiveDashboardReality() {
     pendingApprovals,
     missions,
     activeMissions,
+    missionStatusCounts,
     runs,
     intelligence,
     sources,
@@ -635,6 +648,29 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     userSettingsProfile?.settings_map?.display_name ||
     "O.R.I.O.N. User";
 
+  const activeMissionDetail = liveDashboard.sources.missions
+    ? [
+        liveDashboard.missionStatusCounts.running
+          ? `${liveDashboard.missionStatusCounts.running} running`
+          : "",
+        liveDashboard.missionStatusCounts.waiting
+          ? `${liveDashboard.missionStatusCounts.waiting} waiting`
+          : "",
+        liveDashboard.missionStatusCounts.queued
+          ? `${liveDashboard.missionStatusCounts.queued} queued`
+          : "",
+        liveDashboard.missionStatusCounts.pending
+          ? `${liveDashboard.missionStatusCounts.pending} pending`
+          : "",
+        liveDashboard.missionStatusCounts.in_progress
+          ? `${liveDashboard.missionStatusCounts.in_progress} in progress`
+          : "",
+      ]
+        .filter(Boolean)
+        .join(" · ") ||
+      `${liveDashboard.missions.length} total missions`
+    : "Mission endpoint unavailable";
+
   return (
     <div className="space-y-5 pb-10">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -714,7 +750,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
               </div>
 
               <div className="relative z-10 grid gap-3 sm:grid-cols-3">
-                <HeroStat label="Active missions" value="03" detail="2 executing · 1 waiting" icon={<Rocket size={15} />} />
+                <HeroStat label="Active missions" value={String(liveDashboard.activeMissions.length)} detail={activeMissionDetail} icon={<Rocket size={15} />} />
                 <HeroStat label="Safety gates" value="100%" detail="All policies enforced" icon={<ShieldCheck size={15} />} />
                 <HeroStat label="Runtime health" value="99.8%" detail="Last 24 hours" icon={<Activity size={15} />} />
               </div>
@@ -743,7 +779,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
             <DashboardMetric label="Intelligence score" value={String(intelligenceScore)} detail="Excellent" trend="+4.2%" icon={<Gauge size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Agent telemetry" value="Unavailable" detail="No dedicated /api/agents runtime endpoint configured" trend={liveDashboard.sources.missions ? "Backend" : "Offline"} icon={<Bot size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Memory vectors" value={String(vectorItems.length || 1248)} detail={`${knowledgeDocuments.length} documents`} trend="+86" icon={<MemoryStick size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Active projects" value={String(liveDashboard.missions.length)} detail="Across 3 workspaces" trend="Stable" icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Mission records" value={String(liveDashboard.missions.length)} detail={liveDashboard.sources.missions ? "Recent backend missions" : "Mission endpoint unavailable"} trend={liveDashboard.sources.missions ? "Live" : "Offline"} icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Plugin registry" value={String(plugins.length || 12)} detail="All verified" trend="100%" icon={<Cpu size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Dev reports" value={String(developerReports.length)} detail="Latest scan clean" trend="+2" icon={<Code2 size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Reminders" value={String(reminders.length)} detail="2 due today" trend="Review" icon={<Clock3 size={17} />} compact={compactMetrics} />

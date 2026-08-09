@@ -118,8 +118,13 @@ export function Sidebar() {
 
     void loadMissionCount();
 
+    const timer = window.setInterval(() => {
+      void loadMissionCount();
+    }, 30000);
+
     return () => {
       mounted = false;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -342,7 +347,9 @@ export function Sidebar() {
                                   "rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] text-cyan-200",
                                   compact && "lg:hidden",
                                 )}
-                                title={`${missionCount} mission${missionCount === 1 ? "" : "s"} loaded`}
+                                title={`${missionCount} recent mission${
+                                  missionCount === 1 ? "" : "s"
+                                } returned by backend`}
                               >
                                 {missionCount >= 20 ? "20+" : missionCount}
                               </span>
