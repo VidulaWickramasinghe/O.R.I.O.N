@@ -53,7 +53,7 @@ def generate_production_readiness_snapshot() -> Dict[str, Any]:
         "stabilization": _safe("stabilization", lambda: run_stabilization_scan(run_build=False)),
         "frontend": _safe("frontend", inspect_frontend_architecture),
         "verification": _safe("verification", generate_release_verification_snapshot),
-        "release_checklist": _safe("release checklist", lambda: generate_release_checklist(include_dashboard=False)),
+        "release_checklist": _safe("release checklist", generate_release_checklist),
         "release_freeze": _safe("release freeze", get_freeze_state),
         "final_launch": _safe("final launch", generate_final_launch_checklist),
         "final_freeze": _safe("final freeze", load_final_launch_freeze_state),
