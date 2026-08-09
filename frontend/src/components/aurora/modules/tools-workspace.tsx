@@ -1,13 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+import { ToolPermissionPanel } from "@/components/aurora/panels/ToolPermissionPanel";
 import { ToolsModule } from "@/components/aurora/modules/tools-module";
+import { useAuroraStore } from "@/store/auroraStore";
+
+function metricValue(
+  source: Record<string, unknown> | undefined,
+  key: string,
+  fallback = "0",
+) {
+  const value = source?.[key];
+
+  return value === undefined || value === null
+    ? fallback
+    : String(value);
+}
 
 export function ToolsWorkspace() {
   const [message, setMessage] = useState("");
   const [queryClient] = useState(() => new QueryClient());
+  const toolPermissionMatrix = useAuroraStore(
+    (state) => state.toolPermissionMatrix,
+  );
+  const toolPermissionMetrics = useAuroraStore(
+    (state) => state.toolPermissionMetrics,
+  );
+  const toolPermissionReport = useAuroraStore(
+    (state) => state.toolPermissionReport,
+  );
+  const loadToolPermissions = useAuroraStore(
+    (state) => state.loadToolPermissions,
+  );
+
+  useEffect(() => {
+    void loadToolPermissions();
+  }, [loadToolPermissions]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -21,8 +52,15 @@ export function ToolsWorkspace() {
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
             Review pending approval requests, approve or reject backend-gated actions,
-            and keep command execution visible through O.R.I.O.N.'s safety layer.
+            and keep command execution visible through O.R.I.O.N.&apos;s safety layer.
           </p>
+
+          <Link
+            href="/plugins"
+            className="mt-4 inline-flex rounded-xl border border-violet-300/15 px-3 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-300/[0.05]"
+          >
+            Manage Plugins →
+          </Link>
         </header>
 
         {message && (
@@ -35,6 +73,13 @@ export function ToolsWorkspace() {
             </pre>
           </section>
         )}
+
+        <ToolPermissionPanel
+          matrix={toolPermissionMatrix}
+          metrics={toolPermissionMetrics}
+          report={toolPermissionReport}
+          metricValue={metricValue}
+        />
 
         <ToolsModule
           title="Approval Queue"

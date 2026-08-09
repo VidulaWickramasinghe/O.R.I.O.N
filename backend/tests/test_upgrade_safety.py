@@ -141,6 +141,74 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_plugin_tool_relationships_use_backend_permission_decisions(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        plugin_workspace = (
+            project_root
+            / "frontend/src/components/aurora/modules/plugins-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        tools_workspace = (
+            project_root
+            / "frontend/src/components/aurora/modules/tools-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        permission_panel = (
+            project_root
+            / "frontend/src/components/aurora/panels/ToolPermissionPanel.tsx"
+        ).read_text(encoding="utf-8")
+
+        types = (
+            project_root
+            / "frontend/src/types/orion.ts"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "toolPermissionMatrix",
+            plugin_workspace,
+        )
+
+        self.assertIn(
+            "tool.plugin_key === plugin.key",
+            plugin_workspace,
+        )
+
+        self.assertIn(
+            "tool.allowed",
+            plugin_workspace,
+        )
+
+        self.assertIn(
+            "ToolPermissionPanel",
+            tools_workspace,
+        )
+
+        self.assertIn(
+            "loadToolPermissions",
+            tools_workspace,
+        )
+
+        self.assertIn(
+            "const allowed = item.allowed;",
+            permission_panel,
+        )
+
+        self.assertNotIn(
+            "item.enabled || item.protected",
+            permission_panel,
+        )
+
+        self.assertIn(
+            "policy_blocked: boolean",
+            types,
+        )
+
+        self.assertIn(
+            "block_reason: string",
+            types,
+        )
+
     def test_plugin_management_page_is_available(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 

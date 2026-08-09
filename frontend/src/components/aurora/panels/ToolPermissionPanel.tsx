@@ -21,9 +21,6 @@ export function ToolPermissionPanel({
             Plugin-controlled tool access, blocked tools, protected tools, and risk visibility
           </p>
         </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.3
-        </span>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
@@ -40,7 +37,7 @@ export function ToolPermissionPanel({
             <p className="text-sm text-slate-500">Tool permission matrix has not loaded yet.</p>
           ) : (
             matrix.map((item) => {
-              const allowed = item.enabled || item.protected;
+              const allowed = item.allowed;
               return (
                 <div key={item.tool_name} className="rounded-xl border border-white/10 bg-black/30 p-3">
                   <div className="flex items-start justify-between gap-3">
@@ -64,6 +61,17 @@ export function ToolPermissionPanel({
                   <p className="mt-2 text-xs leading-5 text-slate-400">
                     Plugin: {item.plugin_name}
                   </p>
+
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Plugin key: {item.plugin_key}
+                  </p>
+
+                  {item.policy_blocked && (
+                    <p className="mt-2 rounded-xl border border-red-300/15 bg-red-300/[0.05] p-2 text-xs leading-5 text-red-200">
+                      Policy blocked
+                      {item.block_reason ? ` — ${item.block_reason}` : ""}
+                    </p>
+                  )}
 
                   <div className="mt-2 flex flex-wrap gap-1">
                     <span

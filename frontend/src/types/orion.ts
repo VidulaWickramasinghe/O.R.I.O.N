@@ -68,8 +68,17 @@ export type PluginItem = {
 };
 
 export type ToolPermissionItem = {
-  tool_name: string; plugin_key: string; plugin_name: string; enabled: boolean; risk_level: string;
-  category: string; permissions: string[]; protected: boolean;
+  tool_name: string;
+  plugin_key: string;
+  plugin_name: string;
+  enabled: boolean;
+  risk_level: string;
+  category: string;
+  permissions: string[];
+  protected: boolean;
+  allowed: boolean;
+  policy_blocked: boolean;
+  block_reason: string;
 };
 
 export type ToolAuditEventItem = {
@@ -214,4 +223,3 @@ export type ChangelogIntelligenceResult = {
   raw_patch_notes_path: string;
   summary_path: string;
 };
-
