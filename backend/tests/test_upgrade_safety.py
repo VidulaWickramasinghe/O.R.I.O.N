@@ -611,6 +611,53 @@ class ToolPermissionTests(unittest.TestCase):
         called.assert_not_called()
         self.assertIn("audit event could not be recorded", result)
 
+    def test_permission_matrix_matches_api_response_contract(self) -> None:
+        matrix = tool_permissions.get_tool_permission_matrix()
+
+        self.assertGreater(len(matrix), 0)
+
+        required_fields = {
+            "tool_name",
+            "plugin_key",
+            "plugin_name",
+            "enabled",
+            "risk_level",
+            "category",
+            "permissions",
+            "protected",
+            "allowed",
+            "policy_blocked",
+            "block_reason",
+        }
+
+        for item in matrix:
+            self.assertTrue(
+                required_fields.issubset(item.keys()),
+                f"Missing permission response fields for {item.get('tool_name')}",
+            )
+
+            self.assertEqual(
+                item["policy_blocked"],
+                not item["allowed"],
+            )
+
+            if item["allowed"]:
+                self.assertEqual(item["block_reason"], "")
+            else:
+                self.assertTrue(item["block_reason"])
+
+        snapshot = tool_permissions.get_tool_permission_snapshot()
+
+        self.assertEqual(
+            snapshot["metrics"]["allowed_tools"],
+            sum(1 for item in snapshot["matrix"] if item["allowed"]),
+        )
+
+        self.assertEqual(
+            snapshot["metrics"]["blocked_tools"],
+            sum(1 for item in snapshot["matrix"] if not item["allowed"]),
+        )
+
 
 class ToolAuditTests(unittest.TestCase):
     def test_audit_inputs_and_filters_are_validated(self) -> None:
