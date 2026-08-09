@@ -123,6 +123,54 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_live_context_panel_is_toggleable_and_persistent(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        app_shell = (
+            project_root
+            / "frontend/src/components/aurora/app-shell.tsx"
+        ).read_text(encoding="utf-8")
+
+        context_panel = (
+            project_root
+            / "frontend/src/components/aurora/context-panel.tsx"
+        ).read_text(encoding="utf-8")
+
+        topbar = (
+            project_root
+            / "frontend/src/components/aurora/topbar.tsx"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "const contextOpen = useUiStore",
+            app_shell,
+        )
+
+        self.assertIn(
+            "{contextOpen && (",
+            app_shell,
+        )
+
+        self.assertIn(
+            "orion-context-open",
+            app_shell,
+        )
+
+        self.assertIn(
+            "setContextOpen(false)",
+            context_panel,
+        )
+
+        self.assertIn(
+            'aria-expanded={contextOpen}',
+            topbar,
+        )
+
+        self.assertIn(
+            'aria-controls="orion-live-context-panel"',
+            topbar,
+        )
+
     def test_frontend_dev_command_recovers_empty_manifests(self) -> None:
         root = Path(__file__).resolve().parents[2] / "frontend"
         package = (root / "package.json").read_text(encoding="utf-8")
