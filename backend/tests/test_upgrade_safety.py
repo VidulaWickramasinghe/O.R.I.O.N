@@ -141,6 +141,59 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
+    def test_mission_counts_use_live_backend_state(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        dashboard = (
+            project_root
+            / "frontend/src/components/aurora/dashboard-workspace.tsx"
+        ).read_text(encoding="utf-8")
+
+        sidebar = (
+            project_root
+            / "frontend/src/components/aurora/sidebar.tsx"
+        ).read_text(encoding="utf-8")
+
+        mission_status = (
+            project_root
+            / "frontend/src/lib/mission-status.ts"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "isMissionActive",
+            dashboard,
+        )
+
+        self.assertIn(
+            "missionStatusCounts",
+            dashboard,
+        )
+
+        self.assertIn(
+            "liveDashboard.activeMissions.length",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            'value="03"',
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "2 executing · 1 waiting",
+            dashboard,
+        )
+
+        self.assertIn(
+            "recent mission",
+            sidebar,
+        )
+
+        self.assertIn(
+            "ACTIVE_MISSION_STATUSES",
+            mission_status,
+        )
+
     def test_plugin_tool_relationships_use_backend_permission_decisions(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
