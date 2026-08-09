@@ -25,9 +25,6 @@ export function UserSettingsPanel({
             Local preferences, safety level, workspace defaults, voice, theme, and model mode
           </p>
         </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.3
-        </span>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">

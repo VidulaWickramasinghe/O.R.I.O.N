@@ -243,6 +243,25 @@ function dashboardText(value: unknown, fallback = "Unavailable") {
   return String(value);
 }
 
+function dashboardRecord(
+  value: unknown,
+): Record<string, unknown> {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function dashboardMetricNumber(
+  source: Record<string, unknown> | null,
+  group: string,
+  key: string,
+): number {
+  const section = dashboardRecord(source?.[group]);
+  const value = Number(section[key]);
+
+  return Number.isFinite(value) ? value : 0;
+}
+
 function dashboardListFrom<T>(value: unknown, keys: string[]): T[] {
   if (Array.isArray(value)) return value as T[];
 
@@ -632,7 +651,69 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
   };
 
   const liveDashboard = useLiveDashboardReality();
-  const intelligenceScore = dashboardIntelligence ? Number(dashboardIntelligence.intelligence_score) : 92;
+  const intelligenceScoreValue = Number(
+    liveDashboard.intelligence?.intelligence_score,
+  );
+  const intelligenceScore = Number.isFinite(
+    intelligenceScoreValue,
+  )
+    ? intelligenceScoreValue
+    : 0;
+  const liveVectorCount = dashboardMetricNumber(
+    liveDashboard.intelligence,
+    "memory_metrics",
+    "vector_items",
+  );
+  const liveKnowledgeDocumentCount = dashboardMetricNumber(
+    liveDashboard.intelligence,
+    "memory_metrics",
+    "knowledge_documents",
+  );
+  const livePluginCount = dashboardMetricNumber(
+    liveDashboard.intelligence,
+    "plugin_metrics",
+    "total_plugins",
+  );
+  const liveEnabledPluginCount = dashboardMetricNumber(
+    liveDashboard.intelligence,
+    "plugin_metrics",
+    "enabled_plugins",
+  );
+  const liveDeveloperReportCount = dashboardMetricNumber(
+    liveDashboard.intelligence,
+    "developer_metrics",
+    "developer_reports",
+  );
+  const liveReminderCount = dashboardMetricNumber(
+    liveDashboard.intelligence,
+    "notification_metrics",
+    "total_reminders",
+  );
+  const liveDueReminderCount = dashboardMetricNumber(
+    liveDashboard.intelligence,
+    "notification_metrics",
+    "due_reminders",
+  );
+  const liveWorkspaceCount = dashboardMetricNumber(
+    liveDashboard.intelligence,
+    "workspace_metrics",
+    "total_workspaces",
+  );
+  const liveSecurityPolicy = dashboardRecord(
+    liveDashboard.intelligence?.security_policy,
+  );
+  const liveSecurityProfile = dashboardText(
+    liveSecurityPolicy.profile_name,
+    "Unavailable",
+  );
+  const liveSafetyLevel = dashboardText(
+    liveSecurityPolicy.safety_level,
+    "Unavailable",
+  );
+  const liveReadinessLabel = dashboardText(
+    liveDashboard.intelligence?.readiness_label,
+    "Unavailable",
+  );
 
   const modeOptions = forceGovernanceMode
     ? ([["governance", "Governance"]] as const)
@@ -744,15 +825,15 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
                   <span className="orion-radar-ring" />
                   <span className="orion-radar-ring" style={{ animationDelay: "1.6s" }} />
                   <div className="orion-core flex items-center justify-center"><Sparkles size={26} className="text-white/80" /></div>
-                  <div className="absolute -left-7 top-10 rounded-xl border border-white/[0.08] bg-[#090d15]/85 px-3 py-2 backdrop-blur-xl"><p className="text-[9px] uppercase tracking-[0.16em] text-slate-600">Reasoning</p><p className="mt-1 text-xs font-semibold text-cyan-100">Stable</p></div>
-                  <div className="absolute -right-9 bottom-12 rounded-xl border border-white/[0.08] bg-[#090d15]/85 px-3 py-2 backdrop-blur-xl"><p className="text-[9px] uppercase tracking-[0.16em] text-slate-600">Latency</p><p className="mt-1 text-xs font-semibold text-violet-100">184 ms</p></div>
+                  <div className="absolute -left-7 top-10 rounded-xl border border-white/[0.08] bg-[#090d15]/85 px-3 py-2 backdrop-blur-xl"><p className="text-[9px] uppercase tracking-[0.16em] text-slate-600">Readiness</p><p className="mt-1 text-xs font-semibold text-cyan-100">{liveDashboard.sources.intelligence ? liveReadinessLabel : "Unavailable"}</p></div>
+                  <div className="absolute -right-9 bottom-12 rounded-xl border border-white/[0.08] bg-[#090d15]/85 px-3 py-2 backdrop-blur-xl"><p className="text-[9px] uppercase tracking-[0.16em] text-slate-600">Backend</p><p className="mt-1 text-xs font-semibold text-violet-100">{backendOnline ? "Connected" : "Offline"}</p></div>
                 </div>
               </div>
 
               <div className="relative z-10 grid gap-3 sm:grid-cols-3">
                 <HeroStat label="Active missions" value={String(liveDashboard.activeMissions.length)} detail={activeMissionDetail} icon={<Rocket size={15} />} />
-                <HeroStat label="Safety gates" value="100%" detail="All policies enforced" icon={<ShieldCheck size={15} />} />
-                <HeroStat label="Runtime health" value="99.8%" detail="Last 24 hours" icon={<Activity size={15} />} />
+                <HeroStat label="Security profile" value={liveDashboard.sources.intelligence ? liveSecurityProfile : "Unavailable"} detail={liveDashboard.sources.intelligence ? `Safety level: ${liveSafetyLevel}` : "Policy telemetry unavailable"} icon={<ShieldCheck size={15} />} />
+                <HeroStat label="Backend state" value={backendOnline ? "Online" : "Offline"} detail={backendOnline ? "Local API connected" : "Backend unavailable"} icon={<Activity size={15} />} />
               </div>
             </div>
 
@@ -764,8 +845,8 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
                 ))}
               </div>
               <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
-                <div className="flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-[0.18em] text-slate-600">Execution throughput</p><p className="mt-2 text-2xl font-semibold text-white">1,482 <span className="text-xs font-normal text-slate-500">tasks</span></p></div><span className="flex items-center gap-1 text-xs font-semibold text-emerald-300"><ArrowUpRight size={13} />12.8%</span></div>
-                <svg viewBox="0 0 300 72" className="mt-2 h-[72px] w-full" role="img" aria-label="Execution throughput trend increasing"><defs><linearGradient id="orionArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#67e8f9" stopOpacity=".25"/><stop offset="100%" stopColor="#67e8f9" stopOpacity="0"/></linearGradient></defs><path d="M0,58 C22,55 27,45 47,48 C70,51 78,35 99,39 C123,44 130,27 151,31 C174,35 184,19 205,24 C228,29 242,13 264,17 C278,19 289,9 300,11 L300,72 L0,72 Z" fill="url(#orionArea)"/><path className="orion-pulse-line" d="M0,58 C22,55 27,45 47,48 C70,51 78,35 99,39 C123,44 130,27 151,31 C174,35 184,19 205,24 C228,29 242,13 264,17 C278,19 289,9 300,11" fill="none" stroke="#67e8f9" strokeWidth="2" strokeLinecap="round"/></svg>
+                <div className="flex items-end justify-between"><div><p className="text-[10px] uppercase tracking-[0.18em] text-slate-600">Recent mission runs</p><p className="mt-2 text-2xl font-semibold text-white">{liveDashboard.runs.length}<span className="text-xs font-normal text-slate-500"> runs</span></p></div><span className="text-xs font-semibold text-cyan-300">{liveDashboard.sources.runs ? "Backend" : "Unavailable"}</span></div>
+                <svg viewBox="0 0 300 72" className="mt-2 h-[72px] w-full" role="img" aria-label="Decorative mission activity visualization"><defs><linearGradient id="orionArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#67e8f9" stopOpacity=".25"/><stop offset="100%" stopColor="#67e8f9" stopOpacity="0"/></linearGradient></defs><path d="M0,58 C22,55 27,45 47,48 C70,51 78,35 99,39 C123,44 130,27 151,31 C174,35 184,19 205,24 C228,29 242,13 264,17 C278,19 289,9 300,11 L300,72 L0,72 Z" fill="url(#orionArea)"/><path className="orion-pulse-line" d="M0,58 C22,55 27,45 47,48 C70,51 78,35 99,39 C123,44 130,27 151,31 C174,35 184,19 205,24 C228,29 242,13 264,17 C278,19 289,9 300,11" fill="none" stroke="#67e8f9" strokeWidth="2" strokeLinecap="round"/></svg>
               </div>
             </div>
           </div>
@@ -774,16 +855,16 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
       {widgets.includes("Metrics") && (
         <section>
-          <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-white">System overview</h2><p className="mt-1 text-xs text-slate-600">Live operational metrics across the O.R.I.O.N. stack</p></div><span className="hidden items-center gap-1.5 text-[10px] text-slate-600 sm:flex"><Radio size={11} className="text-emerald-300" /> Updating every 5 seconds</span></div>
+          <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-white">System overview</h2><p className="mt-1 text-xs text-slate-600">Live operational metrics across the O.R.I.O.N. stack</p></div><span className="hidden items-center gap-1.5 text-[10px] text-slate-600 sm:flex"><Radio size={11} className="text-emerald-300" /> Refreshing every 30 seconds</span></div>
           <div className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-4 ${compactMetrics ? "2xl:grid-cols-8" : "2xl:grid-cols-4"}`}>
-            <DashboardMetric label="Intelligence score" value={String(intelligenceScore)} detail="Excellent" trend="+4.2%" icon={<Gauge size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Intelligence score" value={liveDashboard.sources.intelligence ? String(intelligenceScore) : "Unavailable"} detail={dashboardText(liveDashboard.intelligence?.readiness_label, "Unavailable")} trend={liveDashboard.sources.intelligence ? "Live" : "Offline"} icon={<Gauge size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Agent telemetry" value="Unavailable" detail="No dedicated /api/agents runtime endpoint configured" trend={liveDashboard.sources.missions ? "Backend" : "Offline"} icon={<Bot size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Memory vectors" value={String(vectorItems.length || 1248)} detail={`${knowledgeDocuments.length} documents`} trend="+86" icon={<MemoryStick size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Mission records" value={String(liveDashboard.missions.length)} detail={liveDashboard.sources.missions ? "Recent backend missions" : "Mission endpoint unavailable"} trend={liveDashboard.sources.missions ? "Live" : "Offline"} icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Plugin registry" value={String(plugins.length || 12)} detail="All verified" trend="100%" icon={<Cpu size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Dev reports" value={String(developerReports.length)} detail="Latest scan clean" trend="+2" icon={<Code2 size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Reminders" value={String(reminders.length)} detail="2 due today" trend="Review" icon={<Clock3 size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Backend sidecar" value={backendSidecarStatus?.status || (backendOnline ? "Ready" : "Offline")} detail={desktopShellStatus?.status || "Desktop linked"} trend={backendOnline ? "Nominal" : "Check"} icon={<Server size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Memory vectors" value={liveDashboard.sources.intelligence ? String(liveVectorCount) : "Unavailable"} detail={liveDashboard.sources.intelligence ? `${liveKnowledgeDocumentCount} knowledge documents` : "Dashboard intelligence unavailable"} trend={liveDashboard.sources.intelligence ? "Backend" : "Offline"} icon={<MemoryStick size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Mission records" value={String(liveDashboard.missions.length)} detail={liveDashboard.sources.intelligence ? `${liveWorkspaceCount} registered workspace${liveWorkspaceCount === 1 ? "" : "s"}` : liveDashboard.sources.missions ? "Workspace telemetry unavailable" : "Mission endpoint unavailable"} trend={liveDashboard.sources.missions ? "Live" : "Offline"} icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Plugin registry" value={liveDashboard.sources.intelligence ? String(livePluginCount) : String(plugins.length)} detail={liveDashboard.sources.intelligence ? `${liveEnabledPluginCount} enabled` : "Registry state unavailable"} trend={liveDashboard.sources.intelligence ? "Live" : "Offline"} icon={<Cpu size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Dev reports" value={liveDashboard.sources.intelligence ? String(liveDeveloperReportCount) : String(developerReports.length)} detail={liveDashboard.sources.intelligence ? "Backend developer reports" : "Developer telemetry unavailable"} trend={liveDashboard.sources.intelligence ? "Live" : "Offline"} icon={<Code2 size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Reminders" value={liveDashboard.sources.intelligence ? String(liveReminderCount) : String(reminders.length)} detail={liveDashboard.sources.intelligence ? `${liveDueReminderCount} due` : "Reminder telemetry unavailable"} trend={liveDueReminderCount > 0 ? "Review" : "Clear"} icon={<Clock3 size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Backend sidecar" value={backendSidecarStatus?.status || "Unavailable"} detail={desktopShellStatus?.status || "Desktop status unavailable"} trend={backendSidecarStatus ? "Live" : "Unavailable"} icon={<Server size={17} />} compact={compactMetrics} />
           </div>
         </section>
       )}
@@ -801,7 +882,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
                 <QuickAction href="/missions" title="Create mission" detail="Plan an approval-gated workflow" icon={<Rocket size={18} />} tone="violet" />
                 <QuickAction href="/agents" title="Deploy agent" detail="Assign a specialised runtime" icon={<Bot size={18} />} tone="green" />
                 <QuickAction href="/memory" title="Search memory" detail="Retrieve project context" icon={<Search size={18} />} tone="blue" />
-                <QuickAction href="/workflows" title="Run workflow" detail={`${workflowBlueprints.length || 6} blueprints available`} icon={<Workflow size={18} />} tone="amber" />
+                <QuickAction href="/workflows" title="Run workflow" detail={`${workflowBlueprints.length} backend blueprints loaded`} icon={<Workflow size={18} />} tone="amber" />
                 <QuickAction href="/console" title="Open console" detail="Inspect logs and commands" icon={<SquareTerminal size={18} />} tone="slate" />
               </div>
             </section>
@@ -811,7 +892,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
             <section className="orion-panel p-5 sm:p-6">
               <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Execution fabric</p><h2 className="mt-2 text-base font-semibold text-white">Mission lifecycle</h2></div><span className="rounded-full border border-emerald-300/15 bg-emerald-300/[0.06] px-3 py-1.5 text-[10px] font-semibold text-emerald-200">Approval gates enforced</span></div>
               <div className="mt-6 overflow-x-auto pb-2"><div className="flex min-w-[720px] items-center">{dashboardTimeline.map((step, index) => <div key={step} className="flex flex-1 items-center last:flex-none"><div className="group flex min-w-[78px] flex-col items-center"><span className={`flex h-10 w-10 items-center justify-center rounded-2xl border text-xs font-bold ${index < 4 ? "border-cyan-300/20 bg-cyan-300/[0.075] text-cyan-100" : index === 4 ? "border-violet-300/25 bg-violet-300/[0.08] text-violet-100" : "border-white/[0.08] bg-white/[0.025] text-slate-600"}`}>{index < 4 ? <CheckCircle2 size={16} /> : index + 1}</span><span className={`mt-2 text-[10px] font-semibold ${index <= 4 ? "text-slate-300" : "text-slate-600"}`}>{step}</span></div>{index < dashboardTimeline.length - 1 && <div className={`mb-5 h-px flex-1 ${index < 4 ? "bg-gradient-to-r from-cyan-300/50 to-cyan-300/15" : "bg-white/[0.07]"}`} />}</div>)}</div></div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-3"><MiniStatus icon={<Brain size={15} />} title="Context matched" detail="8 memories loaded" /><MiniStatus icon={<ShieldCheck size={15} />} title="Policy evaluated" detail="Low-risk operation" /><MiniStatus icon={<Zap size={15} />} title="Next action" detail="Execute browser tool" /></div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-3"><MiniStatus icon={<Brain size={15} />} title="Context stage" detail="Retrieve relevant memory" /><MiniStatus icon={<ShieldCheck size={15} />} title="Policy stage" detail="Evaluate risk and approvals" /><MiniStatus icon={<Zap size={15} />} title="Execution stage" detail="Run approved tool action" /></div>
             </section>
           )}
 
