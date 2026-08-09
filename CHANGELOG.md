@@ -1,3 +1,47 @@
+## v6.5.2 — Plugin Management & UI Reality Patch
+
+### Added
+
+- Added a dedicated `/plugins` management workspace.
+- Added Plugins to the Aurora OS Operations navigation.
+- Added plugin search, status, risk, category, permission, and registry-report views.
+- Added protected-plugin indicators for mandatory safety components.
+- Added Plugin → Tool mapping visibility.
+- Added Tool → Plugin ownership visibility.
+- Added direct navigation between Plugins and Tools.
+
+### Fixed
+
+- Fixed Tool Permission UI to use backend `allowed`, `policy_blocked`, and `block_reason` decisions instead of inferring permission state in the frontend.
+- Fixed mission counters so active missions use live backend mission status rather than hardcoded values.
+- Fixed sidebar mission-count semantics and periodic refresh behavior.
+- Removed fake dashboard latency, uptime, throughput, reminder, plugin, vector, developer-report, and workspace values.
+- Removed stale v3.x/v4.x feature-panel version labels.
+- Replaced hardcoded dashboard security status with backend security-policy state.
+- Replaced static shell notifications with backend notification events.
+- Fixed the topbar system indicator to reflect actual backend availability.
+- Removed permanently visible fake notification state.
+- Fixed Live Context persistence so stored open/closed state is not overwritten during startup.
+- Fixed workspace selection so the first workspace is not shown as selected unless it is actually configured as the default.
+- Removed fake model runtime latency and connectivity indicators when no model telemetry endpoint exists.
+
+### Improved
+
+- Improved Plugins and Tools separation while making their relationship explicit.
+- Improved Aurora OS UI truthfulness by showing unavailable telemetry as unavailable instead of simulated.
+- Improved dashboard intelligence integration for plugin, memory, reminder, developer, mission, workspace, and security metrics.
+- Improved shell polling and notification behavior around live backend state.
+- Improved v6.5 patch-release tooling so the current maintenance target is v6.5.2.
+
+### Safety
+
+- Protected safety plugins remain protected.
+- Tool execution permissions remain backend-authoritative.
+- Approval gates remain enforced.
+- Security-profile changes remain confirmation-gated where required.
+- No arbitrary third-party plugin execution is introduced.
+- Release tooling remains local-first and does not automatically publish, push, delete repository content, or bypass approvals.
+
 ## v6.5.1 — Dashboard Runtime & Stability Patch
 
 ### Fixed

@@ -1,6 +1,6 @@
 [package]
 name = "orion-aurora-os"
-version = "6.5.1"
+version = "6.5.2"
 description = "O.R.I.O.N. Aurora OS desktop shell"
 authors = ["O.R.I.O.N."]
 edition = "2021"
