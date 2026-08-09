@@ -301,22 +301,51 @@ def enforce_tool_permission(tool_name: str) -> Callable:
 
 
 def get_tool_permission_matrix() -> List[Dict[str, Any]]:
-    plugins = {plugin["key"]: plugin for plugin in list_plugins(limit=300)}
-    matrix = []
+    plugins = {
+        plugin["key"]: plugin
+        for plugin in list_plugins(limit=300)
+    }
+
+    matrix: List[Dict[str, Any]] = []
+
     for tool_name, plugin_key in sorted(TOOL_PLUGIN_MAP.items()):
         plugin = plugins.get(plugin_key)
+        protected = plugin_key in ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS
+        enabled = bool(plugin.get("enabled", False)) if plugin else False
+
+        decision = is_tool_allowed(tool_name)
+
+        allowed = bool(decision.get("allowed", False))
+        reason = str(decision.get("reason", ""))
+
         matrix.append(
             {
                 "tool_name": tool_name,
                 "plugin_key": plugin_key,
-                "plugin_name": plugin["name"] if plugin else "Missing plugin",
-                "enabled": bool(plugin.get("enabled", False)) if plugin else False,
-                "risk_level": plugin.get("risk_level", "unknown") if plugin else "unknown",
-                "category": plugin.get("category", "unknown") if plugin else "unknown",
+                "plugin_name": (
+                    plugin["name"]
+                    if plugin
+                    else decision.get("plugin_name", "Missing plugin")
+                ),
+                "enabled": enabled,
+                "risk_level": (
+                    plugin.get("risk_level", "unknown")
+                    if plugin
+                    else decision.get("risk_level", "unknown")
+                ),
+                "category": (
+                    plugin.get("category", "unknown")
+                    if plugin
+                    else decision.get("category", "unknown")
+                ),
                 "permissions": plugin.get("permissions", []) if plugin else [],
-                "protected": plugin_key in ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS,
+                "protected": protected,
+                "allowed": allowed,
+                "policy_blocked": not allowed,
+                "block_reason": "" if allowed else reason,
             }
         )
+
     return matrix
 
 
@@ -327,7 +356,10 @@ def get_tool_permission_metrics() -> Dict[str, Any]:
 def get_tool_permission_snapshot() -> Dict[str, Any]:
     matrix = get_tool_permission_matrix()
     total_tools = len(matrix)
-    allowed_tools = sum(1 for item in matrix if item["enabled"] or item["protected"])
+    allowed_tools = sum(
+        1 for item in matrix
+        if item["allowed"]
+    )
     high_risk_tools = sum(1 for item in matrix if item["risk_level"] == "high")
     metrics = {
         "total_mapped_tools": total_tools,
@@ -337,7 +369,8 @@ def get_tool_permission_snapshot() -> Dict[str, Any]:
         "high_risk_allowed": sum(
             1
             for item in matrix
-            if item["risk_level"] == "high" and (item["enabled"] or item["protected"])
+            if item["risk_level"] == "high"
+            and item["allowed"]
         ),
     }
     return {"metrics": metrics, "matrix": matrix}
