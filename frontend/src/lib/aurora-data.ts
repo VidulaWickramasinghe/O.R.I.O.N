@@ -1,4 +1,4 @@
-import { Bot, Briefcase, FolderKanban, Gauge, Globe2, Home, MemoryStick, Mic, MonitorCog, Package, Settings, Shield, Terminal, Wrench, Workflow, BarChart3, MessageSquare } from "lucide-react";
+import { Bot, Briefcase, FolderKanban, Gauge, Globe2, Home, MemoryStick, Mic, MonitorCog, Package, Puzzle, Settings, Shield, Terminal, Wrench, Workflow, BarChart3, MessageSquare } from "lucide-react";
 
 export const navItems = [
   { href: "/", label: "Dashboard", icon: Home },
@@ -9,6 +9,7 @@ export const navItems = [
   { href: "/workspaces", label: "Workspaces", icon: MonitorCog },
   { href: "/agents", label: "Agents", icon: Bot },
   { href: "/tools", label: "Tools", icon: Wrench },
+  { href: "/plugins", label: "Plugins", icon: Puzzle },
   { href: "/browser", label: "Browser", icon: Globe2 },
   { href: "/voice", label: "Voice", icon: Mic },
   { href: "/workflows", label: "Workflows", icon: Workflow },
