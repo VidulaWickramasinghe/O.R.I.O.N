@@ -84,9 +84,25 @@ export function Topbar() {
           <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-[#0b0e15] bg-rose-400" />
         </button>
         <button
-          aria-label="Toggle context panel"
+          type="button"
+          aria-label={
+            contextOpen
+              ? "Close Live Context panel"
+              : "Open Live Context panel"
+          }
+          aria-expanded={contextOpen}
+          aria-controls="orion-live-context-panel"
+          title={
+            contextOpen
+              ? "Close Live Context"
+              : "Open Live Context"
+          }
           onClick={() => setContextOpen(!contextOpen)}
-          className={`hidden rounded-xl border p-2.5 transition xl:block ${contextOpen ? "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-200" : "border-white/[0.08] bg-white/[0.035] text-slate-300 hover:text-white"}`}
+          className={`hidden rounded-xl border p-2.5 transition xl:block ${
+            contextOpen
+              ? "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-200"
+              : "border-white/[0.08] bg-white/[0.035] text-slate-300 hover:border-cyan-300/20 hover:bg-white/[0.06] hover:text-white"
+          }`}
         >
           <PanelRight size={18} />
         </button>

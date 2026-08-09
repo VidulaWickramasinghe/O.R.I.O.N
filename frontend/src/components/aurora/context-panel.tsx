@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, BrainCircuit, FolderKanban, ShieldCheck } from "lucide-react";
+import {
+  Activity,
+  BrainCircuit,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 
 import { GlassPanel } from "@/components/aurora/glass-panel";
 import { StatusChip } from "@/components/aurora/status-chip";
 import { apiGet } from "@/lib/api/client";
+import { useUiStore } from "@/store/ui-store";
 
 type SourceState = {
   activity: boolean;
@@ -34,6 +40,9 @@ function text(value: unknown, fallback = "Unavailable") {
 }
 
 export function ContextPanel() {
+  const setContextOpen = useUiStore(
+    (state) => state.setContextOpen,
+  );
   const [activity, setActivity] = useState<Record<string, unknown>[]>([]);
   const [approvals, setApprovals] = useState<Record<string, unknown>[]>([]);
   const [missions, setMissions] = useState<Record<string, unknown>[]>([]);
@@ -120,10 +129,28 @@ export function ContextPanel() {
   return (
     <aside className="space-y-4">
       <GlassPanel className="p-4">
-        <h2 className="flex items-center gap-2 font-bold text-white">
-          <BrainCircuit size={16} className="text-cyan-300" />
-          Live Context
-        </h2>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 font-bold text-white">
+              <BrainCircuit size={16} className="text-cyan-300" />
+              Live Context
+            </h2>
+
+            <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-slate-600">
+              Backend context stream
+            </p>
+          </div>
+
+          <button
+            type="button"
+            aria-label="Close Live Context panel"
+            title="Close Live Context"
+            onClick={() => setContextOpen(false)}
+            className="rounded-xl border border-white/[0.08] bg-white/[0.035] p-2 text-slate-500 transition hover:border-cyan-300/20 hover:bg-white/[0.06] hover:text-white"
+          >
+            <X size={16} />
+          </button>
+        </div>
 
         <p className="mt-2 text-xs leading-5 text-slate-500">
           Context values are loaded from backend endpoints. Missing sources are
