@@ -122,3 +122,17 @@ frontend/src-tauri/Cargo.lock
 
 # Accidental root lockfile from running npm outside frontend
 /package-lock.json
+
+# Generated local release/readiness artifacts
+backend/data/release_candidates/
+backend/data/stable_release/
+backend/data/final_launch/
+backend/data/github_launch/
+backend/data/production_readiness/
+backend/data/public_release/
+backend/data/release_verification/
+backend/data/demo_walkthrough/
+backend/data/demo_recording/
+backend/data/public_landing/
+backend/data/ui_polish/
+backend/data/portfolio_showcase/
