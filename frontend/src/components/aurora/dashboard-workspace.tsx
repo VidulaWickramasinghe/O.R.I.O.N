@@ -1,5 +1,6 @@
 "use client";
 
+import { apiGet } from "@/lib/api/client";
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -37,7 +38,6 @@ import {
 import { useAuroraStore } from "@/store/auroraStore";
 
 import { dashboardModels, dashboardTimeline } from "@/lib/aurora-data";
-import { agents } from "@/lib/agent-data";
 import { projects } from "@/lib/project-data";
 import { createDeveloperPatchPlan, diagnoseDeveloperWorkspace, getDeveloperReports, inspectDeveloperWorkspace } from "@/lib/api/developer";
 import { getKnowledgeDocuments, indexKnowledgeFolder, searchKnowledge } from "@/lib/api/knowledge";
@@ -219,6 +219,182 @@ const SECURITY_WIDGETS = [
 
 
 type DashboardMode = "overview" | "operations" | "developer" | "governance" | "security";
+
+
+type DashboardLiveActivityItem = Record<string, unknown>;
+type DashboardLiveMissionItem = Record<string, unknown>;
+type DashboardLiveApprovalItem = Record<string, unknown>;
+type DashboardLiveMissionRunItem = Record<string, unknown>;
+type DashboardLiveIntelligence = Record<string, unknown>;
+
+type DashboardLiveSources = {
+  activity: boolean;
+  approvals: boolean;
+  missions: boolean;
+  runs: boolean;
+  intelligence: boolean;
+};
+
+function dashboardText(value: unknown, fallback = "Unavailable") {
+  if (value === null || value === undefined || value === "") return fallback;
+  return String(value);
+}
+
+function dashboardListFrom<T>(value: unknown, keys: string[]): T[] {
+  if (Array.isArray(value)) return value as T[];
+
+  if (value && typeof value === "object") {
+    const object = value as Record<string, unknown>;
+
+    for (const key of keys) {
+      if (Array.isArray(object[key])) return object[key] as T[];
+    }
+  }
+
+  return [];
+}
+
+function dashboardApprovalPending(item: DashboardLiveApprovalItem) {
+  return dashboardText(item.status, "").toLowerCase().includes("pending");
+}
+
+function dashboardMissionActive(item: DashboardLiveMissionItem) {
+  const status = dashboardText(item.status, "").toLowerCase();
+
+  return ["active", "running", "queued", "pending", "in_progress"].some((value) =>
+    status.includes(value),
+  );
+}
+
+function useLiveDashboardReality() {
+  const [activity, setActivity] = useState<DashboardLiveActivityItem[]>([]);
+  const [approvals, setApprovals] = useState<DashboardLiveApprovalItem[]>([]);
+  const [missions, setMissions] = useState<DashboardLiveMissionItem[]>([]);
+  const [runs, setRuns] = useState<DashboardLiveMissionRunItem[]>([]);
+  const [intelligence, setIntelligence] = useState<DashboardLiveIntelligence | null>(null);
+  const [sources, setSources] = useState<DashboardLiveSources>({
+    activity: false,
+    approvals: false,
+    missions: false,
+    runs: false,
+    intelligence: false,
+  });
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function load() {
+      const [activityResult, approvalsResult, missionsResult, runsResult, intelligenceResult] =
+        await Promise.allSettled([
+          apiGet<unknown>("/api/activity"),
+          apiGet<unknown>("/api/approvals"),
+          apiGet<unknown>("/api/missions"),
+          apiGet<unknown>("/api/mission-runs"),
+          apiGet<unknown>("/api/dashboard/intelligence"),
+        ]);
+
+      if (!mounted) return;
+
+      setSources({
+        activity: activityResult.status === "fulfilled",
+        approvals: approvalsResult.status === "fulfilled",
+        missions: missionsResult.status === "fulfilled",
+        runs: runsResult.status === "fulfilled",
+        intelligence: intelligenceResult.status === "fulfilled",
+      });
+
+      setActivity(
+        activityResult.status === "fulfilled"
+          ? dashboardListFrom<DashboardLiveActivityItem>(activityResult.value, [
+              "events",
+              "activity",
+              "items",
+              "timeline",
+              "entries",
+            ])
+          : [],
+      );
+
+      setApprovals(
+        approvalsResult.status === "fulfilled"
+          ? dashboardListFrom<DashboardLiveApprovalItem>(approvalsResult.value, [
+              "approvals",
+              "items",
+              "results",
+            ])
+          : [],
+      );
+
+      setMissions(
+        missionsResult.status === "fulfilled"
+          ? dashboardListFrom<DashboardLiveMissionItem>(missionsResult.value, [
+              "missions",
+              "items",
+              "results",
+            ])
+          : [],
+      );
+
+      setRuns(
+        runsResult.status === "fulfilled"
+          ? dashboardListFrom<DashboardLiveMissionRunItem>(runsResult.value, [
+              "runs",
+              "items",
+              "results",
+            ])
+          : [],
+      );
+
+      setIntelligence(
+        intelligenceResult.status === "fulfilled"
+          ? (intelligenceResult.value as DashboardLiveIntelligence)
+          : null,
+      );
+    }
+
+    void load();
+
+    const timer = window.setInterval(() => {
+      void load();
+    }, 30000);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  const pendingApprovals = approvals.filter(dashboardApprovalPending);
+  const activeMissions = missions.filter(dashboardMissionActive);
+
+  const recentActivityItems = activity
+    .slice(0, 4)
+    .map((item) =>
+      dashboardText(
+        item.title || item.message || item.event || item.action || item.type,
+        "",
+      ),
+    )
+    .filter(Boolean);
+
+  return {
+    activity,
+    approvals,
+    pendingApprovals,
+    missions,
+    activeMissions,
+    runs,
+    intelligence,
+    sources,
+    recentActivityItems:
+      recentActivityItems.length > 0
+        ? recentActivityItems
+        : sources.activity
+          ? ["No live activity records returned by backend"]
+          : ["Activity endpoint unavailable — no simulated events"],
+  };
+}
+
 
 export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityMode = false }: { forceGovernanceMode?: boolean; forceSecurityMode?: boolean } = {}) {
   const loadDemoWalkthroughStateFromStore = useAuroraStore(
@@ -425,7 +601,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     void useAuroraStore.getState().refreshAll();
   };
 
-  const activeAgents = agents.filter((agent) => agent.status === "Running").length;
+  const liveDashboard = useLiveDashboardReality();
   const intelligenceScore = dashboardIntelligence ? Number(dashboardIntelligence.intelligence_score) : 92;
 
   const modeOptions = forceGovernanceMode
@@ -496,7 +672,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
           <div className="grid min-h-[390px] xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,.55fr)]">
             <div className="orion-command-visual relative flex min-h-[390px] flex-col justify-between border-b border-white/[0.07] p-5 sm:p-7 xl:border-b-0 xl:border-r">
               <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
-                <div><div className="flex items-center gap-2"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" /></span><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-200/80">Neural core online</p></div><h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">System intelligence is operating normally</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">Live orchestration across agents, memory, tools, permissions and active workspaces.</p></div>
+                <div><div className="flex items-center gap-2"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" /></span><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-200/80">Backend telemetry status</p></div><h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">Live backend status is the source of truth</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">Operational values are loaded from backend endpoints. Missing endpoints are shown as unavailable, not simulated.</p></div>
                 <StatusChip tone={backendOnline ? "success" : "warning"}>{backendOnline ? "Backend connected" : "Demo / offline mode"}</StatusChip>
               </div>
 
@@ -518,9 +694,9 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
             </div>
 
             <div className="flex flex-col bg-black/10 p-5 sm:p-6">
-              <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Live orchestration</p><h3 className="mt-2 text-base font-semibold text-white">Mission pulse</h3></div><button onClick={() => setActivityPaused(!activityPaused)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-2.5 py-2 text-[10px] font-semibold text-slate-400 hover:text-white">{activityPaused ? <Play size={12} /> : <Pause size={12} />}{activityPaused ? "Resume" : "Pause"}</button></div>
+              <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Live backend activity</p><h3 className="mt-2 text-base font-semibold text-white">Mission pulse</h3></div><button onClick={() => setActivityPaused(!activityPaused)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-2.5 py-2 text-[10px] font-semibold text-slate-400 hover:text-white">{activityPaused ? <Play size={12} /> : <Pause size={12} />}{activityPaused ? "Resume" : "Pause"}</button></div>
               <div className="mt-5 flex-1 space-y-4">
-                {(activityPaused ? ["Stream paused — no new events", "Memory context retained", "Approval queue preserved", "Tool sessions remain connected"] : ["Planner generated execution strategy", "Memory vault returned 8 relevant items", "Security policy approved browser tool", "Frontend agent validating dashboard build"]).map((item, index) => (
+                {(activityPaused ? ["Stream paused — live event list held"] : liveDashboard.recentActivityItems).map((item, index) => (
                   <div key={item} className="flex gap-3"><div className="relative pt-1.5"><span className={`block h-2 w-2 rounded-full ${index === 0 && !activityPaused ? "bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.65)]" : "bg-slate-600"}`} />{index < 3 && <span className="absolute left-[3.5px] top-4 h-[34px] w-px bg-white/[0.07]" />}</div><div className="min-w-0 flex-1"><p className="text-xs leading-5 text-slate-300">{item}</p><div className="mt-1 flex items-center gap-2 text-[10px] text-slate-600"><Clock3 size={10} /><span>{index === 0 ? "now" : `${index * 2 + 1}m ago`}</span></div></div></div>
                 ))}
               </div>
@@ -538,7 +714,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
           <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-white">System overview</h2><p className="mt-1 text-xs text-slate-600">Live operational metrics across the O.R.I.O.N. stack</p></div><span className="hidden items-center gap-1.5 text-[10px] text-slate-600 sm:flex"><Radio size={11} className="text-emerald-300" /> Updating every 5 seconds</span></div>
           <div className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-4 ${compactMetrics ? "2xl:grid-cols-8" : "2xl:grid-cols-4"}`}>
             <DashboardMetric label="Intelligence score" value={String(intelligenceScore)} detail="Excellent" trend="+4.2%" icon={<Gauge size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Running agents" value={String(activeAgents)} detail={`${agents.length} registered`} trend="Live" icon={<Bot size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Agent telemetry" value="Unavailable" detail="No dedicated /api/agents runtime endpoint configured" trend={liveDashboard.sources.missions ? "Backend" : "Offline"} icon={<Bot size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Memory vectors" value={String(vectorItems.length || 1248)} detail={`${knowledgeDocuments.length} documents`} trend="+86" icon={<MemoryStick size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Active projects" value={String(projects.length)} detail="Across 3 workspaces" trend="Stable" icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Plugin registry" value={String(plugins.length || 12)} detail="All verified" trend="100%" icon={<Cpu size={17} />} compact={compactMetrics} />
@@ -587,7 +763,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
         <div className="space-y-5">
           <section className="orion-panel p-5 sm:p-6">
             <div className="flex items-start justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Infrastructure</p><h2 className="mt-2 text-base font-semibold text-white">System health</h2></div><span className="flex items-center gap-1.5 rounded-full border border-emerald-300/15 bg-emerald-300/[0.06] px-2.5 py-1 text-[10px] font-semibold text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Nominal</span></div>
-            <div className="mt-5 space-y-4"><HealthBar label="API gateway" value={backendOnline ? 99 : 18} detail={backendOnline ? "Operational" : "Connection unavailable"} icon={<Network size={14} />} /><HealthBar label="Memory service" value={94} detail="1,248 vectors indexed" icon={<Database size={14} />} /><HealthBar label="Agent runtime" value={88} detail={`${activeAgents} agents executing`} icon={<Bot size={14} />} /><HealthBar label="Storage" value={67} detail="82.4 GB available" icon={<HardDrive size={14} />} /></div>
+            <div className="mt-5 space-y-4"><HealthBar label="API gateway" value={backendOnline ? 99 : 18} detail={backendOnline ? "Operational" : "Connection unavailable"} icon={<Network size={14} />} /><HealthBar label="Dashboard intelligence" value={liveDashboard.sources.intelligence ? 88 : 18} detail={liveDashboard.sources.intelligence ? dashboardText(liveDashboard.intelligence?.readiness_label, "Loaded") : "No /api/dashboard/intelligence data"} icon={<Database size={14} />} /><HealthBar label="Mission records" value={liveDashboard.sources.missions ? 86 : 18} detail={liveDashboard.sources.missions ? `${liveDashboard.missions.length} missions loaded` : "No /api/missions data"} icon={<Bot size={14} />} /><HealthBar label="Approval queue" value={liveDashboard.sources.approvals ? (liveDashboard.pendingApprovals.length > 0 ? 65 : 96) : 18} detail={liveDashboard.sources.approvals ? `${liveDashboard.pendingApprovals.length} pending approvals` : "No /api/approvals data"} icon={<HardDrive size={14} />} /></div>
             <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-xs font-semibold text-slate-400 hover:bg-white/[0.045] hover:text-white">Open system diagnostics <ArrowUpRight size={13} /></button>
           </section>
 
