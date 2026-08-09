@@ -16,8 +16,13 @@ def managed_connection(database: str | Path) -> Iterator[sqlite3.Connection]:
     collection happens to run.
     """
 
-    connection = sqlite3.connect(database)
+    connection = sqlite3.connect(
+        database,
+        timeout=10.0,
+    )
     try:
+        connection.execute("PRAGMA busy_timeout = 10000")
+
         with connection:
             yield connection
     finally:

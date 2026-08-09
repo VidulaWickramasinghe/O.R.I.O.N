@@ -36,6 +36,24 @@ from core import (
 
 
 class DatabaseConnectionTests(unittest.TestCase):
+    def test_shared_sqlite_connections_use_busy_timeout(self) -> None:
+        project_root = Path(__file__).resolve().parents[2]
+
+        database = (
+            project_root
+            / "backend/core/database.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn(
+            "busy_timeout",
+            database,
+        )
+
+        self.assertIn(
+            "timeout=10.0",
+            database,
+        )
+
     def test_managed_connection_closes_after_success(self) -> None:
         connection = Mock()
         connection.__enter__ = Mock(return_value=connection)
@@ -838,6 +856,20 @@ class ToolAuditTests(unittest.TestCase):
 
 
 class PluginRegistryTests(unittest.TestCase):
+    def test_plugin_registry_initialization_is_idempotent(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(
+                plugin_registry,
+                "DB_PATH",
+                Path(temp_dir) / "plugins.sqlite",
+            ):
+                plugin_registry.init_plugin_registry_db()
+                plugin_registry.init_plugin_registry_db()
+
+                plugins = plugin_registry.list_plugins(limit=10)
+
+        self.assertIsInstance(plugins, list)
+
     def test_builtin_sync_preserves_state_and_uses_json_permissions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             db_path = Path(temp_dir) / "plugins.sqlite"
