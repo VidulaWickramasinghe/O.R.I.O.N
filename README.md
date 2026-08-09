@@ -1,79 +1,61 @@
 # O.R.I.O.N. — Operational Response and Intelligent Orchestration Network
 
-**O.R.I.O.N.** is a personal AI desktop agent designed to help users think, plan, act, and learn through a safe agentic execution system.
+**O.R.I.O.N.** is a local-first AI desktop agent and mission-control system built around safe autonomy, approval-gated tool execution, persistent memory, mission planning, and release governance.
 
-The project includes a futuristic web dashboard called **Aurora OS**, which acts as the visual command center for chat, project memory, tool activity, system status, and developer workflows.
+The project includes **Aurora OS**, the visual command center for assistant chat, missions, memory, approvals, tools, analytics, workspaces, diagnostics, security controls, and release readiness.
 
 ## Tagline
 
 **Think. Plan. Act. Learn.**
 
-## Current Release
-**v6.7 — Aurora Mission Control UI Rebuild**
+## Current Public Release
 
-### Aurora OS v6.7
+**v6.5 — Safety Review Board + Feature Approval Workflow**
 
-The current frontend introduces a responsive mission-control shell with
-expanded, compact, and hidden desktop navigation modes. Navigation groups and
-sidebar preferences persist locally, while the mobile drawer remains
-independent. The rebuilt dashboard includes interactive performance analytics,
-mission context, configurable widgets, and dedicated operational workspaces for
-Settings, System, Security, Workflows, and Console.
+> Local-first AI mission control with approval-gated autonomy.
 
-Frontend validation from the canonical project directory:
+Aurora OS currently builds as `frontend@6.7.0`, while the governed public release baseline is **O.R.I.O.N. v6.5**.
 
-```bash
-cd ~/O.R.I.O.N/frontend/
-npm ci
-npm run typecheck
-npm run build
-```
+## Release Highlights
+
+- Live backend-connected Aurora OS dashboard
+- Approval-gated tool and desktop workflows
+- Mission planning, workflow blueprints, and mission history
+- Memory, browser research, voice, analytics, and project modules
+- Security profiles, plugin permissions, and tool auditing
+- Release candidate, production readiness, and stable-release governance
+- Portfolio/demo readiness and public handoff documentation
+- Generated runtime and release artifacts excluded from version control
+
+## Safety Boundary
+
+O.R.I.O.N. is local-first and user-controlled.
+
+It does not automatically publish releases, push GitHub changes, expose secrets, bypass approvals, or execute uncontrolled desktop actions.
 
 ## Quick Setup
 
-Install backend and frontend dependencies, prepare the local environment file,
-and run the backend compile gate with one command:
-
 ```bash
 ./scripts/setup_orion.sh
-```
-
-Then set `OPENAI_API_KEY` in `backend/.env`, run diagnostics, and launch both
-services:
-
-```bash
 ./scripts/doctor.sh
 ./scripts/start_orion.sh
 ```
 
-Aurora OS is available at `http://localhost:3000`; the local API is available
-at `http://127.0.0.1:8000`.
+Aurora OS: `http://localhost:3000`
 
-### Vercel FastAPI deployment
+Backend API: `http://127.0.0.1:8000`
 
-The repository declares `backend.api_main:app` as its Vercel Python entrypoint
-in `pyproject.toml`. Configure `OPENAI_API_KEY` and `ORION_ALLOWED_ORIGINS` in
-the Vercel project environment before deploying the backend.
-
-## Quick Setup
-
-Install backend and frontend dependencies, prepare the local environment file,
-and run the backend compile gate with one command:
+## Quality Gate
 
 ```bash
-./scripts/setup_orion.sh
+curl -X POST http://127.0.0.1:8000/api/quality-gate/run \
+  -H "Content-Type: application/json" \
+  -d '{"run_builds":true}'
 ```
 
-Then set `OPENAI_API_KEY` in `backend/.env`, run diagnostics, and launch both
-services:
+## Public Handoff
 
-```bash
-./scripts/doctor.sh
-./scripts/start_orion.sh
-```
-
-Aurora OS is available at `http://localhost:3000`; the local API is available
-at `http://127.0.0.1:8000`.
+See [`docs/PUBLIC_HANDOFF_SUMMARY_v6.5.md`](docs/PUBLIC_HANDOFF_SUMMARY_v6.5.md).
 
 ## Core Capabilities
 
