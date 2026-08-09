@@ -15,6 +15,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_SETTINGS = {
     "display_name",
+    "role_title",
     "default_workspace_id",
     "safety_level",
     "voice_mode",
@@ -27,6 +28,7 @@ ALLOWED_SETTINGS = {
 
 DEFAULT_SETTINGS = {
     "display_name": "O.R.I.O.N. User",
+    "role_title": "System Architect",
     "default_workspace_id": "",
     "safety_level": "strict",
     "voice_mode": "text_first",
@@ -39,6 +41,7 @@ DEFAULT_SETTINGS = {
 
 SETTING_DESCRIPTIONS = {
     "display_name": "Display name shown inside Aurora OS.",
+    "role_title": "Role or title shown with the user profile inside Aurora OS.",
     "default_workspace_id": "Default registered workspace ID used for developer workflows.",
     "safety_level": "Controls how cautious O.R.I.O.N. should be. Recommended: strict.",
     "voice_mode": "Preferred voice behavior.",
@@ -173,19 +176,25 @@ def validate_setting_value(key: str, value: str) -> str:
         if not get_workspace_record(int(clean_value)):
             raise ValueError(f"Workspace not found: {clean_value}")
 
-    if clean_key == "display_name":
+    if clean_key in {"display_name", "role_title"}:
         if not clean_value:
-            raise ValueError("display_name cannot be empty.")
+            raise ValueError(f"{clean_key} cannot be empty.")
         if len(clean_value) > 80:
-            raise ValueError("display_name must be 80 characters or fewer.")
+            raise ValueError(f"{clean_key} must be 80 characters or fewer.")
         if any(character in clean_value for character in "\r\n\t"):
-            raise ValueError("display_name must be a single line.")
+            raise ValueError(f"{clean_key} must be a single line.")
         lowered = clean_value.lower()
         if any(
             secret_word in lowered
-            for secret_word in ["api_key", "token", "password", "secret", "sk-"]
+            for secret_word in [
+                "api_key",
+                "token",
+                "password",
+                "secret",
+                "sk-",
+            ]
         ):
-            raise ValueError("display_name must not contain secret-like values.")
+            raise ValueError(f"{clean_key} must not contain secret-like values.")
 
     return clean_value
 
@@ -228,6 +237,7 @@ def render_user_profile_summary() -> str:
 ## Profile
 
 - Display Name: {settings.get('display_name', 'O.R.I.O.N. User')}
+- Role Title: {settings.get('role_title', 'System Architect')}
 - Default Workspace ID: {settings.get('default_workspace_id') or 'Not set'}
 
 ## Safety

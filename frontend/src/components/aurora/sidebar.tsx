@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { navItems } from "@/lib/aurora-data";
 import { cn } from "@/lib/utils";
+import { useAuroraStore } from "@/store/auroraStore";
 import { useUiStore, type SidebarMode } from "@/store/ui-store";
 
 const groups = [
@@ -39,12 +40,24 @@ export function Sidebar() {
   const mobileOpen = useUiStore((state) => state.mobileSidebarOpen);
   const setMode = useUiStore((state) => state.setSidebarMode);
   const setMobileOpen = useUiStore((state) => state.setMobileSidebarOpen);
+  const userSettingsProfile = useAuroraStore(
+    (state) => state.userSettingsProfile,
+  );
+  const loadUserSettingsProfile = useAuroraStore(
+    (state) => state.loadUserSettingsProfile,
+  );
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     Object.fromEntries(groups.map((group) => [group.label, true])),
   );
 
   const compact = mode === "compact";
   const hidden = mode === "hidden";
+
+  useEffect(() => {
+    if (!userSettingsProfile) {
+      void loadUserSettingsProfile();
+    }
+  }, [userSettingsProfile, loadUserSettingsProfile]);
 
   useEffect(() => {
     const storedMode = window.localStorage.getItem(STORAGE_KEY) as SidebarMode | null;
@@ -83,6 +96,14 @@ export function Sidebar() {
   const toggleGroup = (label: string) => {
     setOpenGroups((current) => ({ ...current, [label]: !current[label] }));
   };
+
+  const displayName =
+    userSettingsProfile?.settings_map?.display_name ||
+    "O.R.I.O.N. User";
+
+  const roleTitle =
+    userSettingsProfile?.settings_map?.role_title ||
+    "System Architect";
 
   return (
     <>
@@ -257,7 +278,7 @@ export function Sidebar() {
               </button>
               <div className="flex items-center gap-3 rounded-2xl px-2 py-2">
                 <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-slate-200"><CircleUserRound size={19} /><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#080b12] bg-emerald-400" /></div>
-                <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-white">Wichel Ashford</p><p className="truncate text-[10px] text-slate-500">System Architect</p></div>
+                <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-white">{displayName}</p><p className="truncate text-[10px] text-slate-500">{roleTitle}</p></div>
                 <Settings2 size={15} className="text-slate-500" />
               </div>
               <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
