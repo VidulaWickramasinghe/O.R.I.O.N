@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect } from "react";
+import { ReactNode, useEffect, useRef } from "react";
 
 import { AiOrb } from "./ai-orb";
 import { CommandPalette } from "./command-palette";
@@ -16,6 +16,7 @@ const CONTEXT_PANEL_STORAGE_KEY = "orion-context-open";
 export function AppShell({ children }: { children: ReactNode }) {
   const contextOpen = useUiStore((state) => state.contextOpen);
   const setContextOpen = useUiStore((state) => state.setContextOpen);
+  const contextPreferenceLoaded = useRef(false);
 
   useEffect(() => {
     const stored = window.localStorage.getItem(
@@ -25,14 +26,21 @@ export function AppShell({ children }: { children: ReactNode }) {
     if (stored === "true" || stored === "false") {
       setContextOpen(stored === "true");
     }
-  }, [setContextOpen]);
 
-  useEffect(() => {
-    window.localStorage.setItem(
-      CONTEXT_PANEL_STORAGE_KEY,
-      String(contextOpen),
-    );
-  }, [contextOpen]);
+    contextPreferenceLoaded.current = true;
+
+    return useUiStore.subscribe((state, previousState) => {
+      if (
+        contextPreferenceLoaded.current &&
+        state.contextOpen !== previousState.contextOpen
+      ) {
+        window.localStorage.setItem(
+          CONTEXT_PANEL_STORAGE_KEY,
+          String(state.contextOpen),
+        );
+      }
+    });
+  }, [setContextOpen]);
 
   return (
     <main className="aurora-os-bg flex h-dvh overflow-hidden bg-[#05070b] text-slate-100">

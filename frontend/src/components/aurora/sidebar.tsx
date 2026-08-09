@@ -178,10 +178,12 @@ export function Sidebar() {
     userSettingsProfile?.settings_map?.default_workspace_id || "";
 
   const selectedWorkspace =
-    workspaces.find(
-      (workspace) =>
-        String(workspace.id) === defaultWorkspaceId,
-    ) || workspaces[0] || null;
+    defaultWorkspaceId
+      ? workspaces.find(
+          (workspace) =>
+            String(workspace.id) === defaultWorkspaceId,
+        ) || null
+      : null;
 
   const environmentMode =
     userSettingsProfile?.settings_map?.environment_mode ||
