@@ -209,6 +209,56 @@ class FrontendRefactorTests(unittest.TestCase):
             dashboard,
         )
 
+        self.assertNotIn(
+            'value="100%"',
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "All policies enforced",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "Updating every 5 seconds",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "workflowBlueprints.length || 6",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "8 memories loaded",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "Low-risk operation",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "Execute browser tool",
+            dashboard,
+        )
+
+        self.assertNotIn(
+            "Desktop linked",
+            dashboard,
+        )
+
+        self.assertIn(
+            "security_policy",
+            dashboard,
+        )
+
+        self.assertIn(
+            "Refreshing every 30 seconds",
+            dashboard,
+        )
+
         self.assertIn(
             "notification_metrics",
             dashboard,
