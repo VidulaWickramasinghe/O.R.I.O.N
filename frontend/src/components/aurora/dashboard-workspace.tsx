@@ -712,14 +712,14 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
         <section>
           <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-white">System overview</h2><p className="mt-1 text-xs text-slate-600">Live operational metrics across the O.R.I.O.N. stack</p></div><span className="hidden items-center gap-1.5 text-[10px] text-slate-600 sm:flex"><Radio size={11} className="text-emerald-300" /> Updating every 5 seconds</span></div>
           <div className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-4 ${compactMetrics ? "2xl:grid-cols-8" : "2xl:grid-cols-4"}`}>
-            <DashboardMetric label="Intelligence score" value={String(intelligenceScore)} detail="Excellent" trend="+4.2%" icon={<Gauge size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Intelligence score" value={String(intelligenceScore)} detail={dashboardText(liveDashboard.intelligence?.readiness_label, "Backend intelligence")} trend={liveDashboard.sources.intelligence ? "Backend" : "Offline"} icon={<Gauge size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Agent telemetry" value="Unavailable" detail="No dedicated /api/agents runtime endpoint configured" trend={liveDashboard.sources.missions ? "Backend" : "Offline"} icon={<Bot size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Memory vectors" value={String(vectorItems.length || 1248)} detail={`${knowledgeDocuments.length} documents`} trend="+86" icon={<MemoryStick size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Active projects" value={String(liveDashboard.missions.length)} detail="Across 3 workspaces" trend="Stable" icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Plugin registry" value={String(plugins.length || 12)} detail="All verified" trend="100%" icon={<Cpu size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Dev reports" value={String(developerReports.length)} detail="Latest scan clean" trend="+2" icon={<Code2 size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Reminders" value={String(reminders.length)} detail="2 due today" trend="Review" icon={<Clock3 size={17} />} compact={compactMetrics} />
-            <DashboardMetric label="Backend sidecar" value={backendSidecarStatus?.status || (backendOnline ? "Ready" : "Offline")} detail={desktopShellStatus?.status || "Desktop linked"} trend={backendOnline ? "Nominal" : "Check"} icon={<Server size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Memory vectors" value={String(vectorItems.length)} detail={`${knowledgeDocuments.length} knowledge documents`} trend={vectorItems.length || knowledgeDocuments.length ? "Backend" : "Unavailable"} icon={<MemoryStick size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Mission records" value={String(liveDashboard.missions.length)} detail={`${liveDashboard.activeMissions.length} active or queued`} trend={liveDashboard.sources.missions ? "Backend" : "Offline"} icon={<LayoutDashboard size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Plugin registry" value={String(plugins.length)} detail={plugins.length ? "Backend plugin records loaded" : "No plugin records loaded"} trend={plugins.length ? "Backend" : "Unchecked"} icon={<Cpu size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Dev reports" value={String(developerReports.length)} detail={`${developerReports.length} developer reports loaded`} trend={developerReports.length ? "Backend" : "None"} icon={<Code2 size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Reminders" value={String(reminders.length)} detail={`${reminders.length} reminders loaded`} trend={reminders.length ? "Review" : "None"} icon={<Clock3 size={17} />} compact={compactMetrics} />
+            <DashboardMetric label="Backend sidecar" value={backendSidecarStatus?.status || (backendOnline ? "Ready" : "Offline")} detail={desktopShellStatus?.status || "Desktop shell unavailable"} trend={backendOnline ? "Nominal" : "Check"} icon={<Server size={17} />} compact={compactMetrics} />
           </div>
         </section>
       )}
