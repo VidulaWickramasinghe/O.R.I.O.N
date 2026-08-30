@@ -6,10 +6,13 @@ from pathlib import Path
 import tempfile
 from typing import Any, Dict, List
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
-REPORT_DIR = PROJECT_ROOT / "backend" / "data" / "frontend_refactor_reports"
+REPORT_DIR = runtime_data_dir() / "frontend_refactor_reports"
 REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
 EXPECTED_DIRECTORIES = [
@@ -232,6 +235,7 @@ Component Count: {scan['component_count']}
 """
 
 
+@requires_gateway
 def save_frontend_refactor_report() -> Dict[str, Any]:
     scan = inspect_frontend_architecture()
     report = render_frontend_refactor_report(scan)

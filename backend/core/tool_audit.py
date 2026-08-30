@@ -5,8 +5,9 @@ from typing import Any, Dict, List, Optional
 
 
 from core.database import managed_connection
+from core.runtime_paths import runtime_data_dir
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DB_PATH = DATA_DIR / "orion_tool_audit.sqlite"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -44,10 +45,38 @@ def init_tool_audit_db() -> None:
                 risk_level TEXT DEFAULT 'unknown',
                 category TEXT DEFAULT 'unknown',
                 source TEXT DEFAULT 'O.R.I.O.N.',
+                actor TEXT DEFAULT 'unknown',
+                session_id TEXT DEFAULT '',
+                policy_profile TEXT DEFAULT 'unknown',
+                mission_id INTEGER,
+                step_id INTEGER,
+                run_id INTEGER,
+                approval_id INTEGER,
+                scope TEXT DEFAULT '',
+                side_effect INTEGER DEFAULT 0,
                 created_at TEXT NOT NULL
             )
             """
         )
+        existing_columns = {
+            str(row[1]) for row in conn.execute("PRAGMA table_info(tool_audit_events)")
+        }
+        migrations = {
+            "actor": "TEXT DEFAULT 'unknown'",
+            "session_id": "TEXT DEFAULT ''",
+            "policy_profile": "TEXT DEFAULT 'unknown'",
+            "mission_id": "INTEGER",
+            "step_id": "INTEGER",
+            "run_id": "INTEGER",
+            "approval_id": "INTEGER",
+            "scope": "TEXT DEFAULT ''",
+            "side_effect": "INTEGER DEFAULT 0",
+        }
+        for column, definition in migrations.items():
+            if column not in existing_columns:
+                conn.execute(
+                    f"ALTER TABLE tool_audit_events ADD COLUMN {column} {definition}"
+                )
         conn.commit()
 
 
@@ -59,6 +88,15 @@ def record_tool_audit_event(
     risk_level: str = "unknown",
     category: str = "unknown",
     source: str = "O.R.I.O.N.",
+    actor: str = "unknown",
+    session_id: str = "",
+    policy_profile: str = "unknown",
+    mission_id: Optional[int] = None,
+    step_id: Optional[int] = None,
+    run_id: Optional[int] = None,
+    approval_id: Optional[int] = None,
+    scope: str = "",
+    side_effect: bool = False,
 ) -> Dict[str, Any]:
     init_tool_audit_db()
     clean_tool_name = _clean_text(tool_name, "tool_name", 120, required=True)
@@ -70,13 +108,19 @@ def record_tool_audit_event(
     clean_risk_level = _clean_text(risk_level, "risk_level", 32) or "unknown"
     clean_category = _clean_text(category, "category", 64) or "unknown"
     clean_source = _clean_text(source, "source", 100) or "O.R.I.O.N."
+    clean_actor = _clean_text(actor, "actor", 100) or "unknown"
+    clean_session_id = _clean_text(session_id, "session_id", 100)
+    clean_policy_profile = _clean_text(policy_profile, "policy_profile", 100) or "unknown"
+    clean_scope = _clean_text(scope, "scope", 200)
     now = _now()
     with get_connection() as conn:
         cursor = conn.execute(
             """
             INSERT INTO tool_audit_events
-            (tool_name, plugin_key, decision, reason, risk_level, category, source, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (tool_name, plugin_key, decision, reason, risk_level, category, source,
+             actor, session_id, policy_profile, mission_id, step_id, run_id,
+             approval_id, scope, side_effect, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 clean_tool_name,
@@ -86,6 +130,15 @@ def record_tool_audit_event(
                 clean_risk_level,
                 clean_category,
                 clean_source,
+                clean_actor,
+                clean_session_id,
+                clean_policy_profile,
+                mission_id,
+                step_id,
+                run_id,
+                approval_id,
+                clean_scope,
+                1 if side_effect else 0,
                 now,
             ),
         )
@@ -100,6 +153,15 @@ def record_tool_audit_event(
         "risk_level": clean_risk_level,
         "category": clean_category,
         "source": clean_source,
+        "actor": clean_actor,
+        "session_id": clean_session_id,
+        "policy_profile": clean_policy_profile,
+        "mission_id": mission_id,
+        "step_id": step_id,
+        "run_id": run_id,
+        "approval_id": approval_id,
+        "scope": clean_scope,
+        "side_effect": bool(side_effect),
         "created_at": now,
     }
 
@@ -135,7 +197,10 @@ def list_tool_audit_events(limit: int = 100, decision: Optional[str] = None) -> 
                 """,
                 (clean_limit,),
             ).fetchall()
-    return [dict(row) for row in rows]
+    events = [dict(row) for row in rows]
+    for event in events:
+        event["side_effect"] = bool(event.get("side_effect", False))
+    return events
 
 
 def get_tool_audit_metrics() -> Dict[str, Any]:
@@ -187,6 +252,14 @@ def render_tool_audit_report(snapshot: Optional[Dict[str, Any]] = None) -> str:
             f"- Decision: {event['decision']}\n"
             f"- Risk Level: {event['risk_level']}\n"
             f"- Category: {event['category']}\n"
+            f"- Actor: {event.get('actor', 'unknown')}\n"
+            f"- Local Session: {event.get('session_id', '') or 'none'}\n"
+            f"- Policy: {event.get('policy_profile', 'unknown')}\n"
+            f"- Scope: {event.get('scope', '') or 'none'}\n"
+            f"- Mission: {event.get('mission_id') or 'none'}\n"
+            f"- Step: {event.get('step_id') or 'none'}\n"
+            f"- Approval: {event.get('approval_id') or 'none'}\n"
+            f"- Side Effect: {bool(event.get('side_effect', False))}\n"
             f"- Reason: {event['reason']}\n"
             f"- Created: {event['created_at']}\n"
         )

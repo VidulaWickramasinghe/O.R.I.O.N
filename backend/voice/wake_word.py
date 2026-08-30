@@ -1,6 +1,10 @@
 import re
 from voice.voice_io import record_voice, transcribe_voice
-from core.voice_state import update_voice_state
+from core.voice_state import execute_voice_state_update
+
+
+def _update_voice_state(**updates):
+    return execute_voice_state_update("wake_agent", "wake_word", **updates)
 
 
 WAKE_VARIANTS = [
@@ -68,7 +72,7 @@ def listen_for_wake_phrase() -> str:
     If command is included after wake phrase, return it.
     Otherwise, record a second command phrase.
     """
-    update_voice_state(
+    _update_voice_state(
         mode="wake_listening",
         listening=True,
         last_event='Listening for wake phrase: "Hey Orion".',
@@ -82,7 +86,7 @@ def listen_for_wake_phrase() -> str:
         heard_text = transcribe_voice(audio_path)
 
         if not heard_text:
-            update_voice_state(
+            _update_voice_state(
                 mode="wake_listening",
                 listening=True,
                 last_event="No speech detected during wake listening.",
@@ -92,7 +96,7 @@ def listen_for_wake_phrase() -> str:
         print(f"Heard: {heard_text}")
 
         if detect_wake_phrase(heard_text):
-            update_voice_state(
+            _update_voice_state(
                 mode="wake_detected",
                 listening=False,
                 last_event="Wake phrase detected.",
@@ -106,7 +110,7 @@ def listen_for_wake_phrase() -> str:
             if command:
                 return command
 
-            update_voice_state(
+            _update_voice_state(
                 mode="command_listening",
                 listening=True,
                 last_event="Listening for command after wake phrase.",
@@ -116,7 +120,7 @@ def listen_for_wake_phrase() -> str:
             command_audio = record_voice(duration=7)
             command_text = transcribe_voice(command_audio)
 
-            update_voice_state(
+            _update_voice_state(
                 mode="command_received",
                 listening=False,
                 last_transcript=command_text,

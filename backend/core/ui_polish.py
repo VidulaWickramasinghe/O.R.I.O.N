@@ -8,9 +8,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
-UI_POLISH_DIR = PROJECT_ROOT / "backend" / "data" / "ui_polish"
+UI_POLISH_DIR = runtime_data_dir() / "ui_polish"
 EXPECTED_FILES = (
     "src/app/public-demo/page.tsx",
     "src/components/public-demo/PublicHero.tsx",
@@ -84,6 +87,7 @@ This source inspection does not publish, push, expose secrets, or alter tool beh
 """
 
 
+@requires_gateway
 def save_ui_polish_report() -> Dict[str, Any]:
     scan = inspect_ui_polish()
     report = render_ui_polish_report(scan)

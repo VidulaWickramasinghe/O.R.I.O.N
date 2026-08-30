@@ -1,39 +1,45 @@
+import ipaddress
+import socket
+from dataclasses import dataclass
 from datetime import datetime
 from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any, Dict, List
-from urllib.parse import urljoin, urlparse
+from typing import Any, Dict, List, Mapping
+from urllib.parse import urljoin, urlparse, urlunparse
 
-import requests
+import certifi
+import urllib3
+
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
 
 ALLOWED_SCHEMES = {"http", "https"}
-RESEARCH_REPORT_DIR = Path(__file__).resolve().parents[1] / "data" / "browser_research"
+RESEARCH_REPORT_DIR = runtime_data_dir() / "browser_research"
 
-BLOCKED_HOST_PREFIXES = [
-    "localhost",
-    "127.",
-    "0.",
-    "10.",
-    "192.168.",
-    "172.16.",
-    "172.17.",
-    "172.18.",
-    "172.19.",
-    "172.20.",
-    "172.21.",
-    "172.22.",
-    "172.23.",
-    "172.24.",
-    "172.25.",
-    "172.26.",
-    "172.27.",
-    "172.28.",
-    "172.29.",
-    "172.30.",
-    "172.31.",
-]
+MAX_REDIRECTS = 5
+MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+ALLOWED_CONTENT_TYPES = {"text/html", "application/xhtml+xml", "text/plain"}
+REQUEST_TIMEOUT = urllib3.Timeout(connect=5.0, read=10.0)
+
+
+@dataclass(frozen=True)
+class _ResolvedDestination:
+    url: str
+    scheme: str
+    hostname: str
+    port: int
+    request_target: str
+    host_header: str
+    addresses: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _FetchResponse:
+    status_code: int
+    headers: Mapping[str, str]
+    body: bytes
 
 
 class _PublicPageParser(HTMLParser):
@@ -124,52 +130,204 @@ def _empty_result(
     }
 
 
+def _resolve_public_destination(url: str) -> _ResolvedDestination:
+    parsed = urlparse(str(url).strip())
+    scheme = parsed.scheme.lower()
+    if scheme not in ALLOWED_SCHEMES:
+        raise ValueError("Only http and https URLs are allowed.")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("URLs containing credentials are not allowed.")
+    hostname = (parsed.hostname or "").rstrip(".").lower()
+    if not hostname:
+        raise ValueError("URL hostname is required.")
+    try:
+        port = parsed.port or (443 if scheme == "https" else 80)
+    except ValueError as error:
+        raise ValueError("URL port is invalid.") from error
+
+    try:
+        address_rows = socket.getaddrinfo(
+            hostname,
+            port,
+            family=socket.AF_UNSPEC,
+            type=socket.SOCK_STREAM,
+        )
+    except socket.gaierror as error:
+        raise ValueError(f"URL hostname could not be resolved: {error}.") from error
+    addresses = tuple(dict.fromkeys(str(row[4][0]) for row in address_rows))
+    if not addresses:
+        raise ValueError("URL hostname did not resolve to an address.")
+    for address in addresses:
+        try:
+            parsed_address = ipaddress.ip_address(address.split("%", 1)[0])
+        except ValueError as error:
+            raise ValueError("URL hostname resolved to an invalid address.") from error
+        if not parsed_address.is_global:
+            raise ValueError(
+                f"URL hostname resolved to a non-public address ({parsed_address})."
+            )
+
+    path = parsed.path or "/"
+    request_target = f"{path}?{parsed.query}" if parsed.query else path
+    default_port = 443 if scheme == "https" else 80
+    bracketed_host = f"[{hostname}]" if ":" in hostname else hostname
+    host_header = (
+        bracketed_host if port == default_port else f"{bracketed_host}:{port}"
+    )
+    normalized_url = urlunparse(
+        (scheme, host_header, path, parsed.params, parsed.query, "")
+    )
+    return _ResolvedDestination(
+        url=normalized_url,
+        scheme=scheme,
+        hostname=hostname,
+        port=port,
+        request_target=request_target,
+        host_header=host_header,
+        addresses=addresses,
+    )
+
+
+def _read_limited_response(response: Any) -> bytes:
+    content_length = response.headers.get("Content-Length", "")
+    if content_length:
+        try:
+            if int(content_length) > MAX_RESPONSE_BYTES:
+                raise ValueError("Response exceeds the browser research byte limit.")
+        except ValueError as error:
+            if "exceeds" in str(error):
+                raise
+    body = response.read(MAX_RESPONSE_BYTES + 1)
+    if len(body) > MAX_RESPONSE_BYTES:
+        raise ValueError("Response exceeds the browser research byte limit.")
+    return body
+
+
+def _request_once(destination: _ResolvedDestination) -> _FetchResponse:
+    """Fetch one DNS-pinned hop without environment proxy inheritance."""
+
+    address = destination.addresses[0]
+    pool_options: Dict[str, Any] = {
+        "host": address,
+        "port": destination.port,
+        "maxsize": 1,
+        "block": True,
+    }
+    if destination.scheme == "https":
+        pool = urllib3.HTTPSConnectionPool(
+            **pool_options,
+            cert_reqs="CERT_REQUIRED",
+            ca_certs=certifi.where(),
+            assert_hostname=destination.hostname,
+            server_hostname=destination.hostname,
+        )
+    else:
+        pool = urllib3.HTTPConnectionPool(**pool_options)
+    response = None
+    try:
+        response = pool.request(
+            "GET",
+            destination.request_target,
+            headers={
+                "Host": destination.host_header,
+                "User-Agent": "O.R.I.O.N. Browser Research/3.0",
+                "Accept": "text/html,application/xhtml+xml,text/plain;q=0.8",
+            },
+            redirect=False,
+            retries=False,
+            preload_content=False,
+            timeout=REQUEST_TIMEOUT,
+        )
+        body = _read_limited_response(response)
+        return _FetchResponse(
+            status_code=int(response.status),
+            headers={str(key): str(value) for key, value in response.headers.items()},
+            body=body,
+        )
+    finally:
+        if response is not None:
+            response.release_conn()
+        pool.close()
+
+
+def _content_type(headers: Mapping[str, str]) -> str:
+    value = next(
+        (item for key, item in headers.items() if key.lower() == "content-type"), ""
+    )
+    return value.split(";", 1)[0].strip().lower()
+
+
+def _decode_body(body: bytes, headers: Mapping[str, str]) -> str:
+    content_type = next(
+        (item for key, item in headers.items() if key.lower() == "content-type"), ""
+    )
+    charset = "utf-8"
+    for parameter in content_type.split(";")[1:]:
+        key, separator, value = parameter.strip().partition("=")
+        if separator and key.lower() == "charset":
+            charset = value.strip(" \"'") or "utf-8"
+            break
+    try:
+        return body.decode(charset, errors="replace")
+    except LookupError:
+        return body.decode("utf-8", errors="replace")
+
+
+def _fetch_public_page(url: str) -> tuple[str, int, str]:
+    current_url = str(url).strip()
+    visited = set()
+    for redirect_count in range(MAX_REDIRECTS + 1):
+        destination = _resolve_public_destination(current_url)
+        if destination.url in visited:
+            raise ValueError("Redirect loop detected.")
+        visited.add(destination.url)
+        response = _request_once(destination)
+        if response.status_code in {301, 302, 303, 307, 308}:
+            if redirect_count >= MAX_REDIRECTS:
+                raise ValueError("Redirect limit exceeded.")
+            location = next(
+                (
+                    value
+                    for key, value in response.headers.items()
+                    if key.lower() == "location"
+                ),
+                "",
+            )
+            if not location:
+                raise ValueError("Redirect response is missing a destination.")
+            current_url = urljoin(destination.url, location)
+            continue
+        if response.status_code >= 400:
+            raise ValueError(f"Remote server returned HTTP {response.status_code}.")
+        media_type = _content_type(response.headers)
+        if media_type not in ALLOWED_CONTENT_TYPES:
+            raise ValueError(f"Response content type is not allowed: {media_type or 'missing'}.")
+        return destination.url, response.status_code, _decode_body(
+            response.body, response.headers
+        )
+    raise ValueError("Redirect limit exceeded.")
+
+
 def _is_safe_public_url(url: str) -> bool:
-    parsed = urlparse(url)
-
-    if parsed.scheme not in ALLOWED_SCHEMES:
+    try:
+        _resolve_public_destination(url)
+        return True
+    except ValueError:
         return False
-
-    hostname = parsed.hostname or ""
-
-    for blocked in BLOCKED_HOST_PREFIXES:
-        if hostname.startswith(blocked):
-            return False
-
-    return True
 
 
 def research_public_page(url: str) -> Dict[str, Any]:
     """
-    Safely inspect a public web page using requests and the standard library parser.
+    Safely inspect a public web page using a DNS-pinned transport and parser.
     No login, no form submission, no browser automation.
     """
     clean_url = url.strip()
 
-    if not _is_safe_public_url(clean_url):
-        return _empty_result(
-            url=clean_url,
-            title="Blocked URL",
-            summary="Only public http/https pages are allowed. Local/private addresses are blocked.",
-        )
-
     try:
-        response = requests.get(
-            clean_url,
-            timeout=15,
-            allow_redirects=True,
-            headers={
-                "User-Agent": "O.R.I.O.N. Browser Research/2.0"
-            },
-        )
-
-        response.raise_for_status()
-
-        final_url = response.url
-        status_code = response.status_code
+        final_url, status_code, response_text = _fetch_public_page(clean_url)
 
         parser = _PublicPageParser()
-        parser.feed(response.text)
+        parser.feed(response_text)
         parser.close()
 
         title = " ".join(parser.title.split()) or "Untitled page"
@@ -266,6 +424,7 @@ def compare_web_pages(urls: List[str]) -> str:
     return "# Browser Research Comparison\n\n" + "\n\n".join(sections)
 
 
+@requires_gateway
 def save_web_research_report(title: str, url: str, summary: str, notes: str = "") -> str:
     """Save a local-only research note and return its path."""
     RESEARCH_REPORT_DIR.mkdir(parents=True, exist_ok=True)

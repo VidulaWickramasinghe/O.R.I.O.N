@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 from core.roadmap_planner import generate_roadmap_plan, load_future_features
+from core.capability_gateway import requires_gateway
 
 ROOT=Path(__file__).resolve().parents[2];OUT=ROOT/'backend/data/safety_review_board';REVIEW_FILE=OUT/'feature_reviews.json';DEFAULT={'reviews':[],'updated_at':''};_LOCK=threading.RLock();DECISIONS={'approved','conditional_approval','rejected','needs_changes'}
 def _now():return datetime.now().isoformat(timespec='seconds')
@@ -29,6 +30,7 @@ def load_feature_reviews():
  except (OSError,json.JSONDecodeError):return {'reviews':[],'updated_at':''}
  if not isinstance(raw,dict):return {'reviews':[],'updated_at':''}
  return {'reviews':[x for x in (_normalize_review(v) for v in raw.get('reviews',[])) if x],'updated_at':str(raw.get('updated_at',''))[:32]}
+@requires_gateway
 def save_feature_reviews(data):
  normalized={'reviews':[x for x in (_normalize_review(v) for v in data.get('reviews',[])) if x],'updated_at':_now()};_atomic(REVIEW_FILE,json.dumps(normalized,indent=2,sort_keys=True));return normalized
 def calculate_risk_score(feature:Dict[str,Any]):
@@ -46,6 +48,7 @@ def recommend_review_decision(feature):
  elif level=='medium':decision='conditional_approval';controls=['Manual test plan','Clear user-facing behavior','No approval bypass']
  else:decision='approved';controls=['Standard testing','Documentation for user-facing behavior']
  return {**risk,'recommended_decision':decision,'required_controls':controls}
+@requires_gateway
 def create_feature_review(feature_id,reviewer='O.R.I.O.N. Safety Review Board',decision='auto_recommend',notes=''):
  feature_id=_text(feature_id,'Feature ID',80,True);reviewer=_text(reviewer,'Reviewer',120,True);notes=_text(notes,'Notes',5000);features=load_future_features()['features'];feature=next((x for x in features if x['id']==feature_id),None)
  if not feature:raise ValueError(f'Feature not found: {feature_id}')
@@ -63,7 +66,9 @@ def generate_safety_review_snapshot():
  plan=generate_roadmap_plan();all_reviews=load_feature_reviews()['reviews'];reviews=_latest_reviews(all_reviews);reviewed={x['feature_id'] for x in reviews};pending=[x for x in plan['features'] if x['id'] not in reviewed];safety_pending=[x for x in pending if x['release_bucket']=='safety_review' or x['safety_level'] in {'high','medium'}];approved=[x for x in reviews if x['decision'] in {'approved','conditional_approval'}];rejected=[x for x in reviews if x['decision']=='rejected'];changes=[x for x in reviews if x['decision']=='needs_changes'];critical=[x for x in reviews if x['risk_level']=='critical'];checks=[{'name':'Review data valid','ok':True,'details':f'Latest reviews: {len(reviews)}'},{'name':'Pending safety reviews identified','ok':True,'details':f'Pending: {len(safety_pending)}'},{'name':'Critical reviews include controls','ok':all(x['required_controls'] and not x['development_eligible'] for x in critical),'details':f'Critical: {len(critical)}'},{'name':'Development eligibility explicit','ok':all(isinstance(x['development_eligible'],bool) for x in reviews),'details':f'Reviews: {len(reviews)}'}];passed=sum(x['ok'] for x in checks);status='reviews_pending' if safety_pending else 'changes_required' if changes else 'some_rejected' if rejected else 'review_board_clear';return {'status':status,'generated_at':_now(),'release_version':'v6.5','release_name':'Safety Review Board + Feature Approval Workflow','passed':passed,'failed':len(checks)-passed,'checks':checks,'roadmap_plan':plan,'reviews':reviews,'review_history_count':len(all_reviews),'pending_features':pending,'safety_review_features':safety_pending,'approved_count':len(approved),'rejected_count':len(rejected),'needs_changes_count':len(changes),'pending_count':len(pending),'safety_review_pending_count':len(safety_pending),'safety':{'implements_features':False,'pushes_to_github':False,'publishes_release':False,'modifies_github_issues':False,'approves_development_only':True,'bypasses_approvals':False}}
 def render_safety_review_report(snapshot=None):
  snapshot=snapshot or generate_safety_review_snapshot();lines='\n'.join(f"- [{x['decision']}] {x['feature_title']} — risk {x['risk_level']} ({x['risk_score']})" for x in snapshot['reviews']) or 'None';return f"# O.R.I.O.N. v6.5 Safety Review Board Report\n\nGenerated: {snapshot['generated_at']}\nStatus: {snapshot['status']}\nPending: {snapshot['safety_review_pending_count']}\nApproved: {snapshot['approved_count']}\nNeeds changes: {snapshot['needs_changes_count']}\n\n## Latest Decisions\n\n{lines}\n\n## Safety\n\nRecords local decisions only; no implementation, GitHub changes, publishing, or approval bypass.\n"
+@requires_gateway
 def save_safety_review_report():
  snapshot=generate_safety_review_snapshot();report=render_safety_review_report(snapshot);path=OUT/f'SAFETY_REVIEW_BOARD_REPORT_{_stamp()}.md';_atomic(path,report);return {'status':'saved','generated_at':_now(),'path':str(path),'report':report,'snapshot':snapshot}
+@requires_gateway
 def generate_safety_review_package():
  snapshot=generate_safety_review_snapshot();report=render_safety_review_report(snapshot);stamp=_stamp();report_path=OUT/f'SAFETY_REVIEW_REPORT_{stamp}.md';plan_path=OUT/f'FEATURE_APPROVAL_PLAN_{stamp}.md';summary_path=OUT/f'SAFETY_REVIEW_SUMMARY_{stamp}.json';lines='\n'.join(f"- {x['feature_title']} — {x['decision']} — eligible: {x['development_eligible']}" for x in snapshot['reviews']) or 'No reviewed features.';plan=f'# Feature Approval Plan\n\n{lines}\n\nOnly eligible features may enter manual development planning.\n';summary={k:snapshot[k] for k in ('status','generated_at','release_version','release_name','passed','failed','approved_count','rejected_count','needs_changes_count','pending_count','safety_review_pending_count','safety')};summary.update({'report_path':str(report_path),'approval_plan_path':str(plan_path),'summary_path':str(summary_path)});_atomic(report_path,report);_atomic(plan_path,plan);_atomic(summary_path,json.dumps(summary,indent=2,sort_keys=True));return summary

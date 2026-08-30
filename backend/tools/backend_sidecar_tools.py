@@ -10,7 +10,7 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 
 
-@function_tool
+@function_tool(name_override="get_backend_sidecar_status")
 @instrument_tool("get_backend_sidecar_status")
 @enforce_tool_permission("get_backend_sidecar_status")
 def get_backend_sidecar_status() -> str:
@@ -20,7 +20,7 @@ def get_backend_sidecar_status() -> str:
     return render_sidecar_report()
 
 
-@function_tool
+@function_tool(name_override="start_backend_sidecar")
 @instrument_tool("start_backend_sidecar")
 @enforce_tool_permission("start_backend_sidecar")
 def start_backend_sidecar_tool() -> str:
@@ -31,7 +31,7 @@ def start_backend_sidecar_tool() -> str:
     return f"Backend sidecar start requested. Status: {status['status']}. URL: {status['backend_url']}"
 
 
-@function_tool
+@function_tool(name_override="stop_backend_sidecar")
 @instrument_tool("stop_backend_sidecar")
 @enforce_tool_permission("stop_backend_sidecar")
 def stop_backend_sidecar_tool() -> str:
@@ -42,7 +42,7 @@ def stop_backend_sidecar_tool() -> str:
     return f"Backend sidecar stop requested. Status: {status['status']}."
 
 
-@function_tool
+@function_tool(name_override="restart_backend_sidecar")
 @instrument_tool("restart_backend_sidecar")
 @enforce_tool_permission("restart_backend_sidecar")
 def restart_backend_sidecar_tool() -> str:

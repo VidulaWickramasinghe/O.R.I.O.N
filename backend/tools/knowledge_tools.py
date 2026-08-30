@@ -11,17 +11,27 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 
 
-@function_tool
+@function_tool(name_override="index_knowledge_document")
 @instrument_tool("index_knowledge_document")
 @enforce_tool_permission("index_knowledge_document")
-def index_knowledge_document(path: str, summary: str = "") -> str:
+def index_knowledge_document(
+    workspace_id: int,
+    relative_path: str,
+    source_consent: bool,
+    summary: str = "",
+) -> str:
     """
-    Index a supported local knowledge document.
+    Index a supported document from a trusted, consented workspace.
     Supported files include markdown, text, JSON, CSV, Python, TypeScript,
     JavaScript, CSS, and HTML.
     """
     try:
-        result = index_document(path=path, summary=summary)
+        result = index_document(
+            workspace_id=workspace_id,
+            relative_path=relative_path,
+            source_consent=source_consent,
+            summary=summary,
+        )
         return f"""
 Knowledge document indexed.
 Document ID: {result['document_id']}
@@ -35,15 +45,23 @@ Size: {result['size_bytes']} bytes
         return f"Knowledge document indexing failed: {error}"
 
 
-@function_tool
+@function_tool(name_override="index_knowledge_folder")
 @instrument_tool("index_knowledge_folder")
 @enforce_tool_permission("index_knowledge_folder")
-def index_knowledge_folder_tool(folder_path: str) -> str:
+def index_knowledge_folder_tool(
+    workspace_id: int,
+    relative_path: str = ".",
+    source_consent: bool = False,
+) -> str:
     """
-    Index supported documents inside a local folder.
+    Index supported documents inside a trusted, consented workspace folder.
     """
     try:
-        result = index_knowledge_folder(folder_path)
+        result = index_knowledge_folder(
+            workspace_id=workspace_id,
+            relative_path=relative_path,
+            source_consent=source_consent,
+        )
         return f"""
 Knowledge folder indexed.
 Folder: {result['folder']}
@@ -54,7 +72,7 @@ Failed: {result['failed_count']}
         return f"Knowledge folder indexing failed: {error}"
 
 
-@function_tool
+@function_tool(name_override="list_knowledge_documents")
 @instrument_tool("list_knowledge_documents")
 @enforce_tool_permission("list_knowledge_documents")
 def list_knowledge_documents_tool(limit: int = 20) -> str:
@@ -71,7 +89,7 @@ def list_knowledge_documents_tool(limit: int = 20) -> str:
     )
 
 
-@function_tool
+@function_tool(name_override="search_local_knowledge")
 @instrument_tool("search_local_knowledge")
 @enforce_tool_permission("search_local_knowledge")
 def search_local_knowledge(query: str, limit: int = 10) -> str:
@@ -91,7 +109,7 @@ def search_local_knowledge(query: str, limit: int = 10) -> str:
     )
 
 
-@function_tool
+@function_tool(name_override="summarize_knowledge_document")
 @instrument_tool("summarize_knowledge_document")
 @enforce_tool_permission("summarize_knowledge_document")
 def summarize_knowledge_document_tool(document_id: int) -> str:

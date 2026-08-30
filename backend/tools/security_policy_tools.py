@@ -10,7 +10,7 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 
 
-@function_tool
+@function_tool(name_override="list_security_profiles")
 @instrument_tool("list_security_profiles")
 @enforce_tool_permission("list_security_profiles")
 def list_security_profiles_tool() -> str:
@@ -28,7 +28,7 @@ def list_security_profiles_tool() -> str:
     )
 
 
-@function_tool
+@function_tool(name_override="get_active_security_policy")
 @instrument_tool("get_active_security_policy")
 @enforce_tool_permission("get_active_security_policy")
 def get_active_security_policy_tool() -> str:
@@ -52,7 +52,7 @@ Plugin Metrics:
 """.strip()
 
 
-@function_tool
+@function_tool(name_override="apply_security_profile")
 @instrument_tool("apply_security_profile")
 @enforce_tool_permission("apply_security_profile")
 def apply_security_profile_tool(profile_key: str) -> str:

@@ -11,6 +11,7 @@ from agents import Agent, Runner, SQLiteSession
 
 from core.prompt import ORION_SYSTEM_PROMPT
 from core.context_engine import prepare_context_enriched_input
+from core.capability_gateway import CapabilityContext, authorized, execution_identity
 from tools.safe_tools import create_note, read_note, save_activity_log, list_notes
 from tools.project_tools import (
     register_project,
@@ -403,13 +404,14 @@ async def run_orion_voice():
             speak_text("O.R.I.O.N. shutting down.")
             break
 
-        contextual_input = prepare_context_enriched_input(user_input)
-
-        result = await Runner.run(
-            orion,
-            contextual_input,
-            session=session,
-        )
+        context = CapabilityContext(actor="voice_agent", source="voice_mode")
+        with authorized("agent_chat", context), execution_identity(context):
+            contextual_input = prepare_context_enriched_input(user_input)
+            result = await Runner.run(
+                orion,
+                contextual_input,
+                session=session,
+            )
 
         console.print(
             Panel(

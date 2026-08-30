@@ -16,8 +16,10 @@ from openai import OpenAI
 from core.knowledge_base import list_knowledge_documents, read_document_chunks
 from core.persistent_memory import list_recent_memory
 from core.database import managed_connection
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DB_PATH = DATA_DIR / "orion_vectors.sqlite"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -90,6 +92,7 @@ def cosine_similarity(a: List[float], b: List[float]) -> float:
     return dot / (norm_a * norm_b)
 
 
+@requires_gateway
 def upsert_vector_item(
     source_type: str,
     source_id: str,
@@ -309,6 +312,7 @@ def index_knowledge_documents_to_vectors(limit: int = 50) -> Dict[str, Any]:
     }
 
 
+@requires_gateway
 def rebuild_vector_index() -> Dict[str, Any]:
     init_vector_db()
     memory_result = index_recent_memories_to_vectors(limit=80)

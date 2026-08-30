@@ -12,10 +12,11 @@ from typing import Any, Dict
 from core.frontend_refactor import inspect_frontend_architecture
 from core.release_candidate import generate_release_checklist, get_freeze_state
 from core.stabilization_manager import run_stabilization_scan
+from core.runtime_paths import runtime_data_dir
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-REPORT_DIR = PROJECT_ROOT / "backend" / "data" / "quality_gate_reports"
+REPORT_DIR = runtime_data_dir() / "quality_gate_reports"
 
 
 def _now() -> str:

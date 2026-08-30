@@ -9,6 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 from core.demo_recording import inspect_demo_recording_readiness
 from core.demo_walkthrough import inspect_demo_walkthrough
 from core.frontend_refactor import inspect_frontend_architecture
@@ -20,7 +23,7 @@ from core.release_verification import generate_release_verification_snapshot
 from core.stabilization_manager import run_stabilization_scan
 
 
-FINAL_LAUNCH_DIR = Path(__file__).resolve().parents[1] / "data" / "final_launch"
+FINAL_LAUNCH_DIR = runtime_data_dir() / "final_launch"
 FREEZE_STATE_FILE = FINAL_LAUNCH_DIR / "final_launch_freeze_state.json"
 RELEASE_VERSION = "v6.5"
 RELEASE_NAME = "Final Public Launch Checklist + Repository Freeze"
@@ -87,6 +90,7 @@ def load_final_launch_freeze_state() -> Dict[str, Any]:
         return DEFAULT_FREEZE_STATE.copy()
 
 
+@requires_gateway
 def save_final_launch_freeze_state(state: Dict[str, Any]) -> Dict[str, Any]:
     normalized = _normalize_freeze_state(state)
     normalized["updated_at"] = _now()
@@ -103,6 +107,7 @@ def _validate_reason(reason: str) -> str:
     return value
 
 
+@requires_gateway
 def freeze_final_launch(
     reason: str = "Final public portfolio launch preparation.",
 ) -> Dict[str, Any]:
@@ -116,6 +121,7 @@ def freeze_final_launch(
     return save_final_launch_freeze_state(state)
 
 
+@requires_gateway
 def unfreeze_final_launch(reason: str = "Final launch freeze lifted.") -> Dict[str, Any]:
     state = load_final_launch_freeze_state()
     state.update({
@@ -190,6 +196,7 @@ delete, expose secrets, make the Git repository immutable, or bypass approvals.
 """
 
 
+@requires_gateway
 def save_final_launch_report() -> Dict[str, Any]:
     checklist = generate_final_launch_checklist()
     report = render_final_launch_report(checklist)
@@ -198,6 +205,7 @@ def save_final_launch_report() -> Dict[str, Any]:
     return {"status": "saved", "generated_at": _now(), "path": str(path), "report": report, "checklist": checklist}
 
 
+@requires_gateway
 def generate_final_launch_package() -> Dict[str, Any]:
     checklist = generate_final_launch_checklist()
     if not checklist["final_freeze"]["frozen"]:

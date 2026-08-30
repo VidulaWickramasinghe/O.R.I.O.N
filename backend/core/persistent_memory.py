@@ -5,8 +5,10 @@ from typing import List, Dict, Any
 
 
 from core.database import managed_connection
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DB_PATH = DATA_DIR / "orion_memory.sqlite"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -35,6 +37,7 @@ def init_memory_db() -> None:
         conn.commit()
 
 
+@requires_gateway
 def save_memory_item(
     category: str,
     title: str,

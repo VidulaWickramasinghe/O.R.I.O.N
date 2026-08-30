@@ -1,10 +1,11 @@
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 from core.approvals import create_approval_request, get_approval_request
+from core.capability_gateway import requires_gateway
 from core.workspace_manager import get_workspace_record
 
 
@@ -114,14 +115,17 @@ def request_start_workspace_dev_server(workspace_id: int) -> int:
     )
 
 
-def execute_approved_desktop_action(approval_id: int) -> str:
-    approval = get_approval_request(approval_id)
+@requires_gateway
+def execute_approved_desktop_action(
+    approval_id: int, approval: Optional[Dict[str, Any]] = None
+) -> str:
+    approval = approval or get_approval_request(approval_id)
 
     if not approval:
         return "Approval request not found."
 
-    if approval["status"] != "pending":
-        return f"Approval request is already {approval['status']}."
+    if approval["status"] != "executing":
+        return f"Approval request is not executing (status: {approval['status']})."
 
     action_type = approval["action_type"]
     payload: Dict[str, Any] = approval.get("payload", {})

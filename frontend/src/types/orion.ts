@@ -128,6 +128,7 @@ export type UserSettingsProfile = {
 
 export type WorkspaceItem = {
   id: number; name: string; path: string; description: string; status: string;
+  trusted?: boolean; source_consent?: boolean; consent_source?: string; consented_at?: string | null;
   created_at: string; updated_at: string;
 };
 

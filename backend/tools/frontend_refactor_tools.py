@@ -9,7 +9,7 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 
 
-@function_tool
+@function_tool(name_override="inspect_frontend_architecture")
 @instrument_tool("inspect_frontend_architecture")
 @enforce_tool_permission("inspect_frontend_architecture")
 def inspect_frontend_architecture_tool() -> str:

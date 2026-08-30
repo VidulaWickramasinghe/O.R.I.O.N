@@ -33,9 +33,12 @@ def register_workspace(
     path: str,
     description: str = "",
     status: str = "active",
+    trusted: bool = False,
+    source_consent: bool = False,
 ) -> str:
     """
-    Register a local project workspace path for O.R.I.O.N. to inspect safely.
+    Register a local workspace after the user explicitly trusts and consents
+    to O.R.I.O.N. accessing that source root.
     """
     try:
         workspace_id = register_workspace_record(
@@ -43,6 +46,9 @@ def register_workspace(
             path=path,
             description=description,
             status=status,
+            trusted=trusted,
+            source_consent=source_consent,
+            consent_source="agent_explicit_user_consent",
         )
         return f"Workspace registered: {name} | Workspace ID: {workspace_id}"
     except Exception as error:
@@ -77,6 +83,8 @@ Workspace ID: {workspace['id']}
 Name: {workspace['name']}
 Path: {workspace['path']}
 Status: {workspace['status']}
+Trusted: {bool(workspace.get('trusted'))}
+Source consent: {bool(workspace.get('source_consent'))}
 
 Description:
 {workspace['description']}

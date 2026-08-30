@@ -7,6 +7,7 @@ from typing import Any, Dict
 from core.stable_release import generate_stable_release_checklist, load_version_lock
 from core.production_readiness import generate_production_readiness_snapshot
 from core.release_verification import generate_release_verification_snapshot
+from core.capability_gateway import requires_gateway
 
 ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'backend/data/post_release_maintenance'; ISSUES=OUT/'known_issues.json'; RELEASE_VERSION='v6.5'; _LOCK=threading.RLock(); DEFAULT={'issues':[],'updated_at':''}; PRIORITIES={'critical','high','medium','low'}
 def _now(): return datetime.now().isoformat(timespec='seconds')
@@ -31,6 +32,7 @@ def load_known_issues():
  except (OSError,json.JSONDecodeError): return DEFAULT.copy()
  issues=[item for item in (_normalize_issue(x) for x in raw.get('issues',[]) if isinstance(raw,dict)) if item]
  return {'issues':issues,'updated_at':str(raw.get('updated_at',''))[:32]}
+@requires_gateway
 def save_known_issues(data):
  normalized={'issues':[item for item in (_normalize_issue(x) for x in data.get('issues',[])) if item], 'updated_at':_now()}; _atomic(ISSUES,json.dumps(normalized,indent=2,sort_keys=True)); return normalized
 def classify_issue_text(title,body=''):
@@ -40,6 +42,7 @@ def classify_issue_text(title,body=''):
  for candidate,level,words,suggestion in rules:
   if any(word in text for word in words): category,priority,action=candidate,level,suggestion; break
  return {'title':title,'category':category,'priority':priority,'suggested_action':action,'classified_at':_now()}
+@requires_gateway
 def add_known_issue(title,body='',source='manual'):
  body=_text(body,'Body',5000); source=_text(source,'Source',40,True); classification=classify_issue_text(title,body); now=_now()
  issue={'id':f'issue_{uuid.uuid4().hex}','title':classification['title'],'body':body,'source':source,'status':'open','category':classification['category'],'priority':classification['priority'],'suggested_action':classification['suggested_action'],'created_at':now,'updated_at':now}
@@ -57,5 +60,6 @@ def generate_maintenance_snapshot():
 def render_maintenance_report(snapshot=None):
  snapshot=snapshot or generate_maintenance_snapshot(); lines='\n'.join(f"- [{'x' if x['ok'] else ' '}] {x['name']} — {x['details']}" for x in snapshot['checks']); issues='\n'.join(f"- [{x['priority']}] {x['title']} — {x['category']}" for x in snapshot['patch_plan']['open_issues']) or 'None'
  return f"# O.R.I.O.N. {RELEASE_VERSION} Post-Release Maintenance Report\n\nGenerated: {snapshot['generated_at']}\nStatus: {snapshot['status']}\n\n## Checks\n\n{lines}\n\n## Open Issues\n\n{issues}\n\n## Safety\n\nLocal triage only; no GitHub changes, push, publishing, deletion, or approval bypass.\n"
+@requires_gateway
 def save_maintenance_report():
  snapshot=generate_maintenance_snapshot(); report=render_maintenance_report(snapshot); path=OUT/f'POST_RELEASE_MAINTENANCE_REPORT_{_stamp()}.md'; _atomic(path,report); return {'status':'saved','generated_at':_now(),'path':str(path),'report':report,'snapshot':snapshot}

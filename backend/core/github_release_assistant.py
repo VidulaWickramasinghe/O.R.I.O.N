@@ -3,11 +3,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 from core.workspace_manager import get_workspace_record
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 RELEASE_DIR = DATA_DIR / "github_release_assistant"
 
 RELEASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -176,6 +178,7 @@ def inspect_release_readiness(workspace_id: int) -> str:
     ]).strip()
 
 
+@requires_gateway
 def save_release_artifact(
     workspace_id: int,
     file_name: str,

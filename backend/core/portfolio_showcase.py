@@ -6,9 +6,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SHOWCASE_DIR = PROJECT_ROOT / "backend" / "data" / "portfolio_showcase"
+SHOWCASE_DIR = runtime_data_dir() / "portfolio_showcase"
 SCREENSHOTS_DIR = PROJECT_ROOT / "assets" / "screenshots"
 EXPECTED_SCREENSHOTS = (
     "aurora-os-dashboard.png", "dashboard-intelligence.png", "dashboard-views.png",
@@ -60,6 +63,7 @@ Presentation-only: no push, publishing, deletion, secret exposure, or approval b
 """
 
 
+@requires_gateway
 def save_portfolio_showcase_report() -> Dict[str, Any]:
     scan = inspect_portfolio_showcase()
     report = render_portfolio_showcase_report(scan)

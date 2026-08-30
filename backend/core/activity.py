@@ -3,9 +3,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 ACTIVITY_FILE = DATA_DIR / "activity_timeline.json"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -50,5 +53,6 @@ def get_recent_activity(limit: int = 30) -> List[Dict[str, Any]]:
     return list(reversed(events[-limit:]))
 
 
+@requires_gateway
 def clear_activity() -> None:
     _save_events([])

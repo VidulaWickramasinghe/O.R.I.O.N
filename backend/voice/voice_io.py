@@ -6,7 +6,7 @@ import sounddevice as sd
 import pyttsx3
 from openai import OpenAI
 
-from core.voice_state import update_voice_state
+from core.voice_state import execute_voice_state_update
 
 
 AUDIO_DIR = Path("backend/data/audio")
@@ -15,13 +15,17 @@ AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
+def _update_voice_state(**updates):
+    return execute_voice_state_update("voice_agent", "voice_io", **updates)
+
+
 def record_voice(duration: int = 6, sample_rate: int = 16000) -> Path:
     """
     Record microphone audio and save it as a WAV file.
     """
     file_path = AUDIO_DIR / "voice_input.wav"
 
-    update_voice_state(
+    _update_voice_state(
         mode="recording",
         listening=True,
         last_event=f"Recording voice for {duration} seconds.",
@@ -44,7 +48,7 @@ def record_voice(duration: int = 6, sample_rate: int = 16000) -> Path:
         wav_file.setframerate(sample_rate)
         wav_file.writeframes(audio.tobytes())
 
-    update_voice_state(
+    _update_voice_state(
         mode="recorded",
         listening=False,
         last_event=f"Audio saved: {file_path}",
@@ -58,7 +62,7 @@ def transcribe_voice(audio_path: Path) -> str:
     """
     Convert recorded voice audio into text.
     """
-    update_voice_state(
+    _update_voice_state(
         mode="transcribing",
         listening=False,
         last_event="Transcribing voice input.",
@@ -72,7 +76,7 @@ def transcribe_voice(audio_path: Path) -> str:
 
     text = transcript.text.strip()
 
-    update_voice_state(
+    _update_voice_state(
         mode="transcribed",
         last_transcript=text,
         last_event="Voice transcription completed.",
@@ -106,7 +110,7 @@ def speak_text(text: str, concise: bool = True) -> None:
     """
     spoken_text = prepare_voice_reply(text) if concise else text
 
-    update_voice_state(
+    _update_voice_state(
         mode="speaking",
         last_response=spoken_text,
         last_event="O.R.I.O.N. is speaking.",
@@ -120,7 +124,7 @@ def speak_text(text: str, concise: bool = True) -> None:
     engine.say(spoken_text)
     engine.runAndWait()
 
-    update_voice_state(
+    _update_voice_state(
         mode="idle",
         last_event="O.R.I.O.N. finished speaking.",
     )

@@ -11,7 +11,7 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 
 
-@function_tool
+@function_tool(name_override="create_local_reminder")
 @instrument_tool("create_local_reminder")
 @enforce_tool_permission("create_local_reminder")
 def create_local_reminder(
@@ -45,7 +45,7 @@ Status: {reminder['status']}
         return f"Reminder creation failed: {error}"
 
 
-@function_tool
+@function_tool(name_override="list_local_reminders")
 @instrument_tool("list_local_reminders")
 @enforce_tool_permission("list_local_reminders")
 def list_local_reminders(status: str = "", limit: int = 20) -> str:
@@ -80,7 +80,7 @@ def complete_local_reminder(reminder_id: int) -> str:
         return f"Reminder completion failed: {error}"
 
 
-@function_tool
+@function_tool(name_override="refresh_due_reminders")
 @instrument_tool("refresh_due_reminders")
 @enforce_tool_permission("refresh_due_reminders")
 def refresh_due_reminders_tool() -> str:
@@ -96,7 +96,7 @@ def refresh_due_reminders_tool() -> str:
     )
 
 
-@function_tool
+@function_tool(name_override="generate_startup_briefing")
 @instrument_tool("generate_startup_briefing")
 @enforce_tool_permission("generate_startup_briefing")
 def generate_startup_briefing_tool() -> str:

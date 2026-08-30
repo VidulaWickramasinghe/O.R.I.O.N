@@ -9,9 +9,11 @@ from core.github_launch import generate_github_launch_checklist, generate_releas
 from core.production_readiness import generate_final_release_candidate_v2, generate_production_readiness_snapshot
 from core.release_candidate import get_freeze_state
 from core.release_verification import generate_release_verification_snapshot
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "backend" / "data" / "stable_release"
+OUT = runtime_data_dir() / "stable_release"
 LOCK = OUT / "orion_version_lock.json"
 RELEASE_VERSION = "v6.5"
 RELEASE_NAME = "Stable Public Release + Version Lock"
@@ -34,10 +36,13 @@ def _normalize(value: Any) -> Dict[str, Any]:
 def load_version_lock() -> Dict[str, Any]:
     try: return _normalize(json.loads(LOCK.read_text(encoding="utf-8")))
     except (OSError, json.JSONDecodeError): return DEFAULT.copy()
+@requires_gateway
 def save_version_lock(state: Dict[str, Any]) -> Dict[str, Any]:
     state=_normalize(state); state["updated_at"]=_now(); _atomic(LOCK, json.dumps(state, indent=2, sort_keys=True)); return state
+@requires_gateway
 def lock_stable_release(reason="O.R.I.O.N. stable public release lock."):
     state=load_version_lock(); state.update({"locked": True, "release_status": "stable_locked", "locked_at": _now(), "unlocked_at": "", "lock_reason": _reason(reason)}); return save_version_lock(state)
+@requires_gateway
 def unlock_stable_release(reason="O.R.I.O.N. stable release lock lifted."):
     state=load_version_lock(); state.update({"locked": False, "release_status": "unlocked", "unlocked_at": _now(), "lock_reason": _reason(reason)}); return save_version_lock(state)
 
@@ -52,8 +57,10 @@ def generate_manual_github_release_workflow(): return "# Manual GitHub Release W
 def render_stable_release_report(checklist=None):
     checklist=checklist or generate_stable_release_checklist(); lines="\n".join(f"- [{'x' if c['ok'] else ' '}] {c['name']} — {c['details']}" for c in checklist["checks"])
     return f"# O.R.I.O.N. {RELEASE_VERSION} Stable Public Release Report\n\nGenerated: {checklist['generated_at']}\nStatus: {checklist['status']}\nPassed: {checklist['passed']}\nFailed: {checklist['failed']}\n\n## Checklist\n\n{lines}\n\n## Safety\n\nThe version lock is a local marker, not an immutable Git lock. No push or publishing is performed.\n"
+@requires_gateway
 def save_stable_release_report():
     checklist=generate_stable_release_checklist(); report=render_stable_release_report(checklist); path=OUT/f"STABLE_RELEASE_REPORT_{_stamp()}.md"; _atomic(path,report); return {"status":"saved","generated_at":_now(),"path":str(path),"report":report,"checklist":checklist}
+@requires_gateway
 def generate_stable_release_package():
     checklist=generate_stable_release_checklist()
     if not checklist["version_lock"]["locked"]: raise ValueError("Stable release must be locked before packaging.")

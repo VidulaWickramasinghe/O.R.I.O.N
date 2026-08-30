@@ -11,9 +11,11 @@ from typing import Any, Dict
 from core.post_release_maintenance import generate_patch_plan
 from core.release_verification import generate_release_verification_snapshot
 from core.stable_release import generate_stable_release_checklist, load_version_lock
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
 
-PATCH_RELEASE_DIR = Path(__file__).resolve().parents[1] / "data" / "patch_release"
+PATCH_RELEASE_DIR = runtime_data_dir() / "patch_release"
 PATCH_STATE_FILE = PATCH_RELEASE_DIR / "patch_release_state.json"
 
 DEFAULT_PATCH_STATE: Dict[str, Any] = {
@@ -80,6 +82,7 @@ def load_patch_state() -> Dict[str, Any]:
         return DEFAULT_PATCH_STATE.copy()
 
 
+@requires_gateway
 def save_patch_state(state: Dict[str, Any]) -> Dict[str, Any]:
     saved = _normalize_state(state)
     saved["updated_at"] = _now()
@@ -87,12 +90,14 @@ def save_patch_state(state: Dict[str, Any]) -> Dict[str, Any]:
     return saved
 
 
+@requires_gateway
 def start_patch_release(patch_version: str = "v6.5.2", patch_type: str = "maintenance", reason: str = "Post-release maintenance patch.") -> Dict[str, Any]:
     if patch_type not in {"maintenance", "bugfix", "hotfix"}:
         raise ValueError("Patch type must be maintenance, bugfix, or hotfix.")
     return save_patch_state({**load_patch_state(), "active": True, "patch_version": _validate_version(patch_version), "patch_type": patch_type, "started_at": _now(), "completed_at": "", "reason": _clean_reason(reason)})
 
 
+@requires_gateway
 def complete_patch_release(reason: str = "Patch release workflow completed locally.") -> Dict[str, Any]:
     state = load_patch_state()
     if not state["active"]:
@@ -197,6 +202,7 @@ No GitHub push, release publishing, GitHub issue modification, deletion, or appr
 """
 
 
+@requires_gateway
 def save_patch_release_report() -> Dict[str, Any]:
     report = render_patch_release_report()
     path = PATCH_RELEASE_DIR / f"PATCH_RELEASE_REPORT_{_timestamp()}.md"
@@ -204,6 +210,7 @@ def save_patch_release_report() -> Dict[str, Any]:
     return {"status": "saved", "generated_at": _now(), "path": str(path), "report": report}
 
 
+@requires_gateway
 def generate_patch_release_package() -> Dict[str, Any]:
     """Generate local report, notes, checklist, and JSON summary only."""
     checklist, timestamp = generate_hotfix_checklist(), _timestamp()

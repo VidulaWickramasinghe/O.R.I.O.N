@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Optional
 
 
 from core.database import managed_connection
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DB_PATH = DATA_DIR / "orion_missions.sqlite"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -51,6 +53,7 @@ def init_mission_db() -> None:
         conn.commit()
 
 
+@requires_gateway
 def create_mission_record(
     title: str,
     goal: str,
@@ -138,6 +141,7 @@ def get_mission_record(mission_id: int) -> Optional[Dict[str, Any]]:
     return result
 
 
+@requires_gateway
 def update_mission_status_record(mission_id: int, status: str) -> bool:
     init_mission_db()
     now = datetime.now().isoformat(timespec="seconds")
@@ -156,6 +160,7 @@ def update_mission_status_record(mission_id: int, status: str) -> bool:
     return cursor.rowcount > 0
 
 
+@requires_gateway
 def update_mission_step_status_record(step_id: int, status: str) -> bool:
     init_mission_db()
     now = datetime.now().isoformat(timespec="seconds")
@@ -174,6 +179,7 @@ def update_mission_step_status_record(step_id: int, status: str) -> bool:
     return cursor.rowcount > 0
 
 
+@requires_gateway
 def add_mission_step_record(
     mission_id: int,
     title: str,
