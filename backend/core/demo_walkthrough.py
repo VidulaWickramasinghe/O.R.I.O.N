@@ -6,8 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
-DEMO_DIR = Path(__file__).resolve().parents[1] / "data" / "demo_walkthrough"
+
+DEMO_DIR = runtime_data_dir() / "demo_walkthrough"
 DEMO_STEPS = (
     "Open Aurora OS",
     "Show Dashboard Intelligence",
@@ -64,6 +67,7 @@ Status: {scan['status']}
 """
 
 
+@requires_gateway
 def save_demo_walkthrough_report() -> Dict[str, Any]:
     scan = inspect_demo_walkthrough()
     report = render_demo_walkthrough_report(scan)

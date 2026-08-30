@@ -12,6 +12,7 @@ from typing import Any, Dict, List
 
 from core.patch_release import load_patch_state
 from core.post_release_maintenance import load_known_issues
+from core.capability_gateway import requires_gateway
 from core.stable_release import load_version_lock
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -194,6 +195,7 @@ def load_future_features() -> Dict[str, Any]:
     }
 
 
+@requires_gateway
 def save_future_features(data: Dict[str, Any]) -> Dict[str, Any]:
     normalized = {
         "features": _dedupe_features(data.get("features", [])),
@@ -303,6 +305,7 @@ def classify_feature_request(title: str, description: str = "") -> Dict[str, Any
     }
 
 
+@requires_gateway
 def add_future_feature(
     title: str,
     description: str = "",
@@ -450,6 +453,7 @@ def render_roadmap_report(governance: Dict[str, Any] | None = None) -> str:
     )
 
 
+@requires_gateway
 def save_roadmap_report() -> Dict[str, Any]:
     governance = generate_governance_checklist()
     report = render_roadmap_report(governance)
@@ -466,6 +470,7 @@ def save_roadmap_report() -> Dict[str, Any]:
     }
 
 
+@requires_gateway
 def generate_roadmap_package() -> Dict[str, Any]:
     governance = generate_governance_checklist()
     report = render_roadmap_report(governance)

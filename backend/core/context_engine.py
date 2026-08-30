@@ -12,10 +12,12 @@ from core.knowledge_base import search_knowledge, list_knowledge_documents
 from core.vector_memory import semantic_search
 from core.user_settings import get_user_settings_map, render_user_profile_summary
 from core.plugin_registry import get_plugin_metrics, list_plugins
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 PROJECTS_FILE = DATA_DIR / "projects.json"
 CONTEXT_HISTORY_FILE = DATA_DIR / "context_history.json"
 
@@ -345,6 +347,7 @@ Instructions:
 """.strip()
 
 
+@requires_gateway
 def save_context_history(bundle: Dict[str, Any]) -> None:
     history = []
 

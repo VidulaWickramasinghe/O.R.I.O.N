@@ -11,7 +11,7 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 
 
-@function_tool
+@function_tool(name_override="get_release_candidate_status")
 @instrument_tool("get_release_candidate_status")
 @enforce_tool_permission("get_release_candidate_status")
 def get_release_candidate_status() -> str:
@@ -54,7 +54,7 @@ Reason: {state['freeze_reason']}
 Unfrozen At: {state['unfrozen_at']}"""
 
 
-@function_tool
+@function_tool(name_override="generate_release_candidate_package")
 @instrument_tool("generate_release_candidate_package")
 @enforce_tool_permission("generate_release_candidate_package")
 def generate_release_candidate_package_tool() -> str:

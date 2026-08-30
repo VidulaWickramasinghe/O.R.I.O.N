@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">O.R.I.O.N. Aurora OS</title>
+  <defs>
+    <radialGradient id="space" cx="50%" cy="42%" r="70%">
+      <stop offset="0" stop-color="#172554"/>
+      <stop offset="0.62" stop-color="#07111f"/>
+      <stop offset="1" stop-color="#020617"/>
+    </radialGradient>
+    <linearGradient id="aurora" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#67e8f9"/>
+      <stop offset="0.5" stop-color="#22d3ee"/>
+      <stop offset="1" stop-color="#818cf8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#space)"/>
+  <circle cx="256" cy="256" r="154" fill="none" stroke="#164e63" stroke-width="18"/>
+  <circle cx="256" cy="256" r="112" fill="none" stroke="url(#aurora)" stroke-width="28"/>
+  <path d="M112 299c82-33 206-65 288-84" fill="none" stroke="#a5f3fc" stroke-width="13" stroke-linecap="round" opacity=".9"/>
+  <circle cx="394" cy="218" r="21" fill="#e0f2fe"/>
+  <circle cx="256" cy="256" r="37" fill="url(#aurora)"/>
+  <path d="m256 156 13 56 51-27-37 43 55 16-57 2 22 53-34-45-31 47 18-55-57 3 54-20-40-40 52 25z" fill="#cffafe" opacity=".8"/>
+</svg>

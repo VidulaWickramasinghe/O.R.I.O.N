@@ -444,7 +444,9 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
   const [displayDate, setDisplayDate] = useState("");
   const [greeting, setGreeting] = useState("Welcome");
   const [knowledgeDocuments, setKnowledgeDocuments] = useState<KnowledgeDocumentItem[]>([]);
+  const [knowledgeWorkspaceId, setKnowledgeWorkspaceId] = useState("");
   const [knowledgePath, setKnowledgePath] = useState("");
+  const [knowledgeConsent, setKnowledgeConsent] = useState(false);
   const [knowledgeQuery, setKnowledgeQuery] = useState("");
   const [knowledgeResults, setKnowledgeResults] = useState<KnowledgeSearchItem[]>([]);
   const [knowledgeLoading, setKnowledgeLoading] = useState(false);
@@ -526,7 +528,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
   async function loadKnowledgeDocuments() { try { const data = await getKnowledgeDocuments(); setKnowledgeDocuments((data.documents || []) as KnowledgeDocumentItem[]); } catch { setKnowledgeDocuments([]); } }
 
-  async function indexKnowledgeFolderFromUI() { const cleanPath = knowledgePath.trim(); if (!cleanPath || knowledgeLoading) return; setKnowledgeLoading(true); setKnowledgeMessage(""); try { const data = await indexKnowledgeFolder(cleanPath); setKnowledgeMessage(`Knowledge indexing status: ${data.status}. ${data.message}`); await loadKnowledgeDocuments(); } catch { setKnowledgeMessage("Knowledge folder indexing failed. Confirm backend is running."); } finally { setKnowledgeLoading(false); } }
+  async function indexKnowledgeFolderFromUI() { const cleanPath = knowledgePath.trim() || "."; const workspaceId = Number.parseInt(knowledgeWorkspaceId, 10); if (!Number.isFinite(workspaceId) || workspaceId <= 0) { setKnowledgeMessage("Select a trusted workspace before indexing."); return; } if (!knowledgeConsent) { setKnowledgeMessage("Confirm source consent before indexing workspace content."); return; } if (knowledgeLoading) return; setKnowledgeLoading(true); setKnowledgeMessage(""); try { const data = await indexKnowledgeFolder(workspaceId, cleanPath, knowledgeConsent); setKnowledgeMessage(`Knowledge indexing status: ${data.status}. ${data.message}`); await loadKnowledgeDocuments(); } catch { setKnowledgeMessage("Knowledge folder indexing failed. Confirm the workspace is trusted and the backend is running."); } finally { setKnowledgeLoading(false); } }
 
   async function searchKnowledgeFromUI() { const cleanQuery = knowledgeQuery.trim(); if (!cleanQuery || knowledgeLoading) return; setKnowledgeLoading(true); setKnowledgeMessage(""); try { const data = await searchKnowledge(cleanQuery); setKnowledgeResults((data.results || []) as KnowledgeSearchItem[]); } catch { setKnowledgeResults([]); setKnowledgeMessage("Knowledge search failed. Confirm backend is running."); } finally { setKnowledgeLoading(false); } }
 
@@ -925,7 +927,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
         <div className="grid gap-5 2xl:grid-cols-2">
           <div className="space-y-5">
             {widgets.includes("Dashboard Intelligence") && panelVisible("dashboard-intelligence") && <SafePanel panelId="dashboard-intelligence"><DashboardIntelligencePanel intelligence={dashboardIntelligence} loading={dashboardIntelligenceLoading} message={dashboardIntelligenceMessage} onRefresh={loadDashboardIntelligence} /></SafePanel>}
-            {widgets.includes("Knowledge Base") && <KnowledgeBasePanel documents={knowledgeDocuments} path={knowledgePath} query={knowledgeQuery} results={knowledgeResults} loading={knowledgeLoading} message={knowledgeMessage} setPath={setKnowledgePath} setQuery={setKnowledgeQuery} indexFolder={indexKnowledgeFolderFromUI} searchKnowledge={searchKnowledgeFromUI} />}
+            {widgets.includes("Knowledge Base") && <KnowledgeBasePanel documents={knowledgeDocuments} workspaces={workspaces} workspaceId={knowledgeWorkspaceId} path={knowledgePath} consent={knowledgeConsent} query={knowledgeQuery} results={knowledgeResults} loading={knowledgeLoading} message={knowledgeMessage} setWorkspaceId={setKnowledgeWorkspaceId} setPath={setKnowledgePath} setConsent={setKnowledgeConsent} setQuery={setKnowledgeQuery} indexFolder={indexKnowledgeFolderFromUI} searchKnowledge={searchKnowledgeFromUI} />}
             {widgets.includes("Semantic Memory") && <SemanticMemoryPanel vectorItems={vectorItems} semanticQuery={semanticQuery} semanticResults={semanticResults} loading={vectorLoading} message={vectorMessage} setSemanticQuery={setSemanticQuery} rebuildVectorIndex={rebuildVectorIndexFromUI} runSemanticSearch={runSemanticSearchFromUI} />}
             {widgets.includes("Workflow Blueprints") && <WorkflowBlueprintsPanel blueprints={workflowBlueprints} selectedBlueprint={selectedWorkflowBlueprint} loadingKey={workflowLoadingKey} message={workflowMessage} workspaceId={workflowWorkspaceId} setWorkspaceId={setWorkflowWorkspaceId} inspectBlueprint={openWorkflowBlueprint} createMission={createMissionFromBlueprintUI} />}
             {widgets.includes("Developer Mode") && <AgenticDeveloperModePanel workspaces={workspaces} developerIssue={developerIssue} developerReports={developerReports} developerResult={developerResult} loadingAction={developerLoadingAction} message={developerMessage} setDeveloperIssue={setDeveloperIssue} inspectWorkspace={runDeveloperInspect} diagnoseWorkspace={runDeveloperDiagnosis} createPatchPlan={runDeveloperPatchPlan} />}
@@ -1395,23 +1397,33 @@ function SemanticMemoryPanel({
 
 function KnowledgeBasePanel({
   documents,
+  workspaces,
+  workspaceId,
   path,
+  consent,
   query,
   results,
   loading,
   message,
   setPath,
+  setWorkspaceId,
+  setConsent,
   setQuery,
   indexFolder,
   searchKnowledge,
 }: {
   documents: KnowledgeDocumentItem[];
+  workspaces: WorkspaceItem[];
+  workspaceId: string;
   path: string;
+  consent: boolean;
   query: string;
   results: KnowledgeSearchItem[];
   loading: boolean;
   message: string;
   setPath: (value: string) => void;
+  setWorkspaceId: (value: string) => void;
+  setConsent: (value: boolean) => void;
   setQuery: (value: string) => void;
   indexFolder: () => void;
   searchKnowledge: () => void;
@@ -1435,11 +1447,21 @@ function KnowledgeBasePanel({
           <p className="mb-2 text-xs uppercase tracking-[0.2em] text-slate-500">
             Index Folder
           </p>
-          <div className="flex gap-2">
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1fr)_auto]">
+            <select
+              value={workspaceId}
+              onChange={(event) => setWorkspaceId(event.target.value)}
+              className="min-w-0 rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm text-slate-200 outline-none ring-cyan-400/30 focus:ring-2"
+            >
+              <option value="">Select trusted workspace</option>
+              {workspaces.filter((workspace) => workspace.trusted && workspace.source_consent).map((workspace) => (
+                <option key={workspace.id} value={workspace.id}>{workspace.name}</option>
+              ))}
+            </select>
             <input
               value={path}
               onChange={(event) => setPath(event.target.value)}
-              placeholder="/home/titanvx/O.R.I.O.N/orion-ai/docs"
+              placeholder="Relative folder (for example: docs)"
               className="min-w-0 flex-1 rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2"
             />
             <button
@@ -1450,6 +1472,15 @@ function KnowledgeBasePanel({
               Index
             </button>
           </div>
+          <label className="mt-3 flex items-start gap-2 text-xs text-slate-400">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(event) => setConsent(event.target.checked)}
+              className="mt-0.5"
+            />
+            I consent to index supported, non-sensitive files from this trusted workspace scope.
+          </label>
         </div>
 
         <div>

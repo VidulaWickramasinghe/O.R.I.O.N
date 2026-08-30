@@ -13,7 +13,7 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 
 
-@function_tool
+@function_tool(name_override="inspect_workspace_for_development")
 @instrument_tool("inspect_workspace_for_development")
 @enforce_tool_permission("inspect_workspace_for_development")
 def inspect_workspace_for_development_tool(workspace_id: int) -> str:
@@ -23,7 +23,7 @@ def inspect_workspace_for_development_tool(workspace_id: int) -> str:
     return inspect_workspace_for_development(workspace_id)
 
 
-@function_tool
+@function_tool(name_override="diagnose_workspace_issue")
 @instrument_tool("diagnose_workspace_issue")
 @enforce_tool_permission("diagnose_workspace_issue")
 def diagnose_workspace_issue_tool(workspace_id: int, issue_description: str) -> str:
@@ -36,7 +36,7 @@ def diagnose_workspace_issue_tool(workspace_id: int, issue_description: str) -> 
     )
 
 
-@function_tool
+@function_tool(name_override="create_workspace_patch_plan")
 @instrument_tool("create_workspace_patch_plan")
 @enforce_tool_permission("create_workspace_patch_plan")
 def create_workspace_patch_plan(
@@ -54,7 +54,7 @@ def create_workspace_patch_plan(
     )
 
 
-@function_tool
+@function_tool(name_override="request_workspace_file_patch")
 @instrument_tool("request_workspace_file_patch")
 @enforce_tool_permission("request_workspace_file_patch")
 def request_workspace_file_patch_tool(
@@ -82,7 +82,7 @@ def request_workspace_file_patch_tool(
         return f"Workspace patch request failed: {error}"
 
 
-@function_tool
+@function_tool(name_override="list_developer_reports")
 @instrument_tool("list_developer_reports")
 @enforce_tool_permission("list_developer_reports")
 def list_developer_reports_tool(workspace_id: Optional[int] = None, limit: int = 20) -> str:

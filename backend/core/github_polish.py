@@ -10,9 +10,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-POLISH_DIR = PROJECT_ROOT / "backend" / "data" / "github_polish"
+POLISH_DIR = runtime_data_dir() / "github_polish"
 SCREENSHOTS_DIR = PROJECT_ROOT / "assets" / "screenshots"
 
 REQUIRED_PUBLIC_FILES = (
@@ -255,6 +258,7 @@ This report does not include secret values and does not push, publish, or delete
 """
 
 
+@requires_gateway
 def save_github_polish_artifacts() -> Dict[str, Any]:
     stamp = _timestamp()
     checklist = generate_github_polish_checklist()

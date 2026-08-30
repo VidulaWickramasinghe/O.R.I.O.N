@@ -3,9 +3,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DEMO_DIR = BACKEND_DIR / "demo_release"
 
 DEMO_STATE_FILE = DATA_DIR / "portfolio_demo_state.json"
@@ -26,7 +29,7 @@ def get_current_timestamp() -> str:
     return datetime.now().isoformat(timespec="seconds")
 
 
-def ensure_demo_directories() -> None:
+def _ensure_demo_directories() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     DEMO_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -35,15 +38,12 @@ def load_demo_state() -> Dict[str, Any]:
     """
     Load portfolio demo state from disk.
 
-    If the state file does not exist or is corrupted, a safe default state
-    is returned and saved.
+    If the state file does not exist or is corrupted, a safe in-memory default
+    is returned without mutating local state.
     """
-    ensure_demo_directories()
-
     if not DEMO_STATE_FILE.exists():
         state = DEFAULT_DEMO_STATE.copy()
         state["updated_at"] = get_current_timestamp()
-        save_demo_state(state)
         return state
 
     try:
@@ -51,7 +51,6 @@ def load_demo_state() -> Dict[str, Any]:
     except json.JSONDecodeError:
         state = DEFAULT_DEMO_STATE.copy()
         state["updated_at"] = get_current_timestamp()
-        save_demo_state(state)
         return state
 
     state = DEFAULT_DEMO_STATE.copy()
@@ -60,11 +59,12 @@ def load_demo_state() -> Dict[str, Any]:
     return state
 
 
+@requires_gateway
 def save_demo_state(state: Dict[str, Any]) -> Dict[str, Any]:
     """
     Save portfolio demo state to disk.
     """
-    ensure_demo_directories()
+    _ensure_demo_directories()
 
     DEMO_STATE_FILE.write_text(
         json.dumps(state, indent=2),
@@ -74,6 +74,7 @@ def save_demo_state(state: Dict[str, Any]) -> Dict[str, Any]:
     return state
 
 
+@requires_gateway
 def update_demo_mode(enabled: bool) -> Dict[str, Any]:
     """
     Enable or disable portfolio demo mode.
@@ -397,11 +398,11 @@ This project demonstrates practical skills in:
 """
 
 
-def write_demo_file(filename: str, content: str) -> str:
+def _write_demo_file(filename: str, content: str) -> str:
     """
     Write a demo artifact file and return its path.
     """
-    ensure_demo_directories()
+    _ensure_demo_directories()
 
     file_path = DEMO_DIR / filename
     file_path.write_text(content, encoding="utf-8")
@@ -409,11 +410,12 @@ def write_demo_file(filename: str, content: str) -> str:
     return str(file_path)
 
 
+@requires_gateway
 def generate_release_pack() -> Dict[str, Any]:
     """
     Generate a portfolio release pack with demo-ready artifacts.
     """
-    ensure_demo_directories()
+    _ensure_demo_directories()
 
     generated_at = get_current_timestamp()
 
@@ -424,11 +426,11 @@ def generate_release_pack() -> Dict[str, Any]:
     portfolio_summary = generate_portfolio_summary()
 
     files: List[str] = [
-        write_demo_file("DEMO_READINESS_REPORT.md", readiness_report),
-        write_demo_file("DEMO_SCRIPT.md", demo_script),
-        write_demo_file("README_PORTFOLIO_SNAPSHOT.md", readme_snapshot),
-        write_demo_file("CHANGELOG_PORTFOLIO_SNAPSHOT.md", changelog_snapshot),
-        write_demo_file("PORTFOLIO_SUMMARY.md", portfolio_summary),
+        _write_demo_file("DEMO_READINESS_REPORT.md", readiness_report),
+        _write_demo_file("DEMO_SCRIPT.md", demo_script),
+        _write_demo_file("README_PORTFOLIO_SNAPSHOT.md", readme_snapshot),
+        _write_demo_file("CHANGELOG_PORTFOLIO_SNAPSHOT.md", changelog_snapshot),
+        _write_demo_file("PORTFOLIO_SUMMARY.md", portfolio_summary),
     ]
 
     manifest = {
@@ -440,7 +442,7 @@ def generate_release_pack() -> Dict[str, Any]:
         "files": files,
     }
 
-    manifest_path = write_demo_file(
+    manifest_path = _write_demo_file(
         "release_pack_manifest.json",
         json.dumps(manifest, indent=2),
     )
@@ -457,5 +459,3 @@ def generate_release_pack() -> Dict[str, Any]:
         "generated_at": generated_at,
         "files": files,
     }
-
-

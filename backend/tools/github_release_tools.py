@@ -21,7 +21,7 @@ def inspect_github_release_readiness(workspace_id: int) -> str:
 
 
 @function_tool
-@instrument_tool("generate_github_release_notes")
+@instrument_tool("generate_github_release_notes_tool")
 @enforce_tool_permission("generate_github_release_notes_tool")
 def generate_github_release_notes_tool(
     workspace_id: int,

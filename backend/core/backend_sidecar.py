@@ -9,15 +9,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = PROJECT_ROOT / "backend"
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 SIDECAR_DIR = DATA_DIR / "sidecar"
 SIDECAR_STATE_FILE = SIDECAR_DIR / "backend_sidecar_state.json"
 SIDECAR_LOG_FILE = SIDECAR_DIR / "backend_sidecar.log"
-
-SIDECAR_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_STATE = {
     "managed_by": "O.R.I.O.N. Backend Sidecar",
@@ -38,7 +39,7 @@ def _now() -> str:
 
 def load_sidecar_state() -> Dict[str, Any]:
     if not SIDECAR_STATE_FILE.exists():
-        save_sidecar_state(DEFAULT_STATE.copy())
+        return DEFAULT_STATE.copy()
 
     try:
         loaded = json.loads(SIDECAR_STATE_FILE.read_text(encoding="utf-8"))
@@ -46,10 +47,10 @@ def load_sidecar_state() -> Dict[str, Any]:
             raise TypeError("Sidecar state must be a JSON object.")
         return {**DEFAULT_STATE, **loaded}
     except (json.JSONDecodeError, OSError, TypeError):
-        save_sidecar_state(DEFAULT_STATE.copy())
         return DEFAULT_STATE.copy()
 
 
+@requires_gateway
 def save_sidecar_state(state: Dict[str, Any]) -> None:
     SIDECAR_DIR.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -146,6 +147,7 @@ def get_sidecar_status() -> Dict[str, Any]:
     }
 
 
+@requires_gateway
 def start_backend_sidecar(host: str = "127.0.0.1", port: int = 8000) -> Dict[str, Any]:
     host, port = _validate_endpoint(host, port)
     current = get_sidecar_status()
@@ -210,6 +212,7 @@ def start_backend_sidecar(host: str = "127.0.0.1", port: int = 8000) -> Dict[str
         return get_sidecar_status()
 
 
+@requires_gateway
 def stop_backend_sidecar() -> Dict[str, Any]:
     state = load_sidecar_state()
     pid = state.get("pid")
@@ -253,6 +256,7 @@ def stop_backend_sidecar() -> Dict[str, Any]:
     return get_sidecar_status()
 
 
+@requires_gateway
 def restart_backend_sidecar() -> Dict[str, Any]:
     stopped = stop_backend_sidecar()
     if stopped.get("status") == "stop_blocked":

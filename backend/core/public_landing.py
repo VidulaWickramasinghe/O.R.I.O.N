@@ -8,9 +8,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
-LANDING_DIR = PROJECT_ROOT / "backend" / "data" / "public_landing"
+LANDING_DIR = runtime_data_dir() / "public_landing"
 EXPECTED_FRONTEND_FILES = (
     "src/app/public-demo/page.tsx",
     "src/lib/publicLandingRegistry.ts",
@@ -107,6 +110,7 @@ This check is local and read-only. It does not publish, push, expose secrets, or
 """
 
 
+@requires_gateway
 def save_public_landing_report() -> Dict[str, Any]:
     scan = inspect_public_landing()
     report = render_public_landing_report(scan)

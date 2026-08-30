@@ -7,8 +7,10 @@ from .user_settings import get_user_settings_map
 
 
 from core.database import managed_connection
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DB_PATH = DATA_DIR / "orion_notifications.sqlite"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -104,6 +106,7 @@ def _parse_due_at(due_at: str) -> str:
     )
 
 
+@requires_gateway
 def create_notification_event(
     event_type: str,
     title: str,
@@ -135,6 +138,7 @@ def create_notification_event(
     }
 
 
+@requires_gateway
 def create_reminder_record(
     title: str,
     description: str,
@@ -238,6 +242,7 @@ def get_reminder(reminder_id: int) -> Optional[Dict[str, Any]]:
     return dict(row) if row else None
 
 
+@requires_gateway
 def update_reminder_status(reminder_id: int, status: str) -> bool:
     init_notification_db()
     clean_status = status.lower().strip()
@@ -295,6 +300,7 @@ def update_reminder_status(reminder_id: int, status: str) -> bool:
     return updated
 
 
+@requires_gateway
 def refresh_due_reminders() -> List[Dict[str, Any]]:
     init_notification_db()
     now_text = _now()

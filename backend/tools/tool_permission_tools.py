@@ -9,7 +9,7 @@ from core.tool_permissions import (
 )
 
 
-@function_tool
+@function_tool(name_override="get_tool_permission_report")
 @instrument_tool("get_tool_permission_report")
 def get_tool_permission_report() -> str:
     """
@@ -34,7 +34,7 @@ Reason: {decision['reason']}
 """.strip()
 
 
-@function_tool
+@function_tool(name_override="get_tool_permission_metrics")
 @instrument_tool("get_tool_permission_metrics")
 def get_tool_permission_metrics_tool() -> str:
     """

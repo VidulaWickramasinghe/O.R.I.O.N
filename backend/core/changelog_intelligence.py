@@ -6,8 +6,10 @@ from typing import Any, Dict, List
 from core.patch_release import generate_hotfix_checklist, generate_patch_notes, load_patch_state
 from core.post_release_maintenance import generate_patch_plan, load_known_issues
 from core.stable_release import load_version_lock
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
-OUT = Path(__file__).resolve().parents[1] / "data" / "changelog_intelligence"
+OUT = runtime_data_dir() / "changelog_intelligence"
 def _now(): return datetime.now().isoformat(timespec="seconds")
 def _stamp(): return datetime.now().strftime("%Y%m%d_%H%M%S")
 def _group(items: List[Dict[str, Any]]):
@@ -43,6 +45,7 @@ def render_changelog_intelligence_report():
     pack=generate_maintenance_communication_pack(); checks="\n".join(f"- [{'x' if x['ok'] else ' '}] {x['name']} — {x['details']}" for x in pack['checks'])
     return f"# O.R.I.O.N. v6.3 Changelog Intelligence Report\n\nGenerated: {pack['generated_at']}\nStatus: {pack['status']}\n\n## Composer Checks\n\n{checks}\n\n## Public Summary\n\n{pack['public_summary']}\n\n## Safety\n\nLocal drafts only: no GitHub push, publishing, release or issue mutation, deletion, or approval bypass.\n"
 
+@requires_gateway
 def save_changelog_intelligence_artifacts():
     OUT.mkdir(parents=True,exist_ok=True); pack=generate_maintenance_communication_pack(); stamp=_stamp()
     paths={"report_path":OUT/f"CHANGELOG_INTELLIGENCE_REPORT_{stamp}.md","changelog_path":OUT/f"CHANGELOG_ENTRY_{stamp}.md","github_notes_path":OUT/f"GITHUB_RELEASE_NOTES_{stamp}.md","public_summary_path":OUT/f"PUBLIC_UPDATE_SUMMARY_{stamp}.md","raw_patch_notes_path":OUT/f"RAW_PATCH_NOTES_{stamp}.md"}

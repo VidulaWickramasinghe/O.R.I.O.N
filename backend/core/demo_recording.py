@@ -6,8 +6,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
-RECORDING_DIR = Path(__file__).resolve().parents[1] / "data" / "demo_recording"
+
+RECORDING_DIR = runtime_data_dir() / "demo_recording"
 RECORDING_SCENES = (
     "Opening Scene",
     "Dashboard Intelligence",
@@ -86,6 +89,7 @@ Status: {scan['status']}
 """
 
 
+@requires_gateway
 def save_demo_recording_report() -> Dict[str, Any]:
     scan = inspect_demo_recording_readiness()
     report = render_demo_recording_report(scan)

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Set
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -18,6 +18,19 @@ if str(BACKEND_DIR) not in sys.path:
 load_dotenv(dotenv_path=BACKEND_DIR / ".env")
 
 from agents import Agent, Runner, SQLiteSession
+
+from core.capability_gateway import (
+    CapabilityContext,
+    api_capability_guard,
+    execute_capability,
+    execution_identity,
+    get_active_authorization,
+)
+from core.api_auth import (
+    LocalApiAuthenticationMiddleware,
+    create_local_api_authenticator,
+)
+from core.runtime_paths import runtime_data_path
 
 from core.prompt import ORION_SYSTEM_PROMPT
 from core.system_doctor import render_system_doctor_report, run_system_doctor
@@ -34,6 +47,7 @@ from core.mission_planner import (
     init_mission_db,
     list_mission_records,
     get_mission_record,
+    update_mission_step_status_record,
 )
 
 from core.mission_run_history import (
@@ -47,9 +61,20 @@ from core.mission_run_history import (
 )
 
 from core.approvals import (
+    claim_approval_execution,
+    complete_approval_execution,
+    fail_approval_execution,
+    get_approval_request,
+    get_latest_mission_continuation,
+    get_mission_continuation_for_run,
     init_approval_db,
     list_approval_requests,
-    update_approval_status,
+    reject_approval_request,
+)
+
+from core.mission_manager import (
+    recover_mission_continuations,
+    resolve_mission_continuation,
 )
 
 from core.workspace_manager import (
@@ -790,6 +815,25 @@ async def app_lifespan(_app: FastAPI):
     init_security_policy_db()
     init_release_candidate_db()
 
+    try:
+        recovery = execute_capability(
+            "recover_mission_continuations",
+            CapabilityContext(actor="internal", source="api_startup"),
+            recover_mission_continuations,
+        )
+        if recovery["errors"]:
+            log_activity(
+                "MISSION_CONTINUATION_RECOVERY_INCOMPLETE",
+                f"Mission approval recovery reported {len(recovery['errors'])} ownership or state errors.",
+                "API",
+            )
+    except Exception as error:
+        log_activity(
+            "MISSION_CONTINUATION_RECOVERY_FAILED",
+            f"Mission approval recovery was blocked or failed: {error}",
+            "API",
+        )
+
     log_activity(
         "SYSTEM_START",
         "O.R.I.O.N. API v6.5.2 started with the Patch Release Manager enabled.",
@@ -803,6 +847,13 @@ app = FastAPI(
     description="Operational Response and Intelligent Orchestration Network backend API.",
     version="6.5.2",
     lifespan=app_lifespan,
+    dependencies=[Depends(api_capability_guard)],
+)
+
+LOCAL_API_AUTHENTICATOR = create_local_api_authenticator()
+app.add_middleware(
+    LocalApiAuthenticationMiddleware,
+    authenticator=LOCAL_API_AUTHENTICATOR,
 )
 
 DEFAULT_FRONTEND_ORIGINS = [
@@ -1075,6 +1126,7 @@ class MissionRunItem(BaseModel):
     id: int
     mission_id: int
     step_id: Optional[int] = None
+    approval_id: Optional[int] = None
     mission_title: str
     step_title: str
     status: str
@@ -1102,10 +1154,17 @@ class ApprovalItem(BaseModel):
     title: str
     description: str
     payload: Dict[str, Any]
+    payload_hash: str = ""
+    idempotency_key: str = ""
+    mission_id: Optional[int] = None
+    step_id: Optional[int] = None
+    run_id: Optional[int] = None
     risk_level: str
     status: str
     result: str
     source: str
+    execution_started_at: str = ""
+    completed_at: str = ""
     created_at: str
     updated_at: str
 
@@ -1157,6 +1216,8 @@ class WorkspaceRegisterRequest(BaseModel):
     name: str
     path: str
     description: str = ""
+    trusted: bool = False
+    source_consent: bool = False
 
 
 class GitHubReleaseRequest(BaseModel):
@@ -1457,12 +1518,16 @@ class DemoReleasePackResponse(BaseModel):
 
 
 class KnowledgeIndexRequest(BaseModel):
-    path: str
+    workspace_id: int
+    relative_path: str
+    source_consent: bool = False
     summary: str = ""
 
 
 class KnowledgeFolderIndexRequest(BaseModel):
-    folder_path: str
+    workspace_id: int
+    relative_path: str = "."
+    source_consent: bool = False
 
 
 class KnowledgeSearchRequest(BaseModel):
@@ -1751,7 +1816,7 @@ def root():
 
 
 def load_project_items() -> List[ProjectItem]:
-    projects_file = BACKEND_DIR / "data" / "projects.json"
+    projects_file = runtime_data_path("projects.json")
 
     if not projects_file.exists():
         return []
@@ -1782,7 +1847,7 @@ def get_next_actionable_step(mission: Dict[str, Any]) -> Optional[Dict[str, Any]
     steps = mission.get("steps", [])
 
     for step in steps:
-        if step.get("status") in ["pending", "in_progress", "waiting_approval"]:
+        if step.get("status") in ["pending", "in_progress"]:
             return step
 
     return None
@@ -2162,61 +2227,94 @@ def approvals():
     return ApprovalsResponse(approvals=list_approval_requests(limit=30))
 
 
-@app.post("/api/approvals/{approval_id}/approve")
-def approve_request(approval_id: int):
+def _resolve_linked_approval(approval: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if approval.get("mission_id") is None or approval.get("step_id") is None:
+        return None
+    context = CapabilityContext(
+        actor="internal",
+        source="approval_mission_continuation",
+        session_id=(
+            get_active_authorization().context.session_id
+            if get_active_authorization()
+            else ""
+        ),
+        mission_id=int(approval["mission_id"]),
+        step_id=int(approval["step_id"]),
+        run_id=int(approval["run_id"]) if approval.get("run_id") is not None else None,
+        approval_id=int(approval["id"]),
+    )
     try:
-        approval = next(
-            (
-                item
-                for item in list_approval_requests(limit=100)
-                if item["id"] == approval_id
-            ),
-            None,
+        return execute_capability(
+            "resolve_mission_continuation",
+            context,
+            resolve_mission_continuation,
+            int(approval["id"]),
         )
-
-        if not approval:
-            return {
-                "status": "not_found",
-                "approval_id": approval_id,
-                "result": "Approval request not found.",
-            }
-        if approval["status"] != "pending":
-            return {
-                "status": approval["status"],
-                "approval_id": approval_id,
-                "result": "Approval request has already been processed.",
-            }
-
+    except Exception as error:
         log_activity(
-            "APPROVAL_APPROVE",
-            f"Approval request execution started: {approval_id}",
-            "Aurora OS",
-        )
-
-        if approval["action_type"] in ALLOWED_DESKTOP_ACTIONS:
-            result = execute_approved_desktop_action(approval_id)
-        elif approval["action_type"] == "APPLY_WORKSPACE_FILE_PATCH":
-            result = execute_approved_workspace_patch(approval)
-        else:
-            result = execute_approved_dev_action(approval_id)
-
-        update_approval_status(approval_id, "approved", result)
-
-        log_activity(
-            "APPROVAL_EXECUTED",
-            f"Approval {approval_id} executed: {result}",
+            "MISSION_CONTINUATION_RECOVERY_PENDING",
+            f"Approval {approval['id']} is durable but its mission continuation needs recovery: {error}",
             "O.R.I.O.N.",
         )
-
         return {
-            "status": "approved",
-            "approval_id": approval_id,
-            "result": result,
+            "status": "recovery_pending",
+            "approval_id": int(approval["id"]),
+            "error": f"{type(error).__name__}: {error}",
         }
 
-    except Exception as error:
-        update_approval_status(approval_id, "failed", str(error))
 
+@app.post("/api/approvals/{approval_id}/approve")
+def approve_request(
+    approval_id: int,
+    idempotency_key: str = Header(default="", alias="Idempotency-Key"),
+):
+    authorization = get_active_authorization()
+    claim = claim_approval_execution(
+        approval_id,
+        actor=authorization.context.actor if authorization else "",
+        expected_idempotency_key=idempotency_key,
+    )
+    approval = claim.get("approval")
+    execution = claim.get("execution")
+    if not approval:
+        return {
+            "status": "not_found",
+            "approval_id": approval_id,
+            "result": "Approval request not found.",
+        }
+    if not claim["claimed"]:
+        continuation = None
+        if claim["status"] in {"approved", "failed"}:
+            continuation = _resolve_linked_approval(approval)
+        return {
+            "status": claim["status"],
+            "approval_id": approval_id,
+            "result": approval.get("result", ""),
+            "execution": execution,
+            "continuation": continuation,
+            "replayed": True,
+        }
+
+    execution_id = int(claim["execution_id"])
+    log_activity(
+        "APPROVAL_EXECUTION_CLAIMED",
+        f"Approval request execution atomically claimed: {approval_id}",
+        "Aurora OS",
+    )
+    try:
+        if approval["action_type"] in ALLOWED_DESKTOP_ACTIONS:
+            result = execute_approved_desktop_action(approval_id, approval)
+        elif approval["action_type"] == "APPLY_WORKSPACE_FILE_PATCH":
+            result = execute_approved_workspace_patch(approval)
+        elif approval["action_type"] in {"WRITE_PROJECT_FILE", "RUN_SAFE_COMMAND"}:
+            result = execute_approved_dev_action(approval_id, approval)
+        else:
+            raise ValueError(
+                f"No executor is registered for approval action {approval['action_type']}."
+            )
+    except Exception as error:
+        completed = fail_approval_execution(approval_id, execution_id, str(error))
+        continuation = _resolve_linked_approval(completed["approval"])
         log_activity(
             "APPROVAL_FAILED",
             f"Approval {approval_id} failed: {error}",
@@ -2227,27 +2325,49 @@ def approve_request(approval_id: int):
             "status": "failed",
             "approval_id": approval_id,
             "result": str(error),
+            "execution": completed["execution"],
+            "continuation": continuation,
         }
+
+    completed = complete_approval_execution(approval_id, execution_id, result)
+    continuation = _resolve_linked_approval(completed["approval"])
+    log_activity(
+        "APPROVAL_EXECUTED",
+        f"Approval {approval_id} executed exactly once: {result}",
+        "O.R.I.O.N.",
+    )
+    return {
+        "status": "approved",
+        "approval_id": approval_id,
+        "result": result,
+        "execution": completed["execution"],
+        "continuation": continuation,
+        "replayed": False,
+    }
 
 
 @app.post("/api/approvals/{approval_id}/reject")
 def reject_request(approval_id: int):
-    update_approval_status(
-        approval_id,
-        "rejected",
-        "Rejected by user.",
-    )
+    rejection = reject_approval_request(approval_id, "Rejected by user.")
+    approval = rejection.get("approval")
+    continuation = None
+    if approval and rejection["status"] == "rejected":
+        continuation = _resolve_linked_approval(approval)
 
-    log_activity(
-        "APPROVAL_REJECTED",
-        f"Approval request rejected: {approval_id}",
-        "Aurora OS",
-    )
+    if rejection["transitioned"]:
+        log_activity(
+            "APPROVAL_REJECTED",
+            f"Approval request rejected: {approval_id}",
+            "Aurora OS",
+        )
 
     return {
-        "status": "rejected",
+        "status": rejection["status"],
         "approval_id": approval_id,
-        "result": "Rejected by user.",
+        "result": approval.get("result", "") if approval else "Approval request not found.",
+        "execution": rejection.get("execution"),
+        "continuation": continuation,
+        "replayed": not rejection["transitioned"],
     }
 
 
@@ -2292,6 +2412,23 @@ async def run_next_mission_step(mission_id: int):
     next_step = get_next_actionable_step(mission_record)
 
     if not next_step:
+        waiting_step = next(
+            (
+                step
+                for step in mission_record.get("steps", [])
+                if step.get("status") == "waiting_approval"
+            ),
+            None,
+        )
+        if waiting_step:
+            output = "Mission is paused until its pending approval is resolved."
+            return MissionRunResponse(
+                mission_id=mission_id,
+                step_id=int(waiting_step["id"]),
+                status="waiting_approval",
+                output=output,
+                result=output,
+            )
         log_activity(
             "MISSION_RUN_COMPLETE",
             f"No pending steps for mission: {mission_record['title']}",
@@ -2309,6 +2446,7 @@ async def run_next_mission_step(mission_id: int):
         )
 
     step_id = int(next_step["id"])
+    prior_continuation = get_latest_mission_continuation(mission_id, step_id)
 
     run_id = start_mission_run(
         mission_id=mission_id,
@@ -2339,6 +2477,9 @@ Step title: {next_step['title']}
 Step details: {next_step.get('details', '')}
 Current step status: {next_step['status']}
 
+Prior approval continuation:
+{json.dumps(prior_continuation or {}, sort_keys=True)}
+
 Rules:
 1. Execute only this one step.
 2. Use available safe tools if needed.
@@ -2348,22 +2489,57 @@ Rules:
 6. If approval is required, update mission step {step_id} status to waiting_approval.
 7. If more user input is needed, update mission step {step_id} status to blocked.
 8. Return a clear execution summary.
+9. If the prior approval continuation is resumed/approved, do not request or execute
+   that same side effect again. Evaluate its recorded result and continue this step.
 """
 
     try:
-        result = await Runner.run(
-            orion,
-            internal_prompt,
-            session=session,
-        )
+        with execution_identity(
+            CapabilityContext(
+                actor="mission_agent",
+                source="mission_runner",
+                session_id=(
+                    get_active_authorization().context.session_id
+                    if get_active_authorization()
+                    else ""
+                ),
+                mission_id=mission_id,
+                step_id=step_id,
+                run_id=run_id,
+            )
+        ):
+            result = await Runner.run(
+                orion,
+                internal_prompt,
+                session=session,
+            )
 
         final_output = result.final_output or "Mission cycle completed."
 
-        complete_mission_run(
-            run_id=run_id,
-            status="cycle_complete",
-            output=final_output,
-        )
+        continuation = get_mission_continuation_for_run(run_id)
+        if continuation and continuation["status"] in {
+            "waiting_approval",
+            "executing",
+            "ready_to_resume",
+            "ready_to_block",
+        }:
+            update_mission_step_status_record(step_id, "waiting_approval")
+            complete_mission_run(
+                run_id=run_id,
+                status="waiting_approval",
+                output=final_output,
+                approval_id=int(continuation["approval_id"]),
+            )
+            cycle_status = "waiting_approval"
+        elif continuation:
+            cycle_status = str(continuation["status"])
+        else:
+            complete_mission_run(
+                run_id=run_id,
+                status="cycle_complete",
+                output=final_output,
+            )
+            cycle_status = "cycle_complete"
 
         log_activity(
             "MISSION_STEP_COMPLETE",
@@ -2374,7 +2550,7 @@ Rules:
         return MissionRunResponse(
             mission_id=mission_id,
             step_id=step_id,
-            status="cycle_complete",
+            status=cycle_status,
             output=final_output,
             result=final_output,
         )
@@ -2487,6 +2663,9 @@ def register_workspace_api(request: WorkspaceRegisterRequest):
         path=request.path,
         description=request.description,
         status="active",
+        trusted=request.trusted,
+        source_consent=request.source_consent,
+        consent_source="aurora_api_explicit_user_consent",
     )
 
     log_activity(
@@ -2932,7 +3111,9 @@ def knowledge_documents():
 def knowledge_index(request: KnowledgeIndexRequest):
     try:
         result = index_document(
-            path=request.path,
+            workspace_id=request.workspace_id,
+            relative_path=request.relative_path,
+            source_consent=request.source_consent,
             summary=request.summary,
         )
         log_activity(
@@ -2956,10 +3137,15 @@ def knowledge_index(request: KnowledgeIndexRequest):
 @app.post("/api/knowledge/index-folder", response_model=KnowledgeActionResponse)
 def knowledge_index_folder(request: KnowledgeFolderIndexRequest):
     try:
-        result = index_knowledge_folder(request.folder_path)
+        result = index_knowledge_folder(
+            workspace_id=request.workspace_id,
+            relative_path=request.relative_path,
+            source_consent=request.source_consent,
+        )
         log_activity(
             "KNOWLEDGE_FOLDER_INDEXED",
-            f"Knowledge folder indexed: {request.folder_path}",
+            f"Knowledge folder indexed from workspace {request.workspace_id}: "
+            f"{request.relative_path}",
             "O.R.I.O.N.",
         )
         return KnowledgeActionResponse(
@@ -4299,11 +4485,22 @@ async def chat(request: ChatRequest):
             "O.R.I.O.N.",
         )
 
-        result = await Runner.run(
-            orion,
-            contextual_input,
-            session=session,
-        )
+        with execution_identity(
+            CapabilityContext(
+                actor="agent",
+                source="aurora_chat",
+                session_id=(
+                    get_active_authorization().context.session_id
+                    if get_active_authorization()
+                    else ""
+                ),
+            )
+        ):
+            result = await Runner.run(
+                orion,
+                contextual_input,
+                session=session,
+            )
 
         final_output = result.final_output or "No response generated."
 

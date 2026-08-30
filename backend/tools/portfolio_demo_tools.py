@@ -9,6 +9,8 @@ portfolio demo core functions are still being upgraded.
 from pathlib import Path
 from typing import Any, Dict, List
 
+from core.tool_logger import instrument_tool
+
 
 try:
     from agents import function_tool
@@ -34,7 +36,8 @@ def _safe_import_portfolio_demo():
         return None
 
 
-@function_tool
+@function_tool(name_override="get_portfolio_demo_status")
+@instrument_tool("get_portfolio_demo_status")
 def get_portfolio_demo_status() -> str:
     """
     Return the current Portfolio Demo / Demo Mode status.
@@ -59,7 +62,8 @@ def get_portfolio_demo_status() -> str:
     )
 
 
-@function_tool
+@function_tool(name_override="generate_portfolio_demo_pack")
+@instrument_tool("generate_portfolio_demo_pack")
 def generate_portfolio_demo_pack() -> str:
     """
     Generate a portfolio demo/release pack if the core demo module supports it.
@@ -91,7 +95,8 @@ def generate_portfolio_demo_pack() -> str:
     return f"Placeholder portfolio demo pack created: {placeholder_file}"
 
 
-@function_tool
+@function_tool(name_override="list_portfolio_demo_files")
+@instrument_tool("list_portfolio_demo_files")
 def list_portfolio_demo_files() -> str:
     """
     List generated portfolio demo files.
@@ -112,6 +117,7 @@ def list_portfolio_demo_files() -> str:
 
 
 @function_tool
+@instrument_tool("read_portfolio_demo_file")
 def read_portfolio_demo_file(relative_path: str) -> str:
     """
     Read a generated portfolio demo file from the backend data/demo directory.
@@ -137,6 +143,7 @@ def read_portfolio_demo_file(relative_path: str) -> str:
 
 
 @function_tool
+@instrument_tool("get_demo_readiness_report")
 def get_demo_readiness_report() -> str:
     """Generate the current portfolio-demo readiness report."""
     portfolio_demo = _safe_import_portfolio_demo()
@@ -145,7 +152,8 @@ def get_demo_readiness_report() -> str:
     return portfolio_demo.generate_demo_readiness_report()
 
 
-@function_tool
+@function_tool(name_override="generate_portfolio_case_study")
+@instrument_tool("generate_portfolio_case_study")
 def generate_portfolio_case_study_tool() -> str:
     """Generate the portfolio summary used as a concise case study."""
     portfolio_demo = _safe_import_portfolio_demo()
@@ -154,7 +162,8 @@ def generate_portfolio_case_study_tool() -> str:
     return portfolio_demo.generate_portfolio_summary()
 
 
-@function_tool
+@function_tool(name_override="generate_demo_script")
+@instrument_tool("generate_demo_script")
 def generate_demo_script_tool() -> str:
     """Generate the local portfolio-demo presentation script."""
     portfolio_demo = _safe_import_portfolio_demo()
@@ -163,7 +172,8 @@ def generate_demo_script_tool() -> str:
     return portfolio_demo.generate_demo_script()
 
 
-@function_tool
+@function_tool(name_override="generate_screenshot_checklist")
+@instrument_tool("generate_screenshot_checklist")
 def generate_screenshot_checklist_tool() -> str:
     """Generate a concise screenshot checklist from the readiness report."""
     portfolio_demo = _safe_import_portfolio_demo()
@@ -182,6 +192,7 @@ def generate_screenshot_checklist_tool() -> str:
 
 
 @function_tool
+@instrument_tool("generate_portfolio_release_pack")
 def generate_portfolio_release_pack() -> str:
     """Generate the local-only portfolio release pack."""
     portfolio_demo = _safe_import_portfolio_demo()
@@ -191,6 +202,7 @@ def generate_portfolio_release_pack() -> str:
 
 
 @function_tool
+@instrument_tool("set_demo_mode")
 def set_demo_mode(enabled: bool) -> str:
     """Enable or disable local portfolio-demo mode."""
     portfolio_demo = _safe_import_portfolio_demo()

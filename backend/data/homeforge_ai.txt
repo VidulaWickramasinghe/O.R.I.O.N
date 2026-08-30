@@ -1,1 +1,0 @@
-This project is a 3D interactive house design and visualization platform.

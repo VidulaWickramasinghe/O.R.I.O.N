@@ -7,8 +7,10 @@ from .workspace_manager import get_workspace_record
 
 
 from core.database import managed_connection
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DB_PATH = DATA_DIR / "orion_user_settings.sqlite"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -92,10 +94,10 @@ def init_user_settings_db() -> None:
             """
         )
         conn.commit()
-    ensure_default_settings()
+    _ensure_default_settings()
 
 
-def ensure_default_settings() -> None:
+def _ensure_default_settings() -> None:
     now = _now()
     with get_connection() as conn:
         for key, value in DEFAULT_SETTINGS.items():
@@ -207,6 +209,7 @@ def validate_setting_value(key: str, value: str) -> str:
     return clean_value
 
 
+@requires_gateway
 def update_user_setting(key: str, value: str) -> Dict[str, Any]:
     init_user_settings_db()
     clean_key = key.strip()
@@ -230,11 +233,12 @@ def update_user_setting(key: str, value: str) -> Dict[str, Any]:
     return setting
 
 
+@requires_gateway
 def reset_user_settings() -> List[Dict[str, Any]]:
     with get_connection() as conn:
         conn.execute("DELETE FROM user_settings")
         conn.commit()
-    ensure_default_settings()
+    _ensure_default_settings()
     return list_user_settings()
 
 

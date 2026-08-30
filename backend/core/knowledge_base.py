@@ -1,11 +1,18 @@
+import os
 import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from core.database import managed_connection
+from core.capability_gateway import requires_gateway
+from core.workspace_manager import (
+    get_trusted_workspace_record,
+    resolve_workspace_path,
+)
+from core.runtime_paths import runtime_data_dir
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 KNOWLEDGE_DIR = DATA_DIR / "knowledge_base"
 DB_PATH = DATA_DIR / "orion_knowledge.sqlite"
 
@@ -42,11 +49,28 @@ def init_knowledge_db() -> None:
                 extension TEXT NOT NULL,
                 size_bytes INTEGER DEFAULT 0,
                 summary TEXT DEFAULT '',
+                workspace_id INTEGER,
+                relative_path TEXT DEFAULT '',
+                source_consent INTEGER NOT NULL DEFAULT 0,
                 indexed_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             )
             """
         )
+        columns = {
+            str(row[1])
+            for row in conn.execute("PRAGMA table_info(knowledge_documents)").fetchall()
+        }
+        migrations = {
+            "workspace_id": "INTEGER",
+            "relative_path": "TEXT DEFAULT ''",
+            "source_consent": "INTEGER NOT NULL DEFAULT 0",
+        }
+        for column, definition in migrations.items():
+            if column not in columns:
+                conn.execute(
+                    f"ALTER TABLE knowledge_documents ADD COLUMN {column} {definition}"
+                )
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS knowledge_chunks (
@@ -96,14 +120,20 @@ def _chunk_text(text: str, chunk_size: int = 1800, overlap: int = 200) -> List[s
     return chunks
 
 
-def index_document(path: str, summary: str = "") -> Dict[str, Any]:
-    init_knowledge_db()
-    source_path = Path(path).expanduser().resolve()
+def _require_source_consent(workspace_id: int, source_consent: bool) -> Dict[str, Any]:
+    if not source_consent:
+        raise PermissionError("Knowledge ingestion requires explicit source consent.")
+    return get_trusted_workspace_record(workspace_id)
 
-    if not source_path.exists():
-        raise ValueError(f"File does not exist: {source_path}")
-    if not source_path.is_file():
-        raise ValueError(f"Path is not a file: {source_path}")
+
+@requires_gateway
+def _index_document_path(
+    workspace_id: int,
+    relative_path: str,
+    source_path: Path,
+    summary: str = "",
+) -> Dict[str, Any]:
+    logical_source = f"workspace:{workspace_id}/{relative_path.replace(chr(92), '/')}"
     if source_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
         raise ValueError(
             f"Unsupported file extension: {source_path.suffix}. "
@@ -118,22 +148,25 @@ def index_document(path: str, summary: str = "") -> Dict[str, Any]:
         cursor = conn.execute(
             """
             INSERT OR REPLACE INTO knowledge_documents
-            (id, title, source_path, extension, size_bytes, summary, indexed_at, updated_at)
+            (id, title, source_path, extension, size_bytes, summary,
+             workspace_id, relative_path, source_consent, indexed_at, updated_at)
             VALUES (
                 (SELECT id FROM knowledge_documents WHERE source_path = ?),
-                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, 1,
                 COALESCE((SELECT indexed_at FROM knowledge_documents WHERE source_path = ?), ?),
                 ?
             )
             """,
             (
-                str(source_path),
+                logical_source,
                 _safe_title(source_path),
-                str(source_path),
+                logical_source,
                 source_path.suffix.lower(),
                 source_path.stat().st_size,
                 summary,
-                str(source_path),
+                workspace_id,
+                relative_path.replace("\\", "/"),
+                logical_source,
                 now,
                 now,
             ),
@@ -141,7 +174,7 @@ def index_document(path: str, summary: str = "") -> Dict[str, Any]:
         document_id = cursor.lastrowid
         row = conn.execute(
             "SELECT id FROM knowledge_documents WHERE source_path = ?",
-            (str(source_path),),
+            (logical_source,),
         ).fetchone()
         if row:
             document_id = int(row[0])
@@ -162,48 +195,91 @@ def index_document(path: str, summary: str = "") -> Dict[str, Any]:
 
     return {
         "document_id": document_id,
+        "workspace_id": workspace_id,
         "title": _safe_title(source_path),
-        "source_path": str(source_path),
+        "source_path": logical_source,
+        "relative_path": relative_path.replace("\\", "/"),
         "extension": source_path.suffix.lower(),
         "chunks": len(chunks),
         "size_bytes": source_path.stat().st_size,
     }
 
 
-def index_knowledge_folder(folder_path: str) -> Dict[str, Any]:
+@requires_gateway
+def index_document(
+    workspace_id: int,
+    relative_path: str,
+    summary: str = "",
+    source_consent: bool = False,
+) -> Dict[str, Any]:
     init_knowledge_db()
-    folder = Path(folder_path).expanduser().resolve()
+    _require_source_consent(workspace_id, source_consent)
+    source_path = resolve_workspace_path(
+        workspace_id,
+        relative_path,
+        must_exist=True,
+        require_file=True,
+    )
+    return _index_document_path(workspace_id, relative_path, source_path, summary)
 
-    if not folder.exists():
-        raise ValueError(f"Folder does not exist: {folder}")
-    if not folder.is_dir():
-        raise ValueError(f"Path is not a folder: {folder}")
+
+@requires_gateway
+def index_knowledge_folder(
+    workspace_id: int,
+    relative_path: str = ".",
+    source_consent: bool = False,
+) -> Dict[str, Any]:
+    init_knowledge_db()
+    workspace = _require_source_consent(workspace_id, source_consent)
+    root = Path(str(workspace["path"])).resolve(strict=True)
+    folder = resolve_workspace_path(
+        workspace_id,
+        relative_path,
+        must_exist=True,
+        require_directory=True,
+        allow_root=True,
+    )
 
     indexed = []
     failed = []
 
-    for path in folder.rglob("*"):
-        if not path.is_file():
-            continue
-        if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
-            continue
-        if any(
-            part in {".git", "node_modules", ".next", ".venv", "__pycache__"}
-            for part in path.parts
-        ):
-            continue
-        try:
-            indexed.append(index_document(str(path)))
-        except Exception as error:
-            failed.append(
-                {
-                    "path": str(path),
-                    "error": str(error),
-                }
-            )
+    for current_root, directory_names, file_names in os.walk(folder, followlinks=False):
+        directory_names[:] = [
+            name
+            for name in directory_names
+            if name not in {".git", "node_modules", ".next", ".venv", "__pycache__"}
+            and not (Path(current_root) / name).is_symlink()
+        ]
+        for filename in file_names:
+            path = Path(current_root) / filename
+            if path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+                continue
+            candidate_relative = path.relative_to(root).as_posix()
+            try:
+                safe_path = resolve_workspace_path(
+                    workspace_id,
+                    candidate_relative,
+                    must_exist=True,
+                    require_file=True,
+                )
+                indexed.append(
+                    _index_document_path(
+                        workspace_id,
+                        candidate_relative,
+                        safe_path,
+                    )
+                )
+            except Exception as error:
+                failed.append(
+                    {
+                        "path": candidate_relative,
+                        "error": str(error),
+                    }
+                )
 
     return {
-        "folder": str(folder),
+        "workspace_id": workspace_id,
+        "folder": relative_path,
         "indexed_count": len(indexed),
         "failed_count": len(failed),
         "indexed": indexed,

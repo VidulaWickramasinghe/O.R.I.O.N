@@ -9,6 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 from core.demo_recording import inspect_demo_recording_readiness
 from core.demo_walkthrough import inspect_demo_walkthrough
 from core.final_launch import generate_final_launch_checklist, load_final_launch_freeze_state
@@ -24,7 +27,7 @@ from core.stabilization_manager import run_stabilization_scan
 from core.ui_polish import inspect_ui_polish
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-PRODUCTION_DIR = PROJECT_ROOT / "backend" / "data" / "production_readiness"
+PRODUCTION_DIR = runtime_data_dir() / "production_readiness"
 RELEASE_VERSION = "v6.5"
 RELEASE_NAME = "Production Readiness Snapshot + Final Release Candidate v2"
 
@@ -122,12 +125,14 @@ This snapshot is read-only. It does not generate a public release, push, publish
 """
 
 
+@requires_gateway
 def save_production_readiness_report() -> Dict[str, Any]:
     snapshot = generate_production_readiness_snapshot(); report = render_production_readiness_report(snapshot)
     path = PRODUCTION_DIR / f"PRODUCTION_READINESS_REPORT_{_stamp()}.md"; _atomic_write(path, report)
     return {"status": "saved", "generated_at": _now(), "path": str(path), "report": report, "snapshot": snapshot}
 
 
+@requires_gateway
 def generate_final_release_candidate_v2() -> Dict[str, Any]:
     snapshot = generate_production_readiness_snapshot(); report = render_production_readiness_report(snapshot); stamp = _stamp()
     report_path = PRODUCTION_DIR / f"FINAL_RELEASE_CANDIDATE_V2_{stamp}.md"

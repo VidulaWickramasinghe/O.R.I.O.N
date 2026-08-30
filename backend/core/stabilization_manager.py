@@ -12,11 +12,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = PROJECT_ROOT / "backend"
 FRONTEND_DIR = PROJECT_ROOT / "frontend"
-STABILIZATION_DIR = BACKEND_DIR / "data" / "stabilization_reports"
+STABILIZATION_DIR = runtime_data_dir() / "stabilization_reports"
 STABILIZATION_DIR.mkdir(parents=True, exist_ok=True)
 
 IMPORTANT_BACKEND_FILES = [
@@ -316,6 +319,7 @@ Duplicate Groups: {scan['duplicate_risk_zones']['duplicate_group_count']}
 """
 
 
+@requires_gateway
 def save_stabilization_report(run_build: bool = False) -> Dict[str, Any]:
     scan = run_stabilization_scan(run_build)
     report = render_stabilization_report(run_build, scan=scan)

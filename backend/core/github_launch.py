@@ -7,6 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 from core.final_launch import (
     generate_final_launch_checklist,
     load_final_launch_freeze_state,
@@ -16,7 +19,7 @@ from core.release_verification import generate_release_verification_snapshot
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "backend" / "data" / "github_launch"
+OUT = runtime_data_dir() / "github_launch"
 GITHUB_DIR = ROOT / ".github"
 ISSUES = GITHUB_DIR / "ISSUE_TEMPLATE"
 
@@ -147,6 +150,7 @@ or approval bypass is performed.
 """
 
 
+@requires_gateway
 def save_github_launch_artifacts(write_templates: bool = True) -> Dict[str, Any]:
     stamp = _stamp()
     checklist = generate_github_launch_checklist()

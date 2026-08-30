@@ -13,6 +13,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 from core.notification_engine import generate_startup_briefing
 from core.plugin_registry import get_plugin_metrics, render_plugin_registry_report
 from core.portfolio_demo import generate_release_pack
@@ -26,7 +29,7 @@ from core.database import managed_connection
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 RC_DIR = DATA_DIR / "release_candidates"
 DB_PATH = DATA_DIR / "orion_release_candidate.sqlite"
 
@@ -115,6 +118,7 @@ def get_freeze_state() -> Dict[str, Any]:
     return state
 
 
+@requires_gateway
 def record_release_event(event_type: str, title: str, message: str, artifact_path: str = "") -> Dict[str, Any]:
     init_release_candidate_db()
     clean_event_type = _clean_text(event_type, "event_type", 80)
@@ -149,6 +153,7 @@ def list_release_events(limit: int = 50) -> List[Dict[str, Any]]:
     return [dict(row) for row in rows]
 
 
+@requires_gateway
 def freeze_system(reason: str = "Preparing O.R.I.O.N. v4.0 release candidate.", release_version: str = "v4.0") -> Dict[str, Any]:
     """Enter local release-readiness mode; no external system is changed."""
     init_release_candidate_db()
@@ -170,6 +175,7 @@ def freeze_system(reason: str = "Preparing O.R.I.O.N. v4.0 release candidate.", 
     return get_freeze_state()
 
 
+@requires_gateway
 def unfreeze_system(reason: str = "Release candidate freeze lifted.") -> Dict[str, Any]:
     """Leave local release-readiness mode without changing external services."""
     init_release_candidate_db()
@@ -237,6 +243,7 @@ def _write_artifact(file_name: str, content: str) -> str:
     return str(path)
 
 
+@requires_gateway
 def generate_release_candidate_package() -> Dict[str, Any]:
     """Write a local diagnostics package and return paths to all artifacts."""
     from core.dashboard_intelligence import render_dashboard_intelligence_report

@@ -4,6 +4,7 @@ import os
 import tempfile
 import tomllib
 import unittest
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,6 +12,7 @@ from unittest.mock import Mock, patch
 
 from core import (
     backend_sidecar,
+    capability_gateway,
     database,
     developer_agent,
     demo_recording,
@@ -33,6 +35,33 @@ from core import (
     vector_memory,
     workflow_blueprints,
 )
+
+
+@contextmanager
+def gateway_authorization(capability: str):
+    """Authorize an existing unit test without weakening production defaults."""
+
+    with patch.object(
+        capability_gateway, "_policy_snapshot", return_value=("test", set())
+    ), patch.object(
+        capability_gateway,
+        "_plugin_decision",
+        return_value=(True, "test capability", "low", "test"),
+    ), patch.object(
+        capability_gateway, "_approval_is_valid", return_value=(True, "test approval")
+    ), patch.object(capability_gateway, "_audit"):
+        with capability_gateway.authorized(
+            capability,
+            capability_gateway.test_context(capability, approval_id=1),
+        ):
+            yield
+
+
+def gateway_call(capability: str, operation, *args, **kwargs):
+    """Invoke a protected internal operation as an explicitly authorized test actor."""
+
+    with gateway_authorization(capability):
+        return operation(*args, **kwargs)
 
 
 class DatabaseConnectionTests(unittest.TestCase):
@@ -141,7 +170,7 @@ class DeploymentConfigurationTests(unittest.TestCase):
 
 
 class FrontendRefactorTests(unittest.TestCase):
-    def test_v6_5_2_release_metadata_is_aligned(self) -> None:
+    def test_governed_release_and_desktop_package_versions_are_explicit(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
         orion_build = (
@@ -180,12 +209,12 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            '"version": "6.5.2"',
+            '"version": "6.7.0"',
             tauri,
         )
 
         self.assertIn(
-            'version = "6.5.2"',
+            'version = "6.7.0"',
             cargo,
         )
 
@@ -889,7 +918,7 @@ class FrontendRefactorTests(unittest.TestCase):
             topbar,
         )
 
-    def test_v6_5_2_hydration_and_desktop_metadata(self) -> None:
+    def test_hydration_and_desktop_metadata(self) -> None:
         project_root = Path(__file__).resolve().parents[2]
 
         assistant = (
@@ -946,12 +975,12 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            '"version": "6.5.2"',
+            '"version": "6.7.0"',
             tauri,
         )
 
         self.assertIn(
-            'version = "6.5.2"',
+            'version = "6.7.0"',
             cargo,
         )
 
@@ -1193,8 +1222,14 @@ class ReleaseVerificationTests(unittest.TestCase):
                 "generate_release_verification_snapshot",
                 return_value=verification,
             ):
-                first = public_release.generate_public_release_package()
-                second = public_release.generate_public_release_package()
+                first = gateway_call(
+                    "generate_public_release_package",
+                    public_release.generate_public_release_package,
+                )
+                second = gateway_call(
+                    "generate_public_release_package",
+                    public_release.generate_public_release_package,
+                )
 
             self.assertNotEqual(first["summary_path"], second["summary_path"])
             self.assertTrue(Path(first["summary_path"]).is_file())
@@ -1208,7 +1243,7 @@ class RepositoryPolishTests(unittest.TestCase):
             root = Path(temp_dir)
             source = root / "config.py"
             source.write_text(
-                'OPENAI_API_KEY="sk-do-not-leak-this-value"\n', encoding="utf-8"
+                'OPENAI_API_KEY="sk-do-not-leak-this-value"\n', encoding="utf-8"  # scanner: allow-secret
             )
             with patch.object(github_polish, "PROJECT_ROOT", root), patch.object(
                 github_polish, "_tracked_files", return_value=(source,)
@@ -1247,7 +1282,10 @@ class RepositoryPolishTests(unittest.TestCase):
                 "generate_github_polish_checklist",
                 return_value=checklist,
             ) as generate:
-                result = github_polish.save_github_polish_artifacts()
+                result = gateway_call(
+                    "save_github_polish_artifacts",
+                    github_polish.save_github_polish_artifacts,
+                )
 
         generate.assert_called_once_with()
         self.assertIs(result["checklist"], checklist)
@@ -1270,7 +1308,10 @@ class RepositoryPolishTests(unittest.TestCase):
                 "inspect_portfolio_showcase",
                 return_value=scan,
             ) as inspect:
-                result = portfolio_showcase.save_portfolio_showcase_report()
+                result = gateway_call(
+                    "save_portfolio_showcase_report",
+                    portfolio_showcase.save_portfolio_showcase_report,
+                )
 
             self.assertTrue(Path(result["path"]).is_file())
             self.assertIs(result["scan"], scan)
@@ -1288,7 +1329,10 @@ class DemoPresentationTests(unittest.TestCase):
                 "inspect_demo_walkthrough",
                 return_value=scan,
             ) as inspect:
-                result = demo_walkthrough.save_demo_walkthrough_report()
+                result = gateway_call(
+                    "save_demo_walkthrough_report",
+                    demo_walkthrough.save_demo_walkthrough_report,
+                )
 
             self.assertTrue(Path(result["path"]).is_file())
             self.assertIs(result["scan"], scan)
@@ -1304,7 +1348,10 @@ class DemoPresentationTests(unittest.TestCase):
                 "inspect_demo_recording_readiness",
                 return_value=scan,
             ) as inspect:
-                result = demo_recording.save_demo_recording_report()
+                result = gateway_call(
+                    "save_demo_recording_report",
+                    demo_recording.save_demo_recording_report,
+                )
 
             self.assertTrue(Path(result["path"]).is_file())
             self.assertIs(result["scan"], scan)
@@ -1336,10 +1383,18 @@ class FinalLaunchTests(unittest.TestCase):
             with patch.object(final_launch, "FINAL_LAUNCH_DIR", root), patch.object(
                 final_launch, "FREEZE_STATE_FILE", state_path
             ):
-                state = final_launch.freeze_final_launch("ready for review")
+                state = gateway_call(
+                    "freeze_final_launch",
+                    final_launch.freeze_final_launch,
+                    "ready for review",
+                )
                 loaded = final_launch.load_final_launch_freeze_state()
                 with self.assertRaises(ValueError):
-                    final_launch.freeze_final_launch("x" * 501)
+                    gateway_call(
+                        "freeze_final_launch",
+                        final_launch.freeze_final_launch,
+                        "x" * 501,
+                    )
 
             self.assertTrue(state["frozen"])
             self.assertEqual(loaded, state)
@@ -1358,7 +1413,10 @@ class FinalLaunchTests(unittest.TestCase):
             final_launch, "generate_final_launch_checklist", return_value=checklist
         ), patch.object(final_launch, "generate_public_release_package") as package:
             with self.assertRaises(ValueError):
-                final_launch.generate_final_launch_package()
+                gateway_call(
+                    "generate_final_launch_package",
+                    final_launch.generate_final_launch_package,
+                )
 
         package.assert_not_called()
 
@@ -1391,7 +1449,11 @@ class FinalLaunchTests(unittest.TestCase):
                 "generate_github_launch_checklist",
                 return_value=checklist,
             ) as generate:
-                result = github_launch.save_github_launch_artifacts(False)
+                result = gateway_call(
+                    "save_github_launch_artifacts",
+                    github_launch.save_github_launch_artifacts,
+                    False,
+                )
 
             self.assertTrue(Path(result["summary_path"]).is_file())
             self.assertEqual(result["templates"], {})
@@ -1423,7 +1485,12 @@ class SecurityPolicyTests(unittest.TestCase):
                     )
                     connection.commit()
 
-                security_policy.apply_security_profile("strict", source="test")
+                gateway_call(
+                    "apply_security_profile",
+                    security_policy.apply_security_profile,
+                    "strict",
+                    source="test",
+                )
                 future = plugin_registry.get_plugin("future_plugin")
 
         self.assertIsNotNone(future)
@@ -1441,7 +1508,12 @@ class SecurityPolicyTests(unittest.TestCase):
                     side_effect=OSError("audit unavailable"),
                 ):
                     with self.assertRaisesRegex(OSError, "audit unavailable"):
-                        security_policy.apply_security_profile("strict", source="test")
+                        gateway_call(
+                            "apply_security_profile",
+                            security_policy.apply_security_profile,
+                            "strict",
+                            source="test",
+                        )
 
                 after = plugin_registry.get_plugin("desktop_control")
                 active = security_policy.get_active_security_policy()
@@ -1458,11 +1530,18 @@ class ReleaseCandidateSafetyTests(unittest.TestCase):
         with patch.object(release_candidate, "init_release_candidate_db"):
             with patch.object(release_candidate, "get_freeze_state", return_value=state):
                 with self.assertRaisesRegex(ValueError, "Freeze the system"):
-                    release_candidate.generate_release_candidate_package()
+                    gateway_call(
+                        "generate_release_candidate_package",
+                        release_candidate.generate_release_candidate_package,
+                    )
 
     def test_freeze_metadata_is_bounded(self) -> None:
         with self.assertRaisesRegex(ValueError, "1000 characters or fewer"):
-            release_candidate.freeze_system(reason="x" * 1001)
+            gateway_call(
+                "freeze_release_candidate",
+                release_candidate.freeze_system,
+                reason="x" * 1001,
+            )
 
 
 class ToolPermissionTests(unittest.TestCase):
@@ -1474,24 +1553,18 @@ class ToolPermissionTests(unittest.TestCase):
     def test_audit_failure_blocks_tool_execution(self) -> None:
         called = Mock(return_value="executed")
         wrapped = tool_permissions.enforce_tool_permission("run_safe_command")(called)
-        decision = {
-            "allowed": True,
-            "tool_name": "run_safe_command",
-            "plugin_key": "developer_tools",
-            "risk_level": "high",
-            "category": "developer",
-            "reason": "enabled",
-        }
-        with patch.object(tool_permissions, "is_tool_allowed", return_value=decision):
-            with patch.object(
-                tool_permissions,
-                "record_tool_audit_event",
-                side_effect=OSError("database unavailable"),
-            ):
-                with patch.object(
-                    tool_permissions, "log_activity", side_effect=OSError("activity unavailable")
-                ):
-                    result = wrapped("status")
+        with patch.object(
+            capability_gateway, "_policy_snapshot", return_value=("test", set())
+        ), patch.object(
+            capability_gateway,
+            "_plugin_decision",
+            return_value=(True, "enabled", "high", "developer"),
+        ), patch.object(
+            capability_gateway,
+            "_audit",
+            side_effect=OSError("database unavailable"),
+        ):
+            result = wrapped("status")
 
         called.assert_not_called()
         self.assertIn("audit event could not be recorded", result)
@@ -1598,8 +1671,16 @@ class PluginRegistryTests(unittest.TestCase):
             db_path = Path(temp_dir) / "plugins.sqlite"
             with patch.object(plugin_registry, "DB_PATH", db_path):
                 plugin_registry.init_plugin_registry_db()
-                plugin_registry.set_plugin_enabled("portfolio_demo", False)
-                plugin_registry.sync_builtin_plugins()
+                gateway_call(
+                    "set_orion_plugin_enabled",
+                    plugin_registry.set_plugin_enabled,
+                    "portfolio_demo",
+                    False,
+                )
+                gateway_call(
+                    "set_orion_plugin_enabled",
+                    plugin_registry.sync_builtin_plugins,
+                )
 
                 plugin = plugin_registry.get_plugin("portfolio_demo")
                 self.assertIsNotNone(plugin)
@@ -1612,7 +1693,12 @@ class PluginRegistryTests(unittest.TestCase):
                 plugin_registry, "DB_PATH", Path(temp_dir) / "plugins.sqlite"
             ):
                 with self.assertRaisesRegex(ValueError, "cannot be disabled"):
-                    plugin_registry.set_plugin_enabled("plugin_registry", False)
+                    gateway_call(
+                        "set_orion_plugin_enabled",
+                        plugin_registry.set_plugin_enabled,
+                        "plugin_registry",
+                        False,
+                    )
 
     def test_builtin_sync_restores_required_plugin_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -1627,7 +1713,10 @@ class PluginRegistryTests(unittest.TestCase):
                     )
                     connection.commit()
 
-                plugin_registry.sync_builtin_plugins()
+                gateway_call(
+                    "set_orion_plugin_enabled",
+                    plugin_registry.sync_builtin_plugins,
+                )
                 plugin = plugin_registry.get_plugin("approval_system")
 
         self.assertIsNotNone(plugin)
@@ -1638,7 +1727,12 @@ class BackendSidecarTests(unittest.TestCase):
     def test_sidecar_rejects_non_loopback_bind(self) -> None:
         with patch.object(backend_sidecar.subprocess, "Popen") as popen:
             with self.assertRaisesRegex(ValueError, "loopback"):
-                backend_sidecar.start_backend_sidecar("0.0.0.0", 8000)
+                gateway_call(
+                    "start_backend_sidecar",
+                    backend_sidecar.start_backend_sidecar,
+                    "0.0.0.0",
+                    8000,
+                )
         popen.assert_not_called()
 
     def test_stop_refuses_unverified_stale_pid(self) -> None:
@@ -1661,7 +1755,10 @@ class BackendSidecarTests(unittest.TestCase):
                             backend_sidecar, "get_sidecar_status", return_value=status
                         ):
                             with patch.object(backend_sidecar.os, "killpg") as killpg:
-                                result = backend_sidecar.stop_backend_sidecar()
+                                result = gateway_call(
+                                    "stop_backend_sidecar",
+                                    backend_sidecar.stop_backend_sidecar,
+                                )
 
         killpg.assert_not_called()
         self.assertEqual(result["status"], "stop_blocked")
@@ -1699,7 +1796,10 @@ class VectorMemoryTests(unittest.TestCase):
         with patch.object(vector_memory, "init_vector_db"):
             with patch.object(vector_memory, "index_recent_memories_to_vectors", return_value=memory):
                 with patch.object(vector_memory, "index_knowledge_documents_to_vectors", return_value=knowledge):
-                    result = vector_memory.rebuild_vector_index()
+                    result = gateway_call(
+                        "rebuild_vector_memory_index",
+                        vector_memory.rebuild_vector_index,
+                    )
         self.assertEqual(result["status"], "partial")
         self.assertEqual(result["indexed_count"], 2)
         self.assertEqual(result["failed_count"], 1)
@@ -1708,7 +1808,10 @@ class VectorMemoryTests(unittest.TestCase):
         with patch.object(vector_memory, "init_vector_db"):
             with patch.object(vector_memory, "index_recent_memories_to_vectors", return_value=memory):
                 with patch.object(vector_memory, "index_knowledge_documents_to_vectors", return_value=knowledge):
-                    result = vector_memory.rebuild_vector_index()
+                    result = gateway_call(
+                        "rebuild_vector_memory_index",
+                        vector_memory.rebuild_vector_index,
+                    )
         self.assertEqual(result["status"], "failed")
 
 
@@ -1740,7 +1843,7 @@ class DeveloperPatchSafetyTests(unittest.TestCase):
             target.write_text("before", encoding="utf-8")
             approval = {
                 "action_type": "APPLY_WORKSPACE_FILE_PATCH",
-                "status": "pending",
+                "status": "executing",
                 "payload": {
                     "workspace_id": 7,
                     "workspace_path": str(root),
@@ -1750,7 +1853,11 @@ class DeveloperPatchSafetyTests(unittest.TestCase):
                 },
             }
             with patch.object(developer_agent, "_get_workspace_root", return_value=root):
-                result = developer_agent.execute_approved_workspace_patch(approval)
+                result = gateway_call(
+                    "execute_approved_action",
+                    developer_agent.execute_approved_workspace_patch,
+                    approval,
+                )
 
             self.assertIn("Workspace patch applied", result)
             self.assertEqual(target.read_text(encoding="utf-8"), "after")
@@ -1760,8 +1867,12 @@ class DeveloperPatchSafetyTests(unittest.TestCase):
 
             approval["status"] = "approved"
             with patch.object(developer_agent, "_get_workspace_root", return_value=root):
-                with self.assertRaisesRegex(ValueError, "no longer pending"):
-                    developer_agent.execute_approved_workspace_patch(approval)
+                with self.assertRaisesRegex(ValueError, "active execution claim"):
+                    gateway_call(
+                        "execute_approved_action",
+                        developer_agent.execute_approved_workspace_patch,
+                        approval,
+                    )
 
 
 class NotificationEngineTests(unittest.TestCase):
@@ -1769,14 +1880,22 @@ class NotificationEngineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             database = Path(directory) / "notifications.sqlite"
             with patch.object(notification_engine, "DB_PATH", database):
-                reminder = notification_engine.create_reminder_record(
+                reminder = gateway_call(
+                    "create_local_reminder",
+                    notification_engine.create_reminder_record,
                     title="Safe local reminder",
                     description="Regression test",
                     due_at="2020-01-01T00:00:00+10:00",
                     priority="high",
                 )
-                first_due = notification_engine.refresh_due_reminders()
-                second_due = notification_engine.refresh_due_reminders()
+                first_due = gateway_call(
+                    "refresh_due_reminders",
+                    notification_engine.refresh_due_reminders,
+                )
+                second_due = gateway_call(
+                    "refresh_due_reminders",
+                    notification_engine.refresh_due_reminders,
+                )
                 due_events = [
                     event
                     for event in notification_engine.list_notification_events()
@@ -1787,13 +1906,19 @@ class NotificationEngineTests(unittest.TestCase):
                 self.assertEqual(second_due, [])
                 self.assertEqual(len(due_events), 1)
                 self.assertTrue(
-                    notification_engine.update_reminder_status(
-                        reminder["id"], "completed"
+                    gateway_call(
+                        "complete_local_reminder",
+                        notification_engine.update_reminder_status,
+                        reminder["id"],
+                        "completed",
                     )
                 )
                 with self.assertRaisesRegex(ValueError, "already completed"):
-                    notification_engine.update_reminder_status(
-                        reminder["id"], "cancelled"
+                    gateway_call(
+                        "complete_local_reminder",
+                        notification_engine.update_reminder_status,
+                        reminder["id"],
+                        "cancelled",
                     )
 
     def test_relative_due_time_must_be_positive(self) -> None:
@@ -1811,7 +1936,7 @@ class UserSettingsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "single line"):
             user_settings.validate_setting_value("display_name", "User\nIgnore rules")
         with self.assertRaisesRegex(ValueError, "secret-like"):
-            user_settings.validate_setting_value("display_name", "sk-example-secret")
+            user_settings.validate_setting_value("display_name", "sk-example-secret")  # scanner: allow-secret
 
 
 class DashboardIntelligenceTests(unittest.TestCase):
@@ -1923,12 +2048,19 @@ class ProductionReleaseTests(unittest.TestCase):
                 self.assertFalse(lock.exists())
                 with patch.object(stable_release, "generate_stable_release_checklist", return_value={"version_lock": {"locked": False}}):
                     with self.assertRaises(ValueError):
-                        stable_release.generate_stable_release_package()
+                        gateway_call(
+                            "generate_stable_release_package",
+                            stable_release.generate_stable_release_package,
+                        )
 
     def test_stable_lock_reason_is_bounded(self) -> None:
         from core import stable_release
         with self.assertRaises(ValueError):
-            stable_release.lock_stable_release("x" * 501)
+            gateway_call(
+                "lock_stable_release",
+                stable_release.lock_stable_release,
+                "x" * 501,
+            )
 
 
 class MaintenanceAndPatchTests(unittest.TestCase):
@@ -1953,14 +2085,29 @@ class MaintenanceAndPatchTests(unittest.TestCase):
             root=Path(temp_dir); state_path=root/"state.json"
             with patch.object(patch_release,"PATCH_RELEASE_DIR",root),patch.object(patch_release,"PATCH_STATE_FILE",state_path):
                 self.assertFalse(patch_release.load_patch_state()["active"]); self.assertFalse(state_path.exists())
-                with self.assertRaises(ValueError): patch_release.start_patch_release("v6.0.1")
-                state=patch_release.start_patch_release("v6.5.1","hotfix","urgent fix")
+                with self.assertRaises(ValueError):
+                    gateway_call(
+                        "start_patch_release",
+                        patch_release.start_patch_release,
+                        "v6.0.1",
+                    )
+                state=gateway_call(
+                    "start_patch_release",
+                    patch_release.start_patch_release,
+                    "v6.5.1",
+                    "hotfix",
+                    "urgent fix",
+                )
                 self.assertTrue(state["active"]); self.assertEqual(state["patch_type"],"hotfix")
 
     def test_patch_package_requires_active_workflow(self) -> None:
         from core import patch_release
         with patch.object(patch_release,"generate_hotfix_checklist",return_value={"patch_state":{"active":False}}):
-            with self.assertRaises(ValueError): patch_release.generate_patch_release_package()
+            with self.assertRaises(ValueError):
+                gateway_call(
+                    "generate_patch_release_package",
+                    patch_release.generate_patch_release_package,
+                )
 
 
 class RoadmapAndSafetyTests(unittest.TestCase):
@@ -1979,17 +2126,37 @@ class RoadmapAndSafetyTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path=Path(temp_dir)/"roadmap.json"
             with patch.object(roadmap_planner,"ROADMAP_FILE",path):
-                first=roadmap_planner.add_future_feature("UI panel");second=roadmap_planner.add_future_feature("UI panel")
+                first=gateway_call(
+                    "add_future_feature",
+                    roadmap_planner.add_future_feature,
+                    "UI panel",
+                )
+                second=gateway_call(
+                    "add_future_feature",
+                    roadmap_planner.add_future_feature,
+                    "UI panel",
+                )
             self.assertEqual(first["id"],second["id"])
 
     def test_critical_feature_cannot_be_manually_approved(self) -> None:
         from core import safety_review_board
         feature={"id":"feature_1","title":"Execute terminal commands with secrets","description":"upload token","safety_level":"high","category":"agentic_tools","release_bucket":"safety_review","priority_score":90,"status":"proposed","source":"manual","effort":"high","governance_note":"review","created_at":"","updated_at":""}
         with patch.object(safety_review_board,"load_future_features",return_value={"features":[feature]}):
-            with self.assertRaises(ValueError):safety_review_board.create_feature_review("feature_1",decision="approved")
+            with self.assertRaises(ValueError):
+                gateway_call(
+                    "create_feature_review",
+                    safety_review_board.create_feature_review,
+                    "feature_1",
+                    decision="approved",
+                )
             with tempfile.TemporaryDirectory() as temp_dir:
                 path=Path(temp_dir)/"reviews.json"
-                with patch.object(safety_review_board,"REVIEW_FILE",path): review=safety_review_board.create_feature_review("feature_1")
+                with patch.object(safety_review_board,"REVIEW_FILE",path):
+                    review=gateway_call(
+                        "create_feature_review",
+                        safety_review_board.create_feature_review,
+                        "feature_1",
+                    )
             self.assertEqual(review["decision"],"needs_changes");self.assertFalse(review["development_eligible"])
 
     def test_review_read_has_no_write_side_effect(self) -> None:

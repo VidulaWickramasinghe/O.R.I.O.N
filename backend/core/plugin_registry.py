@@ -6,8 +6,10 @@ from typing import Any, Dict, List, Optional
 
 
 from core.database import managed_connection
+from core.runtime_paths import runtime_data_dir
+from core.capability_gateway import requires_gateway
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DB_PATH = DATA_DIR / "orion_plugins.sqlite"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -350,12 +352,12 @@ def init_plugin_registry_db() -> None:
             )
             """
         )
-    sync_builtin_plugins()
+    _sync_builtin_plugins()
     _registry_initialized = True
     _registry_initialized_database = database_key
 
 
-def sync_builtin_plugins() -> None:
+def _sync_builtin_plugins() -> None:
     now = _now()
     with get_connection() as conn:
         for plugin in PLUGIN_DEFINITIONS:
@@ -441,6 +443,11 @@ def sync_builtin_plugins() -> None:
         conn.commit()
 
 
+@requires_gateway
+def sync_builtin_plugins() -> None:
+    _sync_builtin_plugins()
+
+
 def _parse_permissions(value: str) -> List[str]:
     try:
         parsed = json.loads(value or "[]")
@@ -505,6 +512,7 @@ def get_plugin(plugin_key: str) -> Optional[Dict[str, Any]]:
     return _row_to_plugin(row) if row else None
 
 
+@requires_gateway
 def set_plugin_enabled(plugin_key: str, enabled: bool) -> Dict[str, Any]:
     init_plugin_registry_db()
     clean_key = str(plugin_key).strip()

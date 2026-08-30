@@ -9,6 +9,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
+
 from core.release_verification import (
     generate_release_verification_snapshot,
     render_release_verification_report,
@@ -16,7 +19,7 @@ from core.release_verification import (
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-OUT = PROJECT_ROOT / "backend" / "data" / "public_release"
+OUT = runtime_data_dir() / "public_release"
 
 
 def _now() -> str:
@@ -50,6 +53,7 @@ def _docs() -> Dict[str, str]:
     }
 
 
+@requires_gateway
 def generate_public_release_package() -> Dict[str, Any]:
     stamp = _stamp()
     verification = generate_release_verification_snapshot()

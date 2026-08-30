@@ -11,6 +11,8 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from core.approvals import create_approval_request
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 from core.database import managed_connection
 from core.workspace_manager import (
     detect_workspace_stack,
@@ -18,7 +20,7 @@ from core.workspace_manager import (
     inspect_workspace_structure,
 )
 
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 REPORTS_DIR = DATA_DIR / "developer_reports"
 DB_PATH = DATA_DIR / "orion_developer_agent.sqlite"
 
@@ -164,6 +166,7 @@ def _discover_important_files(root: Path) -> List[str]:
     return found
 
 
+@requires_gateway
 def create_developer_report_record(
     workspace_id: int,
     report_type: str,
@@ -356,6 +359,7 @@ No project files were modified by this diagnosis.
     return content
 
 
+@requires_gateway
 def create_patch_plan(
     workspace_id: int,
     issue_description: str,
@@ -424,6 +428,7 @@ This is only a patch plan. No files were edited. Use approval-gated write action
     return content
 
 
+@requires_gateway
 def request_workspace_file_patch(
     workspace_id: int,
     relative_path: str,
@@ -466,11 +471,12 @@ def request_workspace_file_patch(
     )
 
 
+@requires_gateway
 def execute_approved_workspace_patch(approval: Dict[str, Any]) -> str:
     if approval.get("action_type") != "APPLY_WORKSPACE_FILE_PATCH":
         raise ValueError("Approval is not a workspace file patch request.")
-    if approval.get("status") != "pending":
-        raise ValueError("Workspace patch approval is no longer pending.")
+    if approval.get("status") != "executing":
+        raise ValueError("Workspace patch approval does not own an active execution claim.")
 
     payload = approval.get("payload", {})
     workspace_id = int(payload["workspace_id"])

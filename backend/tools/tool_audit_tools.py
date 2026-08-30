@@ -9,7 +9,7 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 
 
-@function_tool
+@function_tool(name_override="get_tool_audit_report")
 @instrument_tool("get_tool_audit_report")
 @enforce_tool_permission("get_tool_audit_report")
 def get_tool_audit_report() -> str:
@@ -19,7 +19,7 @@ def get_tool_audit_report() -> str:
     return render_tool_audit_report()
 
 
-@function_tool
+@function_tool(name_override="list_tool_audit_events")
 @instrument_tool("list_tool_audit_events")
 @enforce_tool_permission("list_tool_audit_events")
 def list_tool_audit_events_tool(limit: int = 30, decision: str = "") -> str:
@@ -38,7 +38,7 @@ def list_tool_audit_events_tool(limit: int = 30, decision: str = "") -> str:
     )
 
 
-@function_tool
+@function_tool(name_override="get_tool_audit_metrics")
 @instrument_tool("get_tool_audit_metrics")
 @enforce_tool_permission("get_tool_audit_metrics")
 def get_tool_audit_metrics_tool() -> str:

@@ -1,9 +1,7 @@
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
 
-from core.activity import log_activity
 from core.plugin_registry import get_plugin, list_plugins
-from core.tool_audit import record_tool_audit_event
 
 
 TOOL_PLUGIN_MAP: Dict[str, str] = {
@@ -53,6 +51,10 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "open_url_in_browser": "desktop_control",
     "start_workspace_dev_server": "desktop_control",
     "get_demo_readiness_report": "portfolio_demo",
+    "get_portfolio_demo_status": "portfolio_demo",
+    "generate_portfolio_demo_pack": "portfolio_demo",
+    "list_portfolio_demo_files": "portfolio_demo",
+    "read_portfolio_demo_file": "portfolio_demo",
     "generate_portfolio_case_study": "portfolio_demo",
     "generate_demo_script": "portfolio_demo",
     "generate_screenshot_checklist": "portfolio_demo",
@@ -182,14 +184,6 @@ ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
 }
 
 
-def _log_permission_activity(event_type: str, message: str) -> None:
-    """Keep secondary activity logging from changing an enforcement decision."""
-    try:
-        log_activity(event_type, message, "O.R.I.O.N.")
-    except Exception:
-        pass
-
-
 def get_plugin_for_tool(tool_name: str) -> str:
     return TOOL_PLUGIN_MAP.get(str(tool_name).strip(), "")
 
@@ -207,16 +201,6 @@ def is_tool_allowed(tool_name: str) -> Dict[str, Any]:
             "reason": "Tool is not mapped to a plugin. Denied by default.",
         }
     plugin = get_plugin(plugin_key)
-    if plugin_key in ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS:
-        return {
-            "allowed": True,
-            "tool_name": tool_name,
-            "plugin_key": plugin_key,
-            "plugin_name": plugin["name"] if plugin else plugin_key,
-            "risk_level": plugin.get("risk_level", "unknown") if plugin else "unknown",
-            "category": plugin.get("category", "unknown") if plugin else "unknown",
-            "reason": "Plugin is protected and always allowed.",
-        }
     if not plugin:
         return {
             "allowed": False,
@@ -248,52 +232,36 @@ def is_tool_allowed(tool_name: str) -> Dict[str, Any]:
     }
 
 def enforce_tool_permission(tool_name: str) -> Callable:
-    """
-    Decorator for O.R.I.O.N. tool functions.
+    """Compatibility decorator backed by the mandatory Capability Gateway.
+
+    ``instrument_tool`` now gates every agent tool, including tools that never
+    used this legacy decorator.  Keeping this wrapper lets older modules retain
+    their decorator stack without creating a second policy implementation.
     """
 
     def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
-            decision = is_tool_allowed(tool_name)
-            try:
-                record_tool_audit_event(
-                    tool_name=tool_name,
-                    plugin_key=decision.get("plugin_key", ""),
-                    decision="allowed" if decision["allowed"] else "blocked",
-                    reason=decision.get("reason", ""),
-                    risk_level=decision.get("risk_level", "unknown"),
-                    category=decision.get("category", "unknown"),
-                    source="Tool Permission Enforcement",
-                )
-            except Exception as error:
-                _log_permission_activity(
-                    "TOOL_AUDIT_FAILED",
-                    f"{tool_name} blocked because its audit event could not be recorded: {error}",
-                )
-                return (
-                    "Tool blocked by Plugin Permission Enforcement.\n\n"
-                    f"Tool: {tool_name}\n"
-                    "Reason: The required audit event could not be recorded."
-                )
-            if not decision["allowed"]:
-                message = (
-                    "Tool blocked by Plugin Permission Enforcement.\n\n"
-                    f"Tool: {tool_name}\n"
-                    f"Plugin: {decision['plugin_key']}\n"
-                    f"Reason: {decision['reason']}\n\n"
-                    "Enable the plugin in Aurora OS Plugin System if you want to use this tool."
-                )
-                _log_permission_activity(
-                    "TOOL_PERMISSION_BLOCKED",
-                    f"{tool_name} blocked. {decision['reason']}",
-                )
-                return message
-            _log_permission_activity(
-                "TOOL_PERMISSION_ALLOWED",
-                f"{tool_name} allowed. {decision['reason']}",
+            from core.capability_gateway import (
+                CapabilityDeniedError,
+                execute_capability,
+                tool_context,
             )
-            return func(*args, **kwargs)
+
+            try:
+                return execute_capability(
+                    tool_name,
+                    tool_context(tool_name),
+                    func,
+                    *args,
+                    **kwargs,
+                )
+            except CapabilityDeniedError as error:
+                return (
+                    "Tool blocked by Capability Gateway.\n\n"
+                    f"Tool: {tool_name}\n"
+                    f"Reason: {error.reason}"
+                )
 
         return wrapper
 

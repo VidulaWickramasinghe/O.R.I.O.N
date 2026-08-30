@@ -39,6 +39,7 @@ tmp/
 temp/
 
 # Generated databases and local app state
+backend/data/
 *.sqlite
 *.sqlite3
 *.db
@@ -70,6 +71,9 @@ backend/data/github_launch/
 *.mov
 *.mp4
 *.webm
+!frontend/src-tauri/icons/*.png
+!frontend/src-tauri/icons/*.ico
+!frontend/src-tauri/icons/*.icns
 
 # OS / editor temp files
 .DS_Store
@@ -119,9 +123,12 @@ backend/data/mission_reports/
 # Generated changelog intelligence artifacts
 backend/data/changelog_intelligence/
 
-# Tauri generated files
+# Tauri generated files and packaged sidecar build output
 frontend/src-tauri/gen/
-frontend/src-tauri/Cargo.lock
+frontend/src-tauri/binaries/
+backend/build/
+backend/dist/
+backend/*.spec
 
 # Accidental root lockfile from running npm outside frontend
 /package-lock.json

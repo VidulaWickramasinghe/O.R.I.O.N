@@ -7,10 +7,12 @@ from core.plugin_registry import get_plugin_metrics, list_plugins, set_plugin_en
 from core.tool_audit import record_tool_audit_event
 from core.user_settings import update_user_setting
 from core.database import managed_connection
+from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DATA_DIR = BACKEND_DIR / "data"
+DATA_DIR = runtime_data_dir()
 DB_PATH = DATA_DIR / "orion_security_policy.sqlite"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -295,6 +297,7 @@ def get_active_security_policy() -> Dict[str, Any]:
     }
 
 
+@requires_gateway
 def apply_security_profile(profile_key: str, source: str = "O.R.I.O.N.") -> Dict[str, Any]:
     init_security_policy_db()
     clean_key = _clean_text(profile_key, "profile_key", 40).lower()

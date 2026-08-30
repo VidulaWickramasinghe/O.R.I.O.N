@@ -1,3 +1,4 @@
+import { invoke, isTauri } from "@tauri-apps/api/core";
 import { getBrowserApiBaseUrl, RuntimeConfigurationError, runtimeConfig } from "@/lib/config/runtime";
 
 export const ORION_API_BASE = runtimeConfig.apiBaseUrl;
@@ -35,11 +36,22 @@ export type ApiRequestOptions = Omit<RequestInit, "body" | "method"> & {
   timeoutMs?: number;
 };
 
-function apiUrl(path: string, query?: ApiRequestOptions["query"]): string {
+type DesktopApiSession = { baseUrl: string; token: string };
+let desktopApiSession: Promise<DesktopApiSession | null> | null = null;
+
+async function getDesktopApiSession(): Promise<DesktopApiSession | null> {
+  if (typeof window === "undefined" || !isTauri()) return null;
+  if (!desktopApiSession) {
+    desktopApiSession = invoke<DesktopApiSession>("get_api_session").catch(() => null);
+  }
+  return desktopApiSession;
+}
+
+function apiUrl(path: string, baseUrl: string, query?: ApiRequestOptions["query"]): string {
   if (!path.startsWith("/") || path.startsWith("//")) {
     throw new Error("O.R.I.O.N. API paths must be root-relative.");
   }
-  const url = new URL(`${getBrowserApiBaseUrl()}${path}`);
+  const url = new URL(`${baseUrl.replace(/\/+$/, "")}${path}`);
   Object.entries(query ?? {}).forEach(([key, value]) => {
     if (value !== undefined && value !== null) url.searchParams.set(key, String(value));
   });
@@ -95,12 +107,16 @@ export async function apiRequest<T>(method: string, path: string, options: ApiRe
   if (options.body !== undefined && !isFormData && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
 
   try {
+    const session = path === "/api/health"
+      ? null
+      : await getDesktopApiSession();
+    if (session) headers.set("Authorization", `Bearer ${session.token}`);
     const body = options.body;
     const requestInit = { ...options };
     delete requestInit.body;
     delete requestInit.query;
     delete requestInit.timeoutMs;
-    const response = await fetch(apiUrl(path, options.query), {
+    const response = await fetch(apiUrl(path, session?.baseUrl ?? getBrowserApiBaseUrl(), options.query), {
       ...(requestInit as RequestInit),
       method,
       headers,
