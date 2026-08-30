@@ -246,7 +246,6 @@ class CapabilityDenialTests(unittest.TestCase):
             "notification_reminders",
             "notification_startup_briefing",
             "dashboard_intelligence",
-            "sidecar_status",
             "system_doctor",
         }
         for endpoint_name in API_CAPABILITY_MAP:
@@ -367,6 +366,8 @@ class CapabilityContextAndAuditTests(unittest.TestCase):
             capability_gateway,
             "_plugin_decision",
             return_value=(True, "allowed", "medium", "mission"),
+        ), patch(
+            "core.mission_manager.assert_mission_execution_allowed"
         ), patch.object(tool_logger, "log_activity"):
             with execution_identity(identity):
                 self.assertEqual(wrapped(), "done")

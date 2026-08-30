@@ -4,12 +4,10 @@ import { useEffect, useState } from "react";
 
 import { DesktopShellPanel } from "@/components/aurora/panels/DesktopShellPanel";
 import { BackendSidecarPanel } from "@/components/aurora/panels/BackendSidecarPanel";
+import { PersistenceRecoveryPanel } from "@/components/aurora/panels/PersistenceRecoveryPanel";
 import { SystemModule } from "@/components/aurora/modules/system-module";
 import { getDesktopShellStatus } from "@/lib/api/desktop";
-import {
-  getBackendSidecarStatus,
-  runBackendSidecarAction,
-} from "@/lib/api/sidecar";
+import { getBackendSidecarStatus } from "@/lib/api/sidecar";
 import { getSystemStatus } from "@/lib/api/status";
 import type { BackendSidecarStatus, DesktopShellStatus } from "@/types/orion";
 
@@ -34,7 +32,6 @@ export function SystemLiveWorkspace() {
   const [systemLoading, setSystemLoading] = useState(false);
   const [desktopShellLoading, setDesktopShellLoading] = useState(false);
   const [backendSidecarLoading, setBackendSidecarLoading] = useState(false);
-  const [backendSidecarMessage, setBackendSidecarMessage] = useState("");
   const [error, setError] = useState("");
 
   async function loadSystemStatus() {
@@ -84,21 +81,6 @@ export function SystemLiveWorkspace() {
     ]);
   }
 
-  async function runSidecarAction(action: "start" | "stop" | "restart") {
-    setBackendSidecarLoading(true);
-    setBackendSidecarMessage("");
-
-    try {
-      const data = await runBackendSidecarAction(action);
-      setBackendSidecarStatus(data.sidecar);
-      setBackendSidecarMessage(data.message || `Sidecar ${action} request completed.`);
-    } catch {
-      setBackendSidecarMessage(`Sidecar ${action} request failed.`);
-    } finally {
-      setBackendSidecarLoading(false);
-    }
-  }
-
   useEffect(() => {
     void refreshAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,12 +98,12 @@ export function SystemLiveWorkspace() {
             </p>
 
             <h1 className="mt-2 text-3xl font-semibold text-white">
-              Backend, sidecar, and diagnostics
+              Backend, supervisor, and diagnostics
             </h1>
 
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
               Inspect live O.R.I.O.N. backend status, desktop shell readiness,
-              backend sidecar state, and read-only System Doctor diagnostics.
+              backend supervisor state, and read-only System Doctor diagnostics.
             </p>
           </div>
 
@@ -208,18 +190,17 @@ export function SystemLiveWorkspace() {
         <BackendSidecarPanel
           status={backendSidecarStatus}
           loading={backendSidecarLoading}
-          message={backendSidecarMessage}
           refreshStatus={loadBackendSidecarStatus}
-          runAction={runSidecarAction}
         />
+
+        <PersistenceRecoveryPanel />
       </div>
 
       <SystemModule />
 
       <p className="rounded-2xl border border-white/10 bg-black/25 p-4 text-xs leading-5 text-slate-500">
-        Safety: this system workspace reads local backend, shell, sidecar, and
-        diagnostic state. Sidecar actions use existing local backend endpoints and
-        do not bypass tool permissions or approval-gated execution.
+        Safety: this workspace reads local backend, shell, supervisor, and diagnostic
+        state. Backend lifecycle control remains exclusively in the Tauri supervisor.
       </p>
     </div>
   );

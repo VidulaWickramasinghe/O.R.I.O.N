@@ -15,6 +15,7 @@ from typing import Any, Dict, List
 
 from core.capability_gateway import requires_gateway
 from core.runtime_paths import runtime_data_dir
+from core.release_evidence import get_release_evidence_status, validate_release_evidence
 
 from core.notification_engine import generate_startup_briefing
 from core.plugin_registry import get_plugin_metrics, render_plugin_registry_report
@@ -216,7 +217,9 @@ def generate_release_checklist(include_dashboard: bool = True) -> Dict[str, Any]
     security_policy = get_active_security_policy()
     settings = get_user_settings_map()
     stabilization = run_stabilization_scan(run_build=False)
+    ci_evidence = get_release_evidence_status()
     checklist = [
+        {"item": "Required CI and package evidence passed", "ok": ci_evidence["ok"], "details": ci_evidence.get("run_url") or ci_evidence.get("error", "Evidence unavailable")},
         {"item": "Dashboard Intelligence score is available", "ok": dashboard.get("intelligence_score", 0) > 0, "details": f"Score: {dashboard.get('intelligence_score', 0)}"},
         {"item": "At least one workspace registered", "ok": dashboard.get("workspace_metrics", {}).get("total_workspaces", 0) > 0, "details": f"Workspaces: {dashboard.get('workspace_metrics', {}).get('total_workspaces', 0)}"},
         {"item": "Plugin Registry loaded", "ok": plugin_metrics.get("total_plugins", 0) > 0, "details": f"Plugins: {plugin_metrics.get('total_plugins', 0)}"},
@@ -243,6 +246,18 @@ def _write_artifact(file_name: str, content: str) -> str:
     return str(path)
 
 
+def render_ci_evidence_summary(evidence: Dict[str, Any]) -> str:
+    artifact_lines = "\n".join(
+        f"- `{artifact['name']}` — `{artifact['sha256']}`"
+        for artifact in evidence.get("artifacts", [])
+    ) or "- No artifact hashes supplied."
+    return f"""- Run: {evidence['run_url']}
+- Commit: `{evidence['commit_sha']}`
+- Hashed Artifacts: {len(evidence.get('artifacts', []))}
+
+{artifact_lines}"""
+
+
 @requires_gateway
 def generate_release_candidate_package() -> Dict[str, Any]:
     """Write a local diagnostics package and return paths to all artifacts."""
@@ -253,7 +268,10 @@ def generate_release_candidate_package() -> Dict[str, Any]:
     freeze_state = get_freeze_state()
     if not freeze_state["frozen"]:
         raise ValueError("Freeze the system before generating a release candidate package.")
+    ci_evidence = validate_release_evidence()
     checklist = generate_release_checklist()
+    if checklist["failed"]:
+        raise ValueError("Release candidate checks must all pass before packaging.")
     reports = {
         "dashboard_intelligence": render_dashboard_intelligence_report(),
         "plugin_registry": render_plugin_registry_report(),
@@ -266,6 +284,7 @@ def generate_release_candidate_package() -> Dict[str, Any]:
     checklist_lines = "\n".join(
         f"- [{'x' if item['ok'] else ' '}] {item['item']} — {item['details']}" for item in checklist["items"]
     )
+    ci_evidence_summary = render_ci_evidence_summary(ci_evidence)
     overview = f"""# O.R.I.O.N. v4.0 Release Candidate Overview
 
 Generated: {_now()}
@@ -285,6 +304,10 @@ Generated: {_now()}
 
 {checklist_lines}
 
+## CI Evidence
+
+{ci_evidence_summary}
+
 ## Package Contents
 
 - Dashboard Intelligence Report
@@ -302,7 +325,8 @@ Generated: {_now()}
     except Exception as error:  # A package remains useful when optional demo generation fails.
         demo_pack = {"status": "failed", "error": str(error), "files": []}
     package_summary = {"status": "generated", "generated_at": _now(), "freeze_state": freeze_state,
-                       "checklist": checklist, "artifacts": artifacts, "demo_pack": demo_pack}
+                       "checklist": checklist, "ci_evidence": ci_evidence,
+                       "artifacts": artifacts, "demo_pack": demo_pack}
     summary_path = _write_artifact(
         f"orion_v4_release_package_summary_{timestamp}.json", json.dumps(package_summary, indent=2)
     )

@@ -13,9 +13,12 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextvars import ContextVar
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import wraps
+import hashlib
+import time
 from typing import Any, Callable, Dict, Iterator, Mapping, Optional, TypeVar
+from uuid import uuid4
 
 from starlette.requests import Request
 
@@ -41,6 +44,12 @@ CAPABILITY_PLUGIN_OVERRIDES: Dict[str, str] = {
     "clear_activity": "core_safe_tools",
     "execute_approved_action": "approval_system",
     "generate_mission_report": "mission_planner",
+    "cancel_mission": "mission_planner",
+    "evaluate_mission_step": "mission_planner",
+    "pause_mission": "mission_planner",
+    "recover_mission_state": "mission_planner",
+    "resume_mission": "mission_planner",
+    "retry_mission_step": "mission_planner",
     "generate_public_release_package": "stable_release",
     "reject_approval": "approval_system",
     "recover_mission_continuations": "mission_planner",
@@ -51,6 +60,14 @@ CAPABILITY_PLUGIN_OVERRIDES: Dict[str, str] = {
     "run_quality_gate": "release_candidate",
     "save_quality_gate_report": "release_candidate",
     "update_voice_state": "voice_system",
+    "update_memory": "memory_system",
+    "exclude_memory": "memory_system",
+    "delete_memory": "memory_system",
+    "exclude_knowledge_document": "knowledge_base",
+    "delete_knowledge_document": "knowledge_base",
+    "create_runtime_backup": "persistence_manager",
+    "request_runtime_restore": "persistence_manager",
+    "restore_runtime_backup": "persistence_manager",
 }
 
 
@@ -59,6 +76,10 @@ CAPABILITY_PLUGIN_OVERRIDES: Dict[str, str] = {
 API_CAPABILITY_MAP: Dict[str, str] = {
     "clear_activity_route": "clear_activity",
     "mission_report": "generate_mission_report",
+    "mission_pause": "pause_mission",
+    "mission_resume": "resume_mission",
+    "mission_cancel": "cancel_mission",
+    "mission_retry_step": "retry_mission_step",
     "approve_request": "execute_approved_action",
     "reject_request": "reject_approval",
     "run_next_mission_step": "run_mission_step",
@@ -82,6 +103,11 @@ API_CAPABILITY_MAP: Dict[str, str] = {
     "knowledge_index": "index_knowledge_document",
     "knowledge_index_folder": "index_knowledge_folder",
     "knowledge_search": "search_local_knowledge",
+    "memory_update": "update_memory",
+    "memory_exclusion": "exclude_memory",
+    "memory_delete": "delete_memory",
+    "knowledge_document_exclusion": "exclude_knowledge_document",
+    "knowledge_document_delete": "delete_knowledge_document",
     "vector_rebuild": "rebuild_vector_memory_index",
     "vector_search": "semantic_memory_search",
     "workflow_create_mission": "create_mission_from_workflow_blueprint",
@@ -93,7 +119,6 @@ API_CAPABILITY_MAP: Dict[str, str] = {
     "notification_reminders": "refresh_due_reminders",
     "notification_startup_briefing": "generate_startup_briefing",
     "dashboard_intelligence": "get_dashboard_intelligence_report",
-    "sidecar_status": "get_backend_sidecar_status",
     "system_doctor": "run_system_doctor",
     "settings_reset": "reset_user_profile_settings",
     "settings_update": "update_user_profile_setting",
@@ -105,11 +130,10 @@ API_CAPABILITY_MAP: Dict[str, str] = {
     "stabilization_scan": "run_stabilization_scan",
     "stabilization_report_save": "save_stabilization_report",
     "frontend_refactor_report_save": "save_frontend_refactor_report",
-    "sidecar_start": "start_backend_sidecar",
-    "sidecar_stop": "stop_backend_sidecar",
-    "sidecar_restart": "restart_backend_sidecar",
     "quality_gate_run": "run_quality_gate",
     "quality_gate_report_save": "save_quality_gate_report",
+    "persistence_backup_create": "create_runtime_backup",
+    "persistence_restore_request": "request_runtime_restore",
     "public_release_package": "generate_public_release_package",
     "github_polish_artifacts_save": "save_github_polish_artifacts",
     "portfolio_showcase_report_save": "save_portfolio_showcase_report",
@@ -149,12 +173,16 @@ API_CAPABILITY_MAP: Dict[str, str] = {
 # This prevents a caller from authorizing an unrelated low-risk operation and
 # using that authorization to invoke a different protected service function.
 INTERNAL_CAPABILITY_MAP: Dict[str, frozenset[str]] = {
+    "core.agent_runtime.run_scoped_agent": frozenset(
+        {"agent_chat", "run_mission_batch", "run_mission_step"}
+    ),
     "core.activity.clear_activity": frozenset({"clear_activity"}),
     "core.approvals.create_approval_request": frozenset(
         {
             "open_url_in_browser",
             "open_workspace_folder",
             "open_workspace_in_vscode",
+            "request_runtime_restore",
             "request_workspace_file_patch",
             "run_safe_command",
             "start_workspace_dev_server",
@@ -176,18 +204,6 @@ INTERNAL_CAPABILITY_MAP: Dict[str, frozenset[str]] = {
     "core.approvals.reject_approval_request": frozenset({"reject_approval"}),
     "core.approvals.mark_mission_continuation_resolved": frozenset(
         {"recover_mission_continuations", "resolve_mission_continuation"}
-    ),
-    "core.backend_sidecar.start_backend_sidecar": frozenset({"start_backend_sidecar"}),
-    "core.backend_sidecar.stop_backend_sidecar": frozenset({"stop_backend_sidecar"}),
-    "core.backend_sidecar.restart_backend_sidecar": frozenset({"restart_backend_sidecar"}),
-    "core.backend_sidecar.save_sidecar_state": frozenset(
-        {
-            "get_backend_sidecar_status",
-            "restart_backend_sidecar",
-            "run_system_doctor",
-            "start_backend_sidecar",
-            "stop_backend_sidecar",
-        }
     ),
     "core.browser_research.save_web_research_report": frozenset({"save_web_research"}),
     "core.context_engine.save_context_history": frozenset(
@@ -231,6 +247,12 @@ INTERNAL_CAPABILITY_MAP: Dict[str, frozenset[str]] = {
     "core.knowledge_base._index_document_path": frozenset(
         {"index_knowledge_document", "index_knowledge_folder"}
     ),
+    "core.knowledge_base.set_knowledge_document_excluded": frozenset(
+        {"exclude_knowledge_document"}
+    ),
+    "core.knowledge_base.delete_knowledge_document": frozenset(
+        {"delete_knowledge_document"}
+    ),
     "core.mission_planner.create_mission_record": frozenset(
         {"create_mission", "create_mission_from_workflow_blueprint"}
     ),
@@ -239,6 +261,52 @@ INTERNAL_CAPABILITY_MAP: Dict[str, frozenset[str]] = {
     ),
     "core.mission_manager.recover_mission_continuations": frozenset(
         {"recover_mission_continuations"}
+    ),
+    "core.mission_manager.transition_mission_state": frozenset(
+        {
+            "cancel_mission",
+            "evaluate_mission_step",
+            "pause_mission",
+            "recover_mission_continuations",
+            "recover_mission_state",
+            "resolve_mission_continuation",
+            "resume_mission",
+            "retry_mission_step",
+            "run_mission_batch",
+            "run_mission_step",
+            "update_mission_status",
+        }
+    ),
+    "core.mission_manager.transition_step_state": frozenset(
+        {
+            "cancel_mission",
+            "evaluate_mission_step",
+            "pause_mission",
+            "recover_mission_continuations",
+            "recover_mission_state",
+            "resolve_mission_continuation",
+            "resume_mission",
+            "retry_mission_step",
+            "run_mission_batch",
+            "run_mission_step",
+            "update_mission_step_status",
+        }
+    ),
+    "core.mission_manager.acquire_mission_lease": frozenset(
+        {"run_mission_batch", "run_mission_step"}
+    ),
+    "core.mission_manager.release_mission_lease": frozenset(
+        {"run_mission_batch", "run_mission_step"}
+    ),
+    "core.mission_manager.pause_mission": frozenset({"pause_mission"}),
+    "core.mission_manager.resume_mission": frozenset({"resume_mission"}),
+    "core.mission_manager.cancel_mission": frozenset({"cancel_mission"}),
+    "core.mission_manager.retry_mission_step": frozenset({"retry_mission_step"}),
+    "core.mission_manager.evaluate_mission_step": frozenset(
+        {"evaluate_mission_step", "run_mission_batch", "run_mission_step"}
+    ),
+    "core.mission_manager.recover_expired_mission_leases": frozenset(
+        {"recover_mission_state"}
     ),
     "core.mission_planner.update_mission_status_record": frozenset(
         {
@@ -287,6 +355,12 @@ INTERNAL_CAPABILITY_MAP: Dict[str, frozenset[str]] = {
     "core.patch_release.save_patch_release_report": frozenset({"save_patch_release_report"}),
     "core.patch_release.generate_patch_release_package": frozenset({"generate_patch_release_package"}),
     "core.persistent_memory.save_memory_item": frozenset({"remember_information"}),
+    "core.persistent_memory.update_memory_item": frozenset({"update_memory"}),
+    "core.persistent_memory.set_memory_excluded": frozenset({"exclude_memory"}),
+    "core.persistent_memory.delete_memory_item": frozenset({"delete_memory"}),
+    "core.persistence.create_runtime_backup": frozenset({"create_runtime_backup"}),
+    "core.persistence.restore_runtime_backup": frozenset({"restore_runtime_backup"}),
+    "core.persistence.schedule_runtime_restore": frozenset({"execute_approved_action"}),
     "core.plugin_registry.set_plugin_enabled": frozenset(
         {"apply_security_profile", "set_orion_plugin_enabled"}
     ),
@@ -356,6 +430,7 @@ SIDE_EFFECTING_CAPABILITIES = {
     "add_project_note",
     "agent_chat",
     "apply_security_profile",
+    "cancel_mission",
     "clear_activity",
     "complete_local_reminder",
     "complete_patch_release",
@@ -364,9 +439,15 @@ SIDE_EFFECTING_CAPABILITIES = {
     "create_mission",
     "create_mission_from_workflow_blueprint",
     "create_note",
+    "create_runtime_backup",
     "create_workspace_patch_plan",
     "diagnose_workspace_issue",
+    "delete_knowledge_document",
+    "delete_memory",
     "execute_approved_action",
+    "evaluate_mission_step",
+    "exclude_knowledge_document",
+    "exclude_memory",
     "freeze_final_launch",
     "freeze_release_candidate",
     "generate_final_launch_package",
@@ -390,24 +471,29 @@ SIDE_EFFECTING_CAPABILITIES = {
     "open_url_in_browser",
     "open_workspace_folder",
     "open_workspace_in_vscode",
+    "pause_mission",
     "rebuild_vector_memory_index",
     "register_project",
     "register_workspace",
     "reject_approval",
     "recover_mission_continuations",
+    "recover_mission_state",
     "request_workspace_file_patch",
+    "request_runtime_restore",
     "research_browser_page",
     "research_web_page",
     "resolve_mission_continuation",
+    "restore_runtime_backup",
     "retrieve_project_context",
     "reset_user_profile_settings",
     "reset_voice_state",
+    "resume_mission",
     "refresh_due_reminders",
-    "restart_backend_sidecar",
     "run_mission_batch",
     "run_mission_step",
     "run_quality_gate",
     "run_safe_command",
+    "retry_mission_step",
     "save_activity_log",
     "save_changelog_intelligence_artifacts",
     "save_demo_recording_report",
@@ -431,15 +517,14 @@ SIDE_EFFECTING_CAPABILITIES = {
     "semantic_memory_search",
     "set_demo_mode",
     "set_orion_plugin_enabled",
-    "start_backend_sidecar",
     "start_patch_release",
     "start_workspace_dev_server",
-    "stop_backend_sidecar",
     "unfreeze_final_launch",
     "unfreeze_release_candidate",
     "unlock_stable_release",
     "update_mission_status",
     "update_mission_step_status",
+    "update_memory",
     "update_project_status",
     "update_user_profile_setting",
     "update_voice_state",
@@ -448,7 +533,7 @@ SIDE_EFFECTING_CAPABILITIES = {
 }
 
 
-APPROVAL_REQUIRED_CAPABILITIES = {"execute_approved_action"}
+APPROVAL_REQUIRED_CAPABILITIES = {"execute_approved_action", "restore_runtime_backup"}
 
 
 @dataclass(frozen=True)
@@ -470,6 +555,8 @@ class CapabilityContext:
     step_id: Optional[int] = None
     run_id: Optional[int] = None
     approval_id: Optional[int] = None
+    correlation_id: str = ""
+    arguments_hash: str = ""
 
 
 @dataclass(frozen=True)
@@ -526,6 +613,18 @@ def list_capability_manifests() -> Dict[str, CapabilityManifest]:
 
 def get_active_authorization() -> Optional[CapabilityAuthorization]:
     return _active_authorization.get()
+
+
+def _correlation_id(value: str = "") -> str:
+    clean = str(value or "").strip()
+    if not clean:
+        return uuid4().hex
+    if len(clean) > 128 or any(
+        character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_.:"
+        for character in clean
+    ):
+        return uuid4().hex
+    return clean
 
 
 def _policy_snapshot() -> tuple[str, set[str]]:
@@ -600,6 +699,8 @@ def _audit(
         approval_id=context.approval_id,
         scope=context.scope or manifest.scope,
         side_effect=manifest.side_effect,
+        correlation_id=context.correlation_id,
+        arguments_hash=context.arguments_hash,
     )
 
 
@@ -627,6 +728,8 @@ def authorize(capability: str, context: CapabilityContext) -> CapabilityAuthoriz
                 approval_id=context.approval_id,
                 scope=str(context.scope or "")[:200],
                 side_effect=True,
+                correlation_id=_correlation_id(context.correlation_id),
+                arguments_hash=str(context.arguments_hash or "")[:64],
             )
         except Exception as error:
             raise CapabilityDeniedError(
@@ -649,6 +752,8 @@ def authorize(capability: str, context: CapabilityContext) -> CapabilityAuthoriz
         step_id=context.step_id,
         run_id=context.run_id,
         approval_id=context.approval_id,
+        correlation_id=_correlation_id(context.correlation_id),
+        arguments_hash=str(context.arguments_hash or "").strip(),
     )
 
     try:
@@ -661,6 +766,18 @@ def authorize(capability: str, context: CapabilityContext) -> CapabilityAuthoriz
         else:
             policy_profile, disabled = _policy_snapshot()
             allowed, reason, risk_level, category = _plugin_decision(manifest, disabled)
+            if (
+                allowed
+                and resolved_context.actor == "mission_agent"
+                and resolved_context.mission_id is not None
+            ):
+                from core.mission_manager import assert_mission_execution_allowed
+
+                try:
+                    assert_mission_execution_allowed(resolved_context.mission_id)
+                except Exception as error:
+                    allowed = False
+                    reason = f"Mission lifecycle blocked execution: {error}"
             if allowed and manifest.approval_required:
                 allowed, reason = _approval_is_valid(resolved_context)
     except Exception as error:
@@ -710,8 +827,59 @@ def execute_capability(
     *args: Any,
     **kwargs: Any,
 ) -> T:
-    with authorized(capability, context):
-        return operation(*args, **kwargs)
+    from core.tool_audit import (
+        complete_audit_event,
+        hash_audit_arguments,
+        record_audit_event,
+    )
+
+    arguments_hash = context.arguments_hash or hash_audit_arguments(
+        {"args": args, "kwargs": kwargs}
+    )
+    resolved_context = replace(
+        context,
+        correlation_id=_correlation_id(context.correlation_id),
+        arguments_hash=arguments_hash,
+    )
+    with authorized(capability, resolved_context) as authorization:
+        active_context = authorization.context
+        started = record_audit_event(
+            "capability.execution",
+            "execution",
+            status="started",
+            actor=active_context.actor,
+            source=active_context.source,
+            session_id=active_context.session_id,
+            mission_id=active_context.mission_id,
+            step_id=active_context.step_id,
+            run_id=active_context.run_id,
+            tool_name=authorization.manifest.name,
+            plugin_key=authorization.manifest.plugin_key,
+            policy_profile=authorization.policy_profile,
+            approval_id=active_context.approval_id,
+            scope=active_context.scope,
+            arguments_hash=arguments_hash,
+            correlation_id=active_context.correlation_id,
+        )
+        start_time = time.perf_counter()
+        try:
+            result = operation(*args, **kwargs)
+        except BaseException as error:
+            complete_audit_event(
+                int(started["id"]),
+                status="failed",
+                result={"error_type": type(error).__name__},
+                duration_ms=(time.perf_counter() - start_time) * 1000,
+                reason=str(error)[:4000],
+            )
+            raise
+        complete_audit_event(
+            int(started["id"]),
+            status="succeeded",
+            result=result,
+            duration_ms=(time.perf_counter() - start_time) * 1000,
+        )
+        return result
 
 
 @contextmanager
@@ -737,6 +905,8 @@ def tool_context(tool_name: str) -> CapabilityContext:
             step_id=identity.step_id,
             run_id=identity.run_id,
             approval_id=identity.approval_id,
+            correlation_id=identity.correlation_id,
+            arguments_hash=identity.arguments_hash,
         )
     return CapabilityContext(actor="agent", source="agent_tool", scope=scope)
 
@@ -762,7 +932,50 @@ def requires_gateway(func: Callable[..., T]) -> Callable[..., T]:
                 func.__name__,
                 "Active capability is not permitted to invoke this internal mutation.",
             )
-        return func(*args, **kwargs)
+        from core.tool_audit import (
+            complete_audit_event,
+            hash_audit_arguments,
+            record_audit_event,
+        )
+
+        context = authorization.context
+        started = record_audit_event(
+            "internal.operation",
+            "action",
+            status="started",
+            actor=context.actor,
+            source=context.source,
+            session_id=context.session_id,
+            mission_id=context.mission_id,
+            step_id=context.step_id,
+            run_id=context.run_id,
+            tool_name=primitive,
+            plugin_key=authorization.manifest.plugin_key,
+            policy_profile=authorization.policy_profile,
+            approval_id=context.approval_id,
+            scope=context.scope,
+            arguments_hash=hash_audit_arguments({"args": args, "kwargs": kwargs}),
+            correlation_id=context.correlation_id,
+        )
+        start_time = time.perf_counter()
+        try:
+            result = func(*args, **kwargs)
+        except BaseException as error:
+            complete_audit_event(
+                int(started["id"]),
+                status="failed",
+                result={"error_type": type(error).__name__},
+                duration_ms=(time.perf_counter() - start_time) * 1000,
+                reason=str(error)[:4000],
+            )
+            raise
+        complete_audit_event(
+            int(started["id"]),
+            status="succeeded",
+            result=result,
+            duration_ms=(time.perf_counter() - start_time) * 1000,
+        )
+        return result
 
     setattr(wrapper, "__capability_gateway_required__", True)
     return wrapper
@@ -781,6 +994,8 @@ def test_context(capability: str, **values: Any) -> CapabilityContext:
         step_id=values.get("step_id"),
         run_id=values.get("run_id"),
         approval_id=values.get("approval_id"),
+        correlation_id=str(values.get("correlation_id") or ""),
+        arguments_hash=str(values.get("arguments_hash") or ""),
     )
 
 
@@ -791,7 +1006,10 @@ async def api_capability_guard(request: Request) -> Iterator[None]:
     endpoint_name = getattr(endpoint, "__name__", "")
     capability = API_CAPABILITY_MAP.get(endpoint_name, "")
     if str(request.method).upper() in {"GET", "HEAD", "OPTIONS"} and not capability:
-        yield
+        from core.activity import suppress_activity_writes
+
+        with suppress_activity_writes():
+            yield
         return
     if not capability:
         from fastapi import HTTPException
@@ -815,6 +1033,22 @@ async def api_capability_guard(request: Request) -> Iterator[None]:
             mission_id = approval.get("mission_id")
             step_header = str(approval.get("step_id") or "")
             run_header = str(approval.get("run_id") or "")
+    request_shape: Dict[str, Any] = {
+        "method": str(request.method).upper(),
+        "path": str(request.url.path),
+        "path_params": dict(path_params),
+    }
+    query = str(getattr(request.url, "query", "") or "")
+    if query:
+        request_shape["query"] = query
+    if str(request.method).upper() in {"POST", "PUT", "PATCH", "DELETE"} and hasattr(request, "body"):
+        try:
+            body = await request.body()
+            request_shape["body_sha256"] = hashlib.sha256(body).hexdigest()
+        except Exception:
+            request_shape["body_sha256"] = "unavailable"
+    from core.tool_audit import hash_audit_arguments
+
     context = CapabilityContext(
         actor="approval_executor" if capability == "execute_approved_action" else "aurora_api",
         source=f"api:{request.method}:{request.url.path}",
@@ -825,7 +1059,11 @@ async def api_capability_guard(request: Request) -> Iterator[None]:
         step_id=int(step_header) if step_header.isdigit() else None,
         run_id=int(run_header) if run_header.isdigit() else None,
         approval_id=int(approval_id) if approval_id is not None else None,
+        correlation_id=_correlation_id(request.headers.get("X-ORION-Correlation-ID", "")),
+        arguments_hash=hash_audit_arguments(request_shape),
     )
+    if hasattr(request, "state"):
+        request.state.orion_correlation_id = context.correlation_id
     try:
         with authorized(capability, context):
             yield

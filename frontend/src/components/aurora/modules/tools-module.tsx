@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 
 import { useAuroraApprovals } from "../lib/aurora-queries";
-import { api } from "../lib/api-client";
+import { api } from "@/lib/api/client";
 import { ModuleShell } from "./module-shell";
 
 type ToolsModuleProps = {

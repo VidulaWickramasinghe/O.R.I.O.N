@@ -58,6 +58,14 @@ export type MemoryItem = {
   importance: number;
   created_at: string;
   updated_at: string;
+  workspace_id?: number | null;
+  project_key: string;
+  sensitivity: "public" | "internal" | "sensitive";
+  expires_at: string;
+  excluded: boolean;
+  exclusion_reason: string;
+  provenance: Record<string, unknown>;
+  retrieval_reason?: string;
 };
 
 export type MissionItem = {
@@ -68,6 +76,8 @@ export type MissionItem = {
   priority: number;
   created_at: string;
   updated_at: string;
+  state_version?: number;
+  terminal_reason?: string;
 };
 
 export type MissionRunItem = {

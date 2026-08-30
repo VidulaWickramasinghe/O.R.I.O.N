@@ -29,7 +29,7 @@ import {
   useAuroraStatus,
   useAuroraWorkspaces,
 } from "./lib/aurora-queries";
-import { api } from "./lib/api-client";
+import { api } from "@/lib/api/client";
 
 type Message = {
   role: "user" | "orion";

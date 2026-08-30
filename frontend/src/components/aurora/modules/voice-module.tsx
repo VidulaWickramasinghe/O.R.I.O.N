@@ -1,33 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-import { VoiceStatus } from "../aurora-types";
-import { getVoiceStatus, resetVoiceStatus } from "@/lib/api/voice";
+import { resetVoiceStatus } from "@/lib/api/voice";
+import { useAuroraVoiceStatus } from "../lib/aurora-queries";
 import { ModuleShell } from "./module-shell";
 
 export function VoiceModule() {
-  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus | null>(null);
-
-  async function loadVoiceStatus() {
-    try {
-      const data = await getVoiceStatus();
-      setVoiceStatus(data);
-    } catch {
-      setVoiceStatus(null);
-    }
-  }
+  const voiceStatusQuery = useAuroraVoiceStatus();
+  const voiceStatus = voiceStatusQuery.data ?? null;
 
   async function resetVoice() {
     await resetVoiceStatus();
-    await loadVoiceStatus();
   }
-
-  useEffect(() => {
-    loadVoiceStatus();
-    const timer = setInterval(loadVoiceStatus, 3000);
-    return () => clearInterval(timer);
-  }, []);
 
   return (
     <ModuleShell

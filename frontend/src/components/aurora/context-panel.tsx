@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Activity,
   BrainCircuit,
@@ -10,7 +10,12 @@ import {
 
 import { GlassPanel } from "@/components/aurora/glass-panel";
 import { StatusChip } from "@/components/aurora/status-chip";
-import { apiGet } from "@/lib/api/client";
+import {
+  useAuroraActivity,
+  useAuroraApprovals,
+  useAuroraMemory,
+  useAuroraMissions,
+} from "@/components/aurora/lib/aurora-queries";
 import { useUiStore } from "@/store/ui-store";
 
 type SourceState = {
@@ -43,80 +48,20 @@ export function ContextPanel() {
   const setContextOpen = useUiStore(
     (state) => state.setContextOpen,
   );
-  const [activity, setActivity] = useState<Record<string, unknown>[]>([]);
-  const [approvals, setApprovals] = useState<Record<string, unknown>[]>([]);
-  const [missions, setMissions] = useState<Record<string, unknown>[]>([]);
-  const [memory, setMemory] = useState<Record<string, unknown>[]>([]);
-  const [sources, setSources] = useState<SourceState>({
-    activity: false,
-    approvals: false,
-    missions: false,
-    memory: false,
-  });
-
-  const load = useCallback(async () => {
-    const [activityResult, approvalsResult, missionsResult, memoryResult] =
-      await Promise.allSettled([
-        apiGet<unknown>("/api/activity"),
-        apiGet<unknown>("/api/approvals"),
-        apiGet<unknown>("/api/missions"),
-        apiGet<unknown>("/api/memory"),
-      ]);
-
-    setSources({
-      activity: activityResult.status === "fulfilled",
-      approvals: approvalsResult.status === "fulfilled",
-      missions: missionsResult.status === "fulfilled",
-      memory: memoryResult.status === "fulfilled",
-    });
-
-    setActivity(
-      activityResult.status === "fulfilled"
-        ? listFrom<Record<string, unknown>>(activityResult.value, [
-            "events",
-            "activity",
-            "items",
-            "timeline",
-            "entries",
-          ])
-        : [],
-    );
-
-    setApprovals(
-      approvalsResult.status === "fulfilled"
-        ? listFrom<Record<string, unknown>>(approvalsResult.value, [
-            "approvals",
-            "items",
-            "results",
-          ])
-        : [],
-    );
-
-    setMissions(
-      missionsResult.status === "fulfilled"
-        ? listFrom<Record<string, unknown>>(missionsResult.value, [
-            "missions",
-            "items",
-            "results",
-          ])
-        : [],
-    );
-
-    setMemory(
-      memoryResult.status === "fulfilled"
-        ? listFrom<Record<string, unknown>>(memoryResult.value, [
-            "items",
-            "memories",
-            "results",
-            "memory",
-          ])
-        : [],
-    );
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const activityQuery = useAuroraActivity();
+  const approvalsQuery = useAuroraApprovals();
+  const missionsQuery = useAuroraMissions();
+  const memoryQuery = useAuroraMemory();
+  const activity = listFrom<Record<string, unknown>>(activityQuery.data, ["events"]);
+  const approvals = listFrom<Record<string, unknown>>(approvalsQuery.data, ["approvals"]);
+  const missions = listFrom<Record<string, unknown>>(missionsQuery.data, ["missions"]);
+  const memory = listFrom<Record<string, unknown>>(memoryQuery.data, ["items"]);
+  const sources: SourceState = {
+    activity: activityQuery.data !== undefined && !activityQuery.isError,
+    approvals: approvalsQuery.data !== undefined && !approvalsQuery.isError,
+    missions: missionsQuery.data !== undefined && !missionsQuery.isError,
+    memory: memoryQuery.data !== undefined && !memoryQuery.isError,
+  };
 
   const pendingApprovals = useMemo(
     () =>

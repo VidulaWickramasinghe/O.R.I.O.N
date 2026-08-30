@@ -15,7 +15,7 @@ export function VoiceWorkspace() {
         </h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Monitor O.R.I.O.N.'s local voice state, wake phrase, listening mode,
+          Monitor O.R.I.O.N.&apos;s local voice state, wake phrase, listening mode,
           latest transcript, and latest voice event from the backend.
         </p>
       </header>

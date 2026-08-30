@@ -152,13 +152,6 @@ from tools.plugin_registry_tools import (
     get_plugin_registry_report,
 )
 
-from tools.backend_sidecar_tools import (
-    get_backend_sidecar_status,
-    start_backend_sidecar_tool,
-    stop_backend_sidecar_tool,
-    restart_backend_sidecar_tool,
-)
-
 from tools.tool_permission_tools import (
     get_tool_permission_report,
     check_tool_permission,
@@ -323,10 +316,6 @@ orion = Agent(
         inspect_orion_plugin,
         set_orion_plugin_enabled,
         get_plugin_registry_report,
-        get_backend_sidecar_status,
-        start_backend_sidecar_tool,
-        stop_backend_sidecar_tool,
-        restart_backend_sidecar_tool,
         get_tool_permission_report,
         check_tool_permission,
         get_tool_permission_metrics_tool,

@@ -31,6 +31,9 @@ def remember_information(
     title: str,
     content: str,
     importance: int = 3,
+    workspace_id: int | None = None,
+    project_key: str = "",
+    sensitivity: str = "internal",
 ) -> str:
     """
     Save important long-term information into O.R.I.O.N.'s persistent memory.
@@ -41,6 +44,10 @@ def remember_information(
         content=content,
         source="O.R.I.O.N.",
         importance=importance,
+        workspace_id=workspace_id,
+        project_key=project_key,
+        sensitivity=sensitivity,
+        provenance={"source": "agent_tool", "method": "explicit_tool_call"},
     )
 
     return f"Memory saved with ID {memory_id}: {title}"
@@ -48,19 +55,37 @@ def remember_information(
 
 @function_tool
 @instrument_tool("search_persistent_memory")
-def search_persistent_memory(query: str, limit: int = 10) -> str:
+def search_persistent_memory(
+    query: str,
+    limit: int = 10,
+    workspace_id: int | None = None,
+    project_key: str = "",
+) -> str:
     """
     Search O.R.I.O.N.'s persistent memory database.
     """
-    items = search_memory_items(query=query, limit=limit)
+    items = search_memory_items(
+        query=query,
+        limit=limit,
+        workspace_id=workspace_id,
+        project_key=project_key,
+    )
     return _format_memory_items(items)
 
 
 @function_tool
 @instrument_tool("list_recent_persistent_memory")
-def list_recent_persistent_memory(limit: int = 10) -> str:
+def list_recent_persistent_memory(
+    limit: int = 10,
+    workspace_id: int | None = None,
+    project_key: str = "",
+) -> str:
     """
     List recent persistent memory items.
     """
-    items = list_recent_memory(limit=limit)
+    items = list_recent_memory(
+        limit=limit,
+        workspace_id=workspace_id,
+        project_key=project_key,
+    )
     return _format_memory_items(items)

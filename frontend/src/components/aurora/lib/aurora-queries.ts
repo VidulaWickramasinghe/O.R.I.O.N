@@ -12,7 +12,9 @@ import {
   VoiceStatus,
   WorkspaceItem,
 } from "../aurora-types";
-import { api } from "./api-client";
+import { api } from "@/lib/api/client";
+import { getDashboardIntelligence } from "@/lib/api/dashboard";
+import { getPersistenceOverview } from "@/lib/api/persistence";
 
 type StatusResponse = Status;
 
@@ -111,5 +113,19 @@ export function useAuroraDemoStatus() {
   return useQuery({
     queryKey: ["aurora-demo-status"],
     queryFn: () => api.get<DemoStatus>("/api/demo/status"),
+  });
+}
+
+export function useAuroraDashboardIntelligence() {
+  return useQuery({
+    queryKey: ["aurora-dashboard-intelligence"],
+    queryFn: getDashboardIntelligence,
+  });
+}
+
+export function useAuroraPersistence() {
+  return useQuery({
+    queryKey: ["aurora-persistence"],
+    queryFn: getPersistenceOverview,
   });
 }

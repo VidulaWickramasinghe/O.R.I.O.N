@@ -42,17 +42,17 @@ frontend/src-tauri/target/release/bundle/
 - No broad filesystem permissions are granted to the frontend.
 - Sensitive actions still route through O.R.I.O.N.’s Command Approval System.
 
-## Current Limitation
+## Packaged Backend
 
-The backend must be started locally before or with the desktop shell. Future versions may package the backend as a controlled sidecar.
+The desktop build packages the backend as a controlled sidecar. Tauri owns launch, health recovery, and shutdown.
 
 
 ## v3.6 One-Click Launch
 
-O.R.I.O.N. v3.6 introduces the backend sidecar launcher:
+For local desktop development, use:
 
 ```bash
 ./scripts/orion_desktop.sh
 ```
 
-This starts the backend if needed and opens the Tauri desktop shell.
+This opens the Tauri desktop shell; the Rust supervisor starts the backend sidecar.

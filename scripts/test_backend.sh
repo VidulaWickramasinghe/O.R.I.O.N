@@ -3,7 +3,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [ -x ".venv/bin/python" ]; then
+if [ -n "${ORION_PYTHON_BIN:-}" ] && [ -x "$ORION_PYTHON_BIN" ]; then
+  PYTHON_BIN="$ORION_PYTHON_BIN"
+elif [ -x ".venv/bin/python" ]; then
   PYTHON_BIN=".venv/bin/python"
 elif command -v python3 >/dev/null 2>&1; then
   PYTHON_BIN="$(command -v python3)"

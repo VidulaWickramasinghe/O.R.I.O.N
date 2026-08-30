@@ -1,10 +1,12 @@
 import { AppShell } from "@/components/aurora/app-shell";
-import { OperationalAnalytics } from "@/components/analytics/operational-analytics";
+import { AnalyticsOverview } from "@/components/aurora/analytics-overview";
 
 export default function AnalyticsPage() {
   return (
     <AppShell>
-      <OperationalAnalytics />
+      <div className="mx-auto w-full max-w-[1600px]">
+        <AnalyticsOverview />
+      </div>
     </AppShell>
   );
 }

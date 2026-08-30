@@ -1,6 +1,7 @@
 "use client";
 
-import { apiGet } from "@/lib/api/client";
+import { ORION_API_MUTATION_EVENT } from "@/lib/api/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   Activity,
@@ -41,7 +42,6 @@ import { dashboardModels, dashboardTimeline } from "@/lib/aurora-data";
 import { createDeveloperPatchPlan, diagnoseDeveloperWorkspace, getDeveloperReports, inspectDeveloperWorkspace } from "@/lib/api/developer";
 import { getKnowledgeDocuments, indexKnowledgeFolder, searchKnowledge } from "@/lib/api/knowledge";
 import { getVectorItems, rebuildVectorIndex, searchVector } from "@/lib/api/vector";
-import { getWorkspaces } from "@/lib/api/workspaces";
 import { createWorkflowMission, getWorkflowBlueprint, getWorkflowBlueprints } from "@/lib/api/workflows";
 import {
   isMissionActive,
@@ -70,6 +70,14 @@ import { UserSettingsPanel } from "@/components/aurora/panels/UserSettingsPanel"
 import { AnalyticsOverview } from "./analytics-overview";
 import { GlassPanel } from "./glass-panel";
 import { StatusChip } from "./status-chip";
+import {
+  useAuroraActivity,
+  useAuroraApprovals,
+  useAuroraDashboardIntelligence,
+  useAuroraMissions,
+  useAuroraMissionRuns,
+  useAuroraWorkspaces,
+} from "./lib/aurora-queries";
 
 import type { WorkspaceItem } from "@/types/orion";
 import { DashboardIntelligencePanel } from "@/components/aurora/panels/DashboardIntelligencePanel";
@@ -83,14 +91,6 @@ import { SafetyReviewBoardPanel } from "@/components/aurora/panels/SafetyReviewB
 import { ProductionReadinessPanel } from "@/components/aurora/panels/ProductionReadinessPanel";
 import { PublicLandingPanel } from "@/components/aurora/panels/PublicLandingPanel";
 import { UIPolishPanel } from "@/components/aurora/panels/UIPolishPanel";
-
-function restoreDashboardPreferences() {
-  const store = useAuroraStore.getState();
-  void store.loadPanelLayout();
-  store.loadDemoWalkthroughStateFromStore();
-  store.loadRecordingModeStateFromStore();
-  void store.loadActiveDashboardView();
-}
 
 type KnowledgeDocumentItem = {
   id: number;
@@ -111,6 +111,11 @@ type KnowledgeSearchItem = {
   title: string;
   source_path: string;
   extension: string;
+  workspace_id: number;
+  relative_path: string;
+  sensitivity: string;
+  provenance: Record<string, unknown>;
+  retrieval_reason: string;
 };
 
 type VectorItem = {
@@ -131,6 +136,8 @@ type SemanticSearchItem = {
   title: string;
   content: string;
   metadata: Record<string, unknown>;
+  provenance?: Record<string, unknown>;
+  retrieval_reason?: string;
   score: number;
   created_at: string;
   updated_at: string;
@@ -189,19 +196,8 @@ const DEFAULT_WIDGETS = [
 
 const GOVERNANCE_WIDGETS = [
   "Dashboard Intelligence",
-  "Dashboard Views",
   "Release Candidate",
-  "Changelog Intelligence",
-  "Stable Public Release",
-  "Post-Release Maintenance",
-  "Patch Release",
-  "Roadmap Planner",
   "Safety Review Board",
-  "Production Readiness",
-  "Final Launch",
-  "GitHub Launch",
-  "Public Landing Page",
-  "UI Polish",
   "Plugin System",
   "Security Policy",
   "Tool Permission Enforcement",
@@ -228,7 +224,6 @@ type DashboardLiveActivityItem = Record<string, unknown>;
 type DashboardLiveMissionItem = Record<string, unknown>;
 type DashboardLiveApprovalItem = Record<string, unknown>;
 type DashboardLiveMissionRunItem = Record<string, unknown>;
-type DashboardLiveIntelligence = Record<string, unknown>;
 
 type DashboardLiveSources = {
   activity: boolean;
@@ -287,102 +282,37 @@ function dashboardMissionActive(
 }
 
 function useLiveDashboardReality() {
-  const [activity, setActivity] = useState<DashboardLiveActivityItem[]>([]);
-  const [approvals, setApprovals] = useState<DashboardLiveApprovalItem[]>([]);
-  const [missions, setMissions] = useState<DashboardLiveMissionItem[]>([]);
-  const [runs, setRuns] = useState<DashboardLiveMissionRunItem[]>([]);
-  const [intelligence, setIntelligence] = useState<DashboardLiveIntelligence | null>(null);
-  const [sources, setSources] = useState<DashboardLiveSources>({
-    activity: false,
-    approvals: false,
-    missions: false,
-    runs: false,
-    intelligence: false,
-  });
+  const activityQuery = useAuroraActivity();
+  const approvalsQuery = useAuroraApprovals();
+  const missionsQuery = useAuroraMissions();
+  const runsQuery = useAuroraMissionRuns();
+  const intelligenceQuery = useAuroraDashboardIntelligence();
+  const intelligence = intelligenceQuery.data ?? null;
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      const [activityResult, approvalsResult, missionsResult, runsResult, intelligenceResult] =
-        await Promise.allSettled([
-          apiGet<unknown>("/api/activity"),
-          apiGet<unknown>("/api/approvals"),
-          apiGet<unknown>("/api/missions"),
-          apiGet<unknown>("/api/mission-runs"),
-          apiGet<unknown>("/api/dashboard/intelligence"),
-        ]);
-
-      if (!mounted) return;
-
-      setSources({
-        activity: activityResult.status === "fulfilled",
-        approvals: approvalsResult.status === "fulfilled",
-        missions: missionsResult.status === "fulfilled",
-        runs: runsResult.status === "fulfilled",
-        intelligence: intelligenceResult.status === "fulfilled",
-      });
-
-      setActivity(
-        activityResult.status === "fulfilled"
-          ? dashboardListFrom<DashboardLiveActivityItem>(activityResult.value, [
-              "events",
-              "activity",
-              "items",
-              "timeline",
-              "entries",
-            ])
-          : [],
-      );
-
-      setApprovals(
-        approvalsResult.status === "fulfilled"
-          ? dashboardListFrom<DashboardLiveApprovalItem>(approvalsResult.value, [
-              "approvals",
-              "items",
-              "results",
-            ])
-          : [],
-      );
-
-      setMissions(
-        missionsResult.status === "fulfilled"
-          ? dashboardListFrom<DashboardLiveMissionItem>(missionsResult.value, [
-              "missions",
-              "items",
-              "results",
-            ])
-          : [],
-      );
-
-      setRuns(
-        runsResult.status === "fulfilled"
-          ? dashboardListFrom<DashboardLiveMissionRunItem>(runsResult.value, [
-              "runs",
-              "items",
-              "results",
-            ])
-          : [],
-      );
-
-      setIntelligence(
-        intelligenceResult.status === "fulfilled"
-          ? (intelligenceResult.value as DashboardLiveIntelligence)
-          : null,
-      );
-    }
-
-    void load();
-
-    const timer = window.setInterval(() => {
-      void load();
-    }, 30000);
-
-    return () => {
-      mounted = false;
-      window.clearInterval(timer);
-    };
-  }, []);
+  const activity = dashboardListFrom<DashboardLiveActivityItem>(
+    activityQuery.data,
+    ["events", "activity", "items", "timeline", "entries"],
+  );
+  const approvals = dashboardListFrom<DashboardLiveApprovalItem>(
+    approvalsQuery.data,
+    ["approvals", "items", "results"],
+  );
+  const missions = dashboardListFrom<DashboardLiveMissionItem>(
+    missionsQuery.data,
+    ["missions", "items", "results"],
+  );
+  const runs = dashboardListFrom<DashboardLiveMissionRunItem>(runsQuery.data, [
+    "runs",
+    "items",
+    "results",
+  ]);
+  const sources: DashboardLiveSources = {
+    activity: activityQuery.data !== undefined && !activityQuery.isError,
+    approvals: approvalsQuery.data !== undefined && !approvalsQuery.isError,
+    missions: missionsQuery.data !== undefined && !missionsQuery.isError,
+    runs: runsQuery.data !== undefined && !runsQuery.isError,
+    intelligence: intelligenceQuery.data !== undefined && !intelligenceQuery.isError,
+  };
 
   const pendingApprovals = approvals.filter(dashboardApprovalPending);
   const activeMissions = missions.filter(dashboardMissionActive);
@@ -416,6 +346,8 @@ function useLiveDashboardReality() {
     missionStatusCounts,
     runs,
     intelligence,
+    intelligenceLoading: intelligenceQuery.isLoading || intelligenceQuery.isFetching,
+    refreshIntelligence: intelligenceQuery.refetch,
     sources,
     recentActivityItems:
       recentActivityItems.length > 0
@@ -428,6 +360,9 @@ function useLiveDashboardReality() {
 
 
 export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityMode = false }: { forceGovernanceMode?: boolean; forceSecurityMode?: boolean } = {}) {
+  const queryClient = useQueryClient();
+  const workspacesQuery = useAuroraWorkspaces();
+  const workspaces = workspacesQuery.data?.workspaces ?? [];
   const loadDemoWalkthroughStateFromStore = useAuroraStore(
     (state) => state.loadDemoWalkthroughStateFromStore,
   );
@@ -462,15 +397,13 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
   const [workflowLoadingKey, setWorkflowLoadingKey] = useState<string | null>(null);
   const [workflowMessage, setWorkflowMessage] = useState("");
   const [workflowWorkspaceId, setWorkflowWorkspaceId] = useState("1");
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
   const [developerReports, setDeveloperReports] = useState<DeveloperReportItem[]>([]);
   const [developerResult, setDeveloperResult] = useState<DeveloperInspectResult | null>(null);
   const [developerIssue, setDeveloperIssue] = useState("");
   const [developerLoadingAction, setDeveloperLoadingAction] = useState<string | null>(null);
   const [developerMessage, setDeveloperMessage] = useState("");
   const {
-    dashboardIntelligence, dashboardIntelligenceLoading, plugins, pluginMetrics,
-    pluginRegistryReport, pluginLoadingKey, toolPermissionMatrix, toolPermissionMetrics,
+    plugins, pluginMetrics, pluginRegistryReport, pluginLoadingKey, toolPermissionMatrix, toolPermissionMetrics,
     toolPermissionReport, toolAuditEvents, toolAuditMetrics, toolAuditReport,
     securityProfiles, securityPolicyEvents, securityPolicyActive, securityPolicyReport,
     securityPolicyLoadingKey, releaseCandidateStatus, releaseCandidatePackage,
@@ -487,8 +420,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     desktopShellLoading, backendSidecarStatus, backendSidecarLoading, reminders,
     notificationEvents, startupBriefing, reminderTitle, reminderDueAt, reminderLoading,
     userSettingsProfile, settingsLoadingKey, setReminderTitle, setReminderDueAt,
-    loadDashboardIntelligence, loadDesktopShellStatus,
-    loadBackendSidecarStatus, loadStartupBriefing, updatePluginStatusFromStore,
+    loadDesktopShellStatus, loadBackendSidecarStatus, loadStartupBriefing, updatePluginStatusFromStore,
     applySecurityProfileFromStore, freezeReleaseCandidateFromStore,
     unfreezeReleaseCandidateFromStore, generateReleaseCandidatePackageFromStore,
     runStabilizationScanFromStore, saveStabilizationReportFromStore,
@@ -501,7 +433,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     loadPatchReleaseStatusFromStore, startPatchReleaseFromStore, completePatchReleaseFromStore, savePatchReleaseReportFromStore, generatePatchReleasePackageFromStore,
     loadRoadmapPlannerStatusFromStore, saveRoadmapPlannerReportFromStore, loadFutureFeaturesFromStore, addFutureFeatureFromStore, generateRoadmapPackageFromStore,
     loadSafetyReviewBoardStatusFromStore, saveSafetyReviewBoardReportFromStore, loadFeatureReviewsFromStore, createFeatureReviewFromStore, generateSafetyReviewPackageFromStore,
-    runBackendSidecarActionFromStore, createReminderFromStore,
+    createReminderFromStore,
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
     recordingModeState, startRecordingModeFromStore, stopRecordingModeFromStore, setRecordingSceneFromStore, toggleRecordingLargeCalloutFromStore, toggleRecordingHideNoisyPanelsFromStore, toggleRecordingTimerFromStore, toggleRecordingChecklistFromStore, resetRecordingModeFromStore,
     demoWalkthroughState, startDemoWalkthroughFromStore, stopDemoWalkthroughFromStore, nextDemoWalkthroughStepFromStore, previousDemoWalkthroughStepFromStore, resetDemoWalkthroughFromStore,
@@ -511,7 +443,6 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
   const notificationMessage = "";
   const settingsMessage = "";
   const pluginMessage = "";
-  const backendSidecarMessage = "";
   const securityPolicyMessage = "";
   const releaseCandidateMessage = "";
   const stabilizationMessage = "";
@@ -530,7 +461,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
   async function indexKnowledgeFolderFromUI() { const cleanPath = knowledgePath.trim() || "."; const workspaceId = Number.parseInt(knowledgeWorkspaceId, 10); if (!Number.isFinite(workspaceId) || workspaceId <= 0) { setKnowledgeMessage("Select a trusted workspace before indexing."); return; } if (!knowledgeConsent) { setKnowledgeMessage("Confirm source consent before indexing workspace content."); return; } if (knowledgeLoading) return; setKnowledgeLoading(true); setKnowledgeMessage(""); try { const data = await indexKnowledgeFolder(workspaceId, cleanPath, knowledgeConsent); setKnowledgeMessage(`Knowledge indexing status: ${data.status}. ${data.message}`); await loadKnowledgeDocuments(); } catch { setKnowledgeMessage("Knowledge folder indexing failed. Confirm the workspace is trusted and the backend is running."); } finally { setKnowledgeLoading(false); } }
 
-  async function searchKnowledgeFromUI() { const cleanQuery = knowledgeQuery.trim(); if (!cleanQuery || knowledgeLoading) return; setKnowledgeLoading(true); setKnowledgeMessage(""); try { const data = await searchKnowledge(cleanQuery); setKnowledgeResults((data.results || []) as KnowledgeSearchItem[]); } catch { setKnowledgeResults([]); setKnowledgeMessage("Knowledge search failed. Confirm backend is running."); } finally { setKnowledgeLoading(false); } }
+  async function searchKnowledgeFromUI() { const cleanQuery = knowledgeQuery.trim(); const selectedWorkspaceId = Number.parseInt(knowledgeWorkspaceId, 10); if (!cleanQuery || knowledgeLoading) return; if (!Number.isFinite(selectedWorkspaceId) || selectedWorkspaceId <= 0) { setKnowledgeMessage("Select the trusted workspace whose knowledge may be searched."); return; } setKnowledgeLoading(true); setKnowledgeMessage(""); try { const data = await searchKnowledge(cleanQuery, selectedWorkspaceId); setKnowledgeResults((data.results || []) as KnowledgeSearchItem[]); } catch { setKnowledgeResults([]); setKnowledgeMessage("Knowledge search failed. Confirm backend is running."); } finally { setKnowledgeLoading(false); } }
 
 
 
@@ -538,15 +469,13 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
   async function rebuildVectorIndexFromUI() { setVectorLoading(true); setVectorMessage(""); try { const data = await rebuildVectorIndex(); setVectorMessage(`Vector index rebuild status: ${data.status}`); await loadVectorItems(); } catch { setVectorMessage("Vector index rebuild failed. Confirm backend is running and OPENAI_API_KEY is set."); } finally { setVectorLoading(false); } }
 
-  async function runSemanticSearchFromUI() { const cleanQuery = semanticQuery.trim(); if (!cleanQuery || vectorLoading) return; setVectorLoading(true); setVectorMessage(""); try { const data = await searchVector(cleanQuery); setSemanticResults((data.results || []) as SemanticSearchItem[]); } catch { setSemanticResults([]); setVectorMessage("Semantic search failed. Confirm backend is running and OPENAI_API_KEY is set."); } finally { setVectorLoading(false); } }
+  async function runSemanticSearchFromUI() { const cleanQuery = semanticQuery.trim(); const selectedWorkspaceId = Number.parseInt(knowledgeWorkspaceId, 10); if (!cleanQuery || vectorLoading) return; setVectorLoading(true); setVectorMessage(""); try { const data = await searchVector(cleanQuery, Number.isFinite(selectedWorkspaceId) && selectedWorkspaceId > 0 ? selectedWorkspaceId : undefined); setSemanticResults((data.results || []) as SemanticSearchItem[]); } catch { setSemanticResults([]); setVectorMessage("Semantic search failed. Confirm backend is running and OPENAI_API_KEY is set."); } finally { setVectorLoading(false); } }
 
   async function loadWorkflowBlueprints() { try { const data = await getWorkflowBlueprints(); setWorkflowBlueprints((data.blueprints || []) as WorkflowBlueprintItem[]); } catch { setWorkflowBlueprints([]); } }
 
   async function openWorkflowBlueprint(blueprintKey: string) { setWorkflowLoadingKey(blueprintKey); setWorkflowMessage(""); try { setSelectedWorkflowBlueprint((await getWorkflowBlueprint(blueprintKey)) as WorkflowBlueprintDetail); } catch { setSelectedWorkflowBlueprint(null); setWorkflowMessage("Workflow blueprint failed to load. Confirm backend is running."); } finally { setWorkflowLoadingKey(null); } }
 
   async function createMissionFromBlueprintUI(blueprintKey: string) { setWorkflowLoadingKey(blueprintKey); setWorkflowMessage(""); try { const parsed = Number.parseInt(workflowWorkspaceId, 10); const workspaceId = Number.isFinite(parsed) && parsed > 0 ? parsed : null; const data = await createWorkflowMission(blueprintKey, workspaceId); setWorkflowMessage(data.status === "created" ? `Workflow mission created: Mission ${data.mission_id} · ${data.title} · ${data.step_count} steps` : `Workflow mission creation failed: ${data.message}`); } catch { setWorkflowMessage("Workflow mission creation failed. Confirm backend is running."); } finally { setWorkflowLoadingKey(null); } }
-
-  async function loadWorkspaces() { try { const data = await getWorkspaces(); setWorkspaces(data.workspaces || []); } catch { setWorkspaces([]); } }
 
   async function loadDeveloperReports() { try { const data = await getDeveloperReports(); setDeveloperReports((data.reports || []) as DeveloperReportItem[]); } catch { setDeveloperReports([]); } }
 
@@ -581,19 +510,20 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
   useEffect(() => {
     void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
-    void loadWorkspaces(); void loadDeveloperReports();
+    void loadDeveloperReports();
     const store = useAuroraStore.getState();
     void store.loadPanelLayout();
     loadDemoWalkthroughStateFromStore();
     loadRecordingModeStateFromStore();
     void store.loadActiveDashboardView();
     void useAuroraStore.getState().refreshAll();
-    const timer = window.setInterval(() => {
+    const refreshAfterMutation = () => {
       void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
-      void loadWorkspaces(); void loadDeveloperReports();
+      void loadDeveloperReports();
       void useAuroraStore.getState().refreshAll();
-    }, 5000);
-    return () => window.clearInterval(timer);
+    };
+    window.addEventListener(ORION_API_MUTATION_EVENT, refreshAfterMutation);
+    return () => window.removeEventListener(ORION_API_MUTATION_EVENT, refreshAfterMutation);
   }, [loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore]);
 
   function metricValue(
@@ -647,8 +577,8 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     void loadKnowledgeDocuments();
     void loadVectorItems();
     void loadWorkflowBlueprints();
-    void loadWorkspaces();
     void loadDeveloperReports();
+    void queryClient.invalidateQueries({ refetchType: "active" });
     void useAuroraStore.getState().refreshAll();
   };
 
@@ -843,7 +773,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
               <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Live backend activity</p><h3 className="mt-2 text-base font-semibold text-white">Mission pulse</h3></div><button onClick={() => setActivityPaused(!activityPaused)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-2.5 py-2 text-[10px] font-semibold text-slate-400 hover:text-white">{activityPaused ? <Play size={12} /> : <Pause size={12} />}{activityPaused ? "Resume" : "Pause"}</button></div>
               <div className="mt-5 flex-1 space-y-4">
                 {(activityPaused ? ["Stream paused — live event list held"] : liveDashboard.recentActivityItems).map((item, index) => (
-                  <div key={item} className="flex gap-3"><div className="relative pt-1.5"><span className={`block h-2 w-2 rounded-full ${index === 0 && !activityPaused ? "bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.65)]" : "bg-slate-600"}`} />{index < 3 && <span className="absolute left-[3.5px] top-4 h-[34px] w-px bg-white/[0.07]" />}</div><div className="min-w-0 flex-1"><p className="text-xs leading-5 text-slate-300">{item}</p><div className="mt-1 flex items-center gap-2 text-[10px] text-slate-600"><Clock3 size={10} /><span>{index === 0 ? "now" : `${index * 2 + 1}m ago`}</span></div></div></div>
+                  <div key={item} className="flex gap-3"><div className="relative pt-1.5"><span className={`block h-2 w-2 rounded-full ${index === 0 && !activityPaused ? "bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.65)]" : "bg-slate-600"}`} />{index < 3 && <span className="absolute left-[3.5px] top-4 h-[34px] w-px bg-white/[0.07]" />}</div><div className="min-w-0 flex-1"><p className="text-xs leading-5 text-slate-300">{item}</p><div className="mt-1 flex items-center gap-2 text-[10px] text-slate-600"><Clock3 size={10} /><span>{activityPaused ? "Paused" : dashboardText(liveDashboard.activity[index]?.timestamp || liveDashboard.activity[index]?.created_at, "Timestamp unavailable")}</span></div></div></div>
                 ))}
               </div>
               <div className="mt-5 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4">
@@ -883,7 +813,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
                 <QuickAction href="/assistant" title="Open assistant" detail="Start a contextual conversation" icon={<Sparkles size={18} />} tone="cyan" />
                 <QuickAction href="/missions" title="Create mission" detail="Plan an approval-gated workflow" icon={<Rocket size={18} />} tone="violet" />
                 <QuickAction href="/agents" title="Deploy agent" detail="Assign a specialised runtime" icon={<Bot size={18} />} tone="green" />
-                <QuickAction href="/memory" title="Search memory" detail="Retrieve project context" icon={<Search size={18} />} tone="blue" />
+                <QuickAction href="/context" title="Search context" detail="Retrieve memory and knowledge" icon={<Search size={18} />} tone="blue" />
                 <QuickAction href="/workflows" title="Run workflow" detail={`${workflowBlueprints.length} backend blueprints loaded`} icon={<Workflow size={18} />} tone="amber" />
                 <QuickAction href="/console" title="Open console" detail="Inspect logs and commands" icon={<SquareTerminal size={18} />} tone="slate" />
               </div>
@@ -892,8 +822,8 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
           {widgets.includes("Timeline") && (
             <section className="orion-panel p-5 sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Execution fabric</p><h2 className="mt-2 text-base font-semibold text-white">Mission lifecycle</h2></div><span className="rounded-full border border-emerald-300/15 bg-emerald-300/[0.06] px-3 py-1.5 text-[10px] font-semibold text-emerald-200">Approval gates enforced</span></div>
-              <div className="mt-6 overflow-x-auto pb-2"><div className="flex min-w-[720px] items-center">{dashboardTimeline.map((step, index) => <div key={step} className="flex flex-1 items-center last:flex-none"><div className="group flex min-w-[78px] flex-col items-center"><span className={`flex h-10 w-10 items-center justify-center rounded-2xl border text-xs font-bold ${index < 4 ? "border-cyan-300/20 bg-cyan-300/[0.075] text-cyan-100" : index === 4 ? "border-violet-300/25 bg-violet-300/[0.08] text-violet-100" : "border-white/[0.08] bg-white/[0.025] text-slate-600"}`}>{index < 4 ? <CheckCircle2 size={16} /> : index + 1}</span><span className={`mt-2 text-[10px] font-semibold ${index <= 4 ? "text-slate-300" : "text-slate-600"}`}>{step}</span></div>{index < dashboardTimeline.length - 1 && <div className={`mb-5 h-px flex-1 ${index < 4 ? "bg-gradient-to-r from-cyan-300/50 to-cyan-300/15" : "bg-white/[0.07]"}`} />}</div>)}</div></div>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">State machine reference</p><h2 className="mt-2 text-base font-semibold text-white">Mission lifecycle stages</h2></div><span className="rounded-full border border-white/[0.08] px-3 py-1.5 text-[10px] font-semibold text-slate-400">Reference flow · not live progress</span></div>
+              <div className="mt-6 overflow-x-auto pb-2"><div className="flex min-w-[720px] items-center">{dashboardTimeline.map((step, index) => <div key={step} className="flex flex-1 items-center last:flex-none"><div className="group flex min-w-[78px] flex-col items-center"><span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.025] text-xs font-bold text-slate-400">{index + 1}</span><span className="mt-2 text-[10px] font-semibold text-slate-400">{step}</span></div>{index < dashboardTimeline.length - 1 && <div className="mb-5 h-px flex-1 bg-white/[0.07]" />}</div>)}</div></div>
               <div className="mt-5 grid gap-3 sm:grid-cols-3"><MiniStatus icon={<Brain size={15} />} title="Context stage" detail="Retrieve relevant memory" /><MiniStatus icon={<ShieldCheck size={15} />} title="Policy stage" detail="Evaluate risk and approvals" /><MiniStatus icon={<Zap size={15} />} title="Execution stage" detail="Run approved tool action" /></div>
             </section>
           )}
@@ -908,14 +838,14 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
         <div className="space-y-5">
           <section className="orion-panel p-5 sm:p-6">
-            <div className="flex items-start justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Infrastructure</p><h2 className="mt-2 text-base font-semibold text-white">System health</h2></div><span className="flex items-center gap-1.5 rounded-full border border-emerald-300/15 bg-emerald-300/[0.06] px-2.5 py-1 text-[10px] font-semibold text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> Nominal</span></div>
-            <div className="mt-5 space-y-4"><HealthBar label="API gateway" value={backendOnline ? 99 : 18} detail={backendOnline ? "Operational" : "Connection unavailable"} icon={<Network size={14} />} /><HealthBar label="Dashboard intelligence" value={liveDashboard.sources.intelligence ? 88 : 18} detail={liveDashboard.sources.intelligence ? dashboardText(liveDashboard.intelligence?.readiness_label, "Loaded") : "No /api/dashboard/intelligence data"} icon={<Database size={14} />} /><HealthBar label="Mission records" value={liveDashboard.sources.missions ? 86 : 18} detail={liveDashboard.sources.missions ? `${liveDashboard.missions.length} missions loaded` : "No /api/missions data"} icon={<Bot size={14} />} /><HealthBar label="Approval queue" value={liveDashboard.sources.approvals ? (liveDashboard.pendingApprovals.length > 0 ? 65 : 96) : 18} detail={liveDashboard.sources.approvals ? `${liveDashboard.pendingApprovals.length} pending approvals` : "No /api/approvals data"} icon={<HardDrive size={14} />} /></div>
+            <div className="flex items-start justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Infrastructure</p><h2 className="mt-2 text-base font-semibold text-white">Observed endpoints</h2></div><span className="text-[10px] text-slate-600">No inferred health score</span></div>
+            <div className="mt-5 space-y-4"><HealthBar label="API gateway" available={backendOnline} detail={backendOnline ? "Responding" : "Connection unavailable"} icon={<Network size={14} />} /><HealthBar label="Dashboard intelligence" available={liveDashboard.sources.intelligence} detail={liveDashboard.sources.intelligence ? dashboardText(liveDashboard.intelligence?.readiness_label, "Loaded") : "No /api/dashboard/intelligence data"} icon={<Database size={14} />} /><HealthBar label="Mission records" available={liveDashboard.sources.missions} detail={liveDashboard.sources.missions ? `${liveDashboard.missions.length} missions loaded` : "No /api/missions data"} icon={<Bot size={14} />} /><HealthBar label="Approval queue" available={liveDashboard.sources.approvals} detail={liveDashboard.sources.approvals ? `${liveDashboard.pendingApprovals.length} pending approvals` : "No /api/approvals data"} icon={<HardDrive size={14} />} /></div>
             <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-xs font-semibold text-slate-400 hover:bg-white/[0.045] hover:text-white">Open system diagnostics <ArrowUpRight size={13} /></button>
           </section>
 
           <section className="orion-panel p-5 sm:p-6">
-            <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Operational queue</p><h2 className="mt-2 text-base font-semibold text-white">Needs attention</h2></div><span className="rounded-full bg-amber-300/[0.08] px-2.5 py-1 text-[10px] font-semibold text-amber-200">3 items</span></div>
-            <div className="mt-4 space-y-2"><AttentionItem tone="amber" title="Mission approval required" detail="Browser research · high-impact action" time="2m" /><AttentionItem tone="violet" title="Release candidate ready" detail="Package can be frozen for validation" time="12m" /><AttentionItem tone="cyan" title="Knowledge index updated" detail="86 new semantic vectors available" time="18m" /></div>
+            <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Operational queue</p><h2 className="mt-2 text-base font-semibold text-white">Needs attention</h2></div><span className="rounded-full bg-amber-300/[0.08] px-2.5 py-1 text-[10px] font-semibold text-amber-200">{liveDashboard.pendingApprovals.length} items</span></div>
+            <div className="mt-4 space-y-2">{liveDashboard.pendingApprovals.length ? liveDashboard.pendingApprovals.map((approval, index) => <AttentionItem key={dashboardText(approval.id, String(index))} tone="amber" title={dashboardText(approval.title, "Approval required")} detail={dashboardText(approval.description, dashboardText(approval.action_type, "Governed action"))} time={dashboardText(approval.created_at, "Timestamp unavailable")} />) : <p className="rounded-2xl border border-white/[0.06] p-4 text-xs text-slate-600">No pending approvals returned by the backend.</p>}</div>
           </section>
         </div>
       </div>
@@ -923,10 +853,10 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
       )}
 
       <section className="pt-2">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Advanced workspace</p><h2 className="mt-2 text-lg font-semibold text-white">{forceGovernanceMode ? "Governance control modules" : forceSecurityMode ? "Security control modules" : "Operational modules"}</h2><p className="mt-1 text-sm text-slate-600">{forceGovernanceMode ? "Release, safety, roadmap, patch, audit, and governance panels are forced visible on this route." : forceSecurityMode ? "Plugin registry, policy profiles, permission enforcement, audit history, and safety review panels are forced visible on this route." : "API-backed controls and specialist panels selected for the current dashboard mode."}</p></div><button onClick={() => setCustomizerOpen(true)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/[0.04] hover:text-white"><SlidersHorizontal size={13} /> Manage modules</button></div>
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Advanced workspace</p><h2 className="mt-2 text-lg font-semibold text-white">{forceGovernanceMode ? "Governance control modules" : forceSecurityMode ? "Security control modules" : "Operational modules"}</h2><p className="mt-1 text-sm text-slate-600">{forceGovernanceMode ? "Approvals, policy, plugin permissions, tool audit, and current release evidence are visible on this route." : forceSecurityMode ? "Plugin registry, policy profiles, permission enforcement, audit history, and safety review panels are forced visible on this route." : "API-backed controls and specialist panels selected for the current dashboard mode."}</p></div><button onClick={() => setCustomizerOpen(true)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/[0.04] hover:text-white"><SlidersHorizontal size={13} /> Manage modules</button></div>
         <div className="grid gap-5 2xl:grid-cols-2">
           <div className="space-y-5">
-            {widgets.includes("Dashboard Intelligence") && panelVisible("dashboard-intelligence") && <SafePanel panelId="dashboard-intelligence"><DashboardIntelligencePanel intelligence={dashboardIntelligence} loading={dashboardIntelligenceLoading} message={dashboardIntelligenceMessage} onRefresh={loadDashboardIntelligence} /></SafePanel>}
+            {widgets.includes("Dashboard Intelligence") && panelVisible("dashboard-intelligence") && <SafePanel panelId="dashboard-intelligence"><DashboardIntelligencePanel intelligence={liveDashboard.intelligence} loading={liveDashboard.intelligenceLoading} message={dashboardIntelligenceMessage} onRefresh={() => { void liveDashboard.refreshIntelligence(); }} /></SafePanel>}
             {widgets.includes("Knowledge Base") && <KnowledgeBasePanel documents={knowledgeDocuments} workspaces={workspaces} workspaceId={knowledgeWorkspaceId} path={knowledgePath} consent={knowledgeConsent} query={knowledgeQuery} results={knowledgeResults} loading={knowledgeLoading} message={knowledgeMessage} setWorkspaceId={setKnowledgeWorkspaceId} setPath={setKnowledgePath} setConsent={setKnowledgeConsent} setQuery={setKnowledgeQuery} indexFolder={indexKnowledgeFolderFromUI} searchKnowledge={searchKnowledgeFromUI} />}
             {widgets.includes("Semantic Memory") && <SemanticMemoryPanel vectorItems={vectorItems} semanticQuery={semanticQuery} semanticResults={semanticResults} loading={vectorLoading} message={vectorMessage} setSemanticQuery={setSemanticQuery} rebuildVectorIndex={rebuildVectorIndexFromUI} runSemanticSearch={runSemanticSearchFromUI} />}
             {widgets.includes("Workflow Blueprints") && <WorkflowBlueprintsPanel blueprints={workflowBlueprints} selectedBlueprint={selectedWorkflowBlueprint} loadingKey={workflowLoadingKey} message={workflowMessage} workspaceId={workflowWorkspaceId} setWorkspaceId={setWorkflowWorkspaceId} inspectBlueprint={openWorkflowBlueprint} createMission={createMissionFromBlueprintUI} />}
@@ -958,7 +888,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
             {widgets.includes("Plugin System") && panelVisible("plugin-system") && <SafePanel panelId="plugin-system"><PluginSystemPanel plugins={plugins} metrics={pluginMetrics} report={pluginRegistryReport} loadingKey={pluginLoadingKey} message={pluginMessage} metricValue={metricValue} updatePluginStatus={updatePluginStatusFromStore} /></SafePanel>}
             {widgets.includes("Security Policy") && panelVisible("security-policy") && <SafePanel panelId="security-policy"><SecurityPolicyPanel activePolicy={securityPolicyActive} profiles={securityProfiles} events={securityPolicyEvents} report={securityPolicyReport} loadingKey={securityPolicyLoadingKey} message={securityPolicyMessage} applyProfile={applySecurityProfileFromStore} /></SafePanel>}
             {widgets.includes("Desktop Shell") && panelVisible("desktop-shell") && <SafePanel panelId="desktop-shell"><DesktopShellPanel status={desktopShellStatus} loading={desktopShellLoading} refreshStatus={loadDesktopShellStatus} /></SafePanel>}
-            {widgets.includes("Backend Sidecar") && panelVisible("backend-sidecar") && <SafePanel panelId="backend-sidecar"><BackendSidecarPanel status={backendSidecarStatus} loading={backendSidecarLoading} message={backendSidecarMessage} refreshStatus={loadBackendSidecarStatus} runAction={runBackendSidecarActionFromStore} /></SafePanel>}
+            {widgets.includes("Backend Sidecar") && panelVisible("backend-sidecar") && <SafePanel panelId="backend-sidecar"><BackendSidecarPanel status={backendSidecarStatus} loading={backendSidecarLoading} refreshStatus={loadBackendSidecarStatus} /></SafePanel>}
             {widgets.includes("Tool Permission Enforcement") && panelVisible("tool-permission") && <SafePanel panelId="tool-permission"><ToolPermissionPanel matrix={toolPermissionMatrix} metrics={toolPermissionMetrics} report={toolPermissionReport} metricValue={metricValue} /></SafePanel>}
             {widgets.includes("Tool Audit Center") && panelVisible("tool-audit") && <SafePanel panelId="tool-audit"><ToolAuditPanel events={toolAuditEvents} metrics={toolAuditMetrics} report={toolAuditReport} metricValue={metricValue} /></SafePanel>}
             {widgets.includes("Public Landing Page") && panelVisible("public-landing") && <SafePanel panelId="public-landing"><PublicLandingPanel result={publicLandingResult} loading={publicLandingLoading} onCheck={loadPublicLandingStatusFromStore} onSave={savePublicLandingReportFromStore} /></SafePanel>}
@@ -1037,11 +967,10 @@ function MiniStatus({ icon, title, detail }: DashboardVisualProps) {
   );
 }
 
-function HealthBar({ label, value, detail, icon }: { label: string; value: number; detail: string; icon: React.ReactNode }) {
+function HealthBar({ label, available, detail, icon }: { label: string; available: boolean; detail: string; icon: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-2 flex items-center gap-2"><span className="text-slate-500">{icon}</span><span className="flex-1 text-xs font-medium text-slate-300">{label}</span><span className={`text-[10px] font-semibold ${value > 80 ? "text-emerald-300" : value > 50 ? "text-amber-300" : "text-rose-300"}`}>{value}%</span></div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/[0.055]"><div className={`h-full rounded-full ${value > 80 ? "bg-gradient-to-r from-emerald-400 to-cyan-300" : value > 50 ? "bg-gradient-to-r from-amber-400 to-orange-300" : "bg-gradient-to-r from-rose-400 to-amber-300"}`} style={{ width: `${value}%` }} /></div>
+      <div className="mb-2 flex items-center gap-2"><span className="text-slate-500">{icon}</span><span className="flex-1 text-xs font-medium text-slate-300">{label}</span><span className={`text-[10px] font-semibold ${available ? "text-emerald-300" : "text-rose-300"}`}>{available ? "Available" : "Unavailable"}</span></div>
       <p className="mt-1.5 text-[10px] text-slate-600">{detail}</p>
     </div>
   );
@@ -1385,6 +1314,8 @@ function SemanticMemoryPanel({
                 <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-300">
                   {result.content.slice(0, 700)}
                 </p>
+                <p className="mt-2 text-[10px] leading-4 text-cyan-200/70">{result.retrieval_reason}</p>
+                <p className="mt-1 break-all text-[10px] leading-4 text-slate-600">Provenance: {JSON.stringify(result.provenance || {})}</p>
               </div>
             ))}
           </div>
@@ -1544,6 +1475,8 @@ function KnowledgeBasePanel({
                 <p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-slate-300">
                   {result.content.slice(0, 700)}
                 </p>
+                <p className="mt-2 text-[10px] leading-4 text-cyan-200/70">{result.retrieval_reason}</p>
+                <p className="mt-1 break-all text-[10px] leading-4 text-slate-600">Provenance: {JSON.stringify(result.provenance || {})}</p>
               </div>
             ))}
           </div>

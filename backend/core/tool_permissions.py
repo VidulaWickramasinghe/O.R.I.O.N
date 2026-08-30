@@ -61,6 +61,9 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "generate_portfolio_release_pack": "portfolio_demo",
     "set_demo_mode": "portfolio_demo",
     "run_system_doctor": "system_doctor",
+    "create_runtime_backup": "persistence_manager",
+    "request_runtime_restore": "persistence_manager",
+    "restore_runtime_backup": "persistence_manager",
     "index_knowledge_document": "knowledge_base",
     "index_knowledge_folder": "knowledge_base",
     "list_knowledge_documents": "knowledge_base",
@@ -91,10 +94,6 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
     "inspect_orion_plugin": "plugin_registry",
     "set_orion_plugin_enabled": "plugin_registry",
     "get_plugin_registry_report": "plugin_registry",
-    "get_backend_sidecar_status": "backend_sidecar",
-    "start_backend_sidecar": "backend_sidecar",
-    "stop_backend_sidecar": "backend_sidecar",
-    "restart_backend_sidecar": "backend_sidecar",
     "get_tool_permission_report": "tool_permission_enforcement",
     "check_tool_permission": "tool_permission_enforcement",
     "get_tool_permission_metrics": "tool_permission_enforcement",
@@ -155,6 +154,7 @@ TOOL_PLUGIN_MAP: Dict[str, str] = {
 
 ENFORCEMENT_ALWAYS_ALLOWED_PLUGINS = {
     "portfolio_showcase",
+    "persistence_manager",
     "demo_walkthrough",
     "demo_recording",
     "final_launch",

@@ -1,14 +1,16 @@
 import asyncio
 import os
+import uuid
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
 
-from agents import Agent, Runner, SQLiteSession
+from agents import Agent
 
 from core.prompt import ORION_SYSTEM_PROMPT
 from core.context_engine import prepare_context_enriched_input
 from core.capability_gateway import CapabilityContext, authorized, execution_identity
+from core.agent_runtime import run_scoped_agent
 from tools.safe_tools import create_note, read_note, save_activity_log, list_notes
 from tools.project_tools import (
     register_project,
@@ -140,13 +142,6 @@ from tools.plugin_registry_tools import (
     inspect_orion_plugin,
     set_orion_plugin_enabled,
     get_plugin_registry_report,
-)
-
-from tools.backend_sidecar_tools import (
-    get_backend_sidecar_status,
-    start_backend_sidecar_tool,
-    stop_backend_sidecar_tool,
-    restart_backend_sidecar_tool,
 )
 
 from tools.tool_permission_tools import (
@@ -308,10 +303,6 @@ orion = Agent(
         inspect_orion_plugin,
         set_orion_plugin_enabled,
         get_plugin_registry_report,
-        get_backend_sidecar_status,
-        start_backend_sidecar_tool,
-        stop_backend_sidecar_tool,
-        restart_backend_sidecar_tool,
         get_tool_permission_report,
         check_tool_permission,
         get_tool_permission_metrics_tool,
@@ -375,10 +366,8 @@ orion = Agent(
 )
 
 
-session = SQLiteSession("orion_core_v03")
-
-
 async def run_orion():
+    terminal_scope_id = uuid.uuid4().hex
     console.print(
         Panel.fit(
             "O.R.I.O.N. Core v0.3 Online\nProject Command Center Activated\nThink. Plan. Act. Learn.",
@@ -395,17 +384,20 @@ async def run_orion():
             break
 
         context = CapabilityContext(actor="agent", source="terminal_agent")
-        with authorized("agent_chat", context), execution_identity(context):
+        with authorized("agent_chat", context) as authorization, execution_identity(
+            authorization.context
+        ):
             contextual_input = prepare_context_enriched_input(user_input)
-            result = await Runner.run(
+            outcome = await run_scoped_agent(
                 orion,
                 contextual_input,
-                session=session,
+                scope_type="chat",
+                scope_id=terminal_scope_id,
             )
 
         console.print(
             Panel(
-                result.final_output,
+                outcome.result.final_output,
                 title="O.R.I.O.N.",
                 border_style="cyan",
             )

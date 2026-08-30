@@ -1,11 +1,11 @@
-# O.R.I.O.N. v3.6 — Backend Sidecar + One-Click Desktop Launch
+# O.R.I.O.N. Backend Supervisor
 
 ## Overview
 
-v3.6 adds a local backend sidecar manager for O.R.I.O.N. The sidecar starts and monitors the FastAPI backend at:
+The packaged desktop application bundles the FastAPI backend as a Tauri sidecar. The Rust supervisor owns the live child-process handle, generates the per-launch API capability token, selects a loopback port, monitors health, performs one bounded crash restart, and terminates the child during application shutdown.
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1:<per-launch-port>
 ```
 
 ## Main Launcher
@@ -14,12 +14,7 @@ http://127.0.0.1:8000
 ./scripts/orion_desktop.sh
 ```
 
-This script:
-
-1. Checks whether the backend is already running.
-2. Starts the backend sidecar if needed.
-3. Waits for the backend port to become available.
-4. Starts the Aurora OS Tauri desktop shell.
+This script starts Tauri development mode. Tauri starts and supervises the backend; Python never starts, stops, signals, or restarts itself.
 
 ## Desktop Shortcut
 
@@ -31,24 +26,13 @@ Install the Linux desktop shortcut:
 
 Then search for **O.R.I.O.N. Aurora OS** in your app launcher.
 
-## Sidecar Files
-
-```text
-backend/data/sidecar/backend_sidecar_state.json
-backend/data/sidecar/backend_sidecar.log
-```
-
-These are generated local state files and are intentionally ignored by git.
-
-## API Endpoints
+## Status interfaces
 
 ```text
 GET  /api/sidecar/status
-POST /api/sidecar/start
-POST /api/sidecar/stop
-POST /api/sidecar/restart
+Tauri command: get_backend_supervisor_status
 ```
 
 ## Safety
 
-The sidecar only manages the local FastAPI backend. It does not bypass O.R.I.O.N.'s Command Approval System, does not execute arbitrary commands, and keeps the backend bound to `127.0.0.1`.
+There are no backend lifecycle mutation endpoints or agent tools. The Rust supervisor retains the exact `CommandChild`; it does not trust PID files, `/proc`, or platform-specific signal conventions. A stale process identifier therefore cannot terminate an unrelated process.

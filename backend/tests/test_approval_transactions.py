@@ -107,7 +107,7 @@ class ApprovalTransactionTests(unittest.TestCase):
             replay = approve()
 
         self.assertEqual(executions, 1)
-        self.assertEqual(sum(item["status"] == "approved" for item in results), 1)
+        self.assertEqual(sum(not item.get("replayed", False) for item in results), 1)
         self.assertTrue(all(item["status"] in {"executing", "approved"} for item in results))
         self.assertEqual(replay["status"], "approved")
         self.assertTrue(replay["replayed"])

@@ -142,6 +142,15 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
         "default_enabled": True,
     },
     {
+        "key": "persistence_manager",
+        "name": "Persistence Recovery",
+        "description": "Versioned schema migrations plus verified local backup and restart-bound restore.",
+        "category": "system",
+        "risk_level": "high",
+        "permissions": ["database_backup", "database_restore_request"],
+        "default_enabled": True,
+    },
+    {
         "key": "knowledge_base",
         "name": "Knowledge Base",
         "description": "Local document indexing, knowledge search, and document summaries.",
@@ -197,11 +206,11 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
     },
     {
         "key": "backend_sidecar",
-        "name": "Backend Sidecar",
-        "description": "Local backend process manager and one-click desktop launch support.",
+        "name": "Backend Supervisor",
+        "description": "Read-only visibility into the Tauri-owned backend process supervisor.",
         "category": "desktop",
-        "risk_level": "medium",
-        "permissions": ["backend_start", "backend_stop", "process_status"],
+        "risk_level": "low",
+        "permissions": ["process_status"],
         "default_enabled": True,
     },
     {
@@ -307,6 +316,7 @@ PLUGIN_DEFINITIONS: List[Dict[str, Any]] = [
 # are inactive even though they are required to enforce every other plugin.
 REQUIRED_ENABLED_PLUGINS = {
     "approval_system",
+    "persistence_manager",
     "plugin_registry",
     "tool_permission_enforcement",
     "tool_audit_center",

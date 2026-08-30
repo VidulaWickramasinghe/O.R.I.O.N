@@ -4,7 +4,6 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   Brain,
   CircleAlert,
-  MessageSquare,
   RefreshCw,
   Send,
   ShieldCheck,
@@ -60,6 +59,12 @@ export function AssistantWorkspace() {
   const [backendError, setBackendError] = useState("");
 
   const threadRef = useRef<HTMLDivElement | null>(null);
+  const conversationIdRef = useRef("");
+  const clientScopeIdRef = useRef(
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : newId("chat"),
+  );
 
   const backendOnline = backend?.status === "online";
 
@@ -103,7 +108,11 @@ export function AssistantWorkspace() {
     });
 
     try {
-      const data = await sendChatMessage(cleanMessage);
+      const data = await sendChatMessage(cleanMessage, {
+        conversation_id: conversationIdRef.current || undefined,
+        client_scope_id: clientScopeIdRef.current,
+      });
+      conversationIdRef.current = data.conversation_id || conversationIdRef.current;
 
       appendMessage({
         id: newId("assistant"),
@@ -193,7 +202,7 @@ export function AssistantWorkspace() {
 
           <p className="mt-2 text-sm leading-6 text-slate-400">
             Live chat console connected to the local backend. Tool execution
-            remains controlled by O.R.I.O.N.'s approval and permission layers.
+            remains controlled by O.R.I.O.N.&apos;s approval and permission layers.
           </p>
 
           {backendError && (

@@ -20,18 +20,18 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { navItems } from "@/lib/aurora-data";
-import { getMissions } from "@/lib/api/missions";
-import { getWorkspaces } from "@/lib/api/workspaces";
+import { destinationForPath, navItems } from "@/lib/aurora-data";
+import {
+  useAuroraMissions,
+  useAuroraWorkspaces,
+} from "@/components/aurora/lib/aurora-queries";
 import { cn } from "@/lib/utils";
 import { useAuroraStore } from "@/store/auroraStore";
 import { useUiStore, type SidebarMode } from "@/store/ui-store";
-import type { WorkspaceItem } from "@/types/orion";
 
 const groups = [
-  { label: "Command", items: ["Dashboard", "Assistant", "Missions", "Agents"] },
-  { label: "Intelligence", items: ["Memory", "Projects", "Workspaces", "Workflows", "Analytics"] },
-  { label: "Operations", items: ["Tools", "Plugins", "Browser", "Voice", "System", "Security", "Governance", "Console"] },
+  { label: "Operate", items: ["Dashboard", "Assistant", "Missions", "Context", "Workspaces"] },
+  { label: "Control", items: ["Governance", "System"] },
 ];
 
 const STORAGE_KEY = "orion-sidebar-mode";
@@ -53,80 +53,24 @@ export function Sidebar() {
     (state) => state.updateUserSettingFromStore,
   );
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
-  const [workspaceLoading, setWorkspaceLoading] = useState(false);
-  const [missionCount, setMissionCount] = useState(0);
+  const workspacesQuery = useAuroraWorkspaces();
+  const missionsQuery = useAuroraMissions();
+  const workspaces = workspacesQuery.data?.workspaces ?? [];
+  const workspaceLoading = workspacesQuery.isLoading;
+  const missionCount = missionsQuery.data?.missions.length ?? 0;
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     Object.fromEntries(groups.map((group) => [group.label, true])),
   );
 
   const compact = mode === "compact";
   const hidden = mode === "hidden";
+  const activeDestination = destinationForPath(pathname);
 
   useEffect(() => {
     if (!userSettingsProfile) {
       void loadUserSettingsProfile();
     }
   }, [userSettingsProfile, loadUserSettingsProfile]);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function load() {
-      setWorkspaceLoading(true);
-
-      try {
-        const response = await getWorkspaces();
-
-        if (mounted) {
-          setWorkspaces(response.workspaces || []);
-        }
-      } catch {
-        if (mounted) {
-          setWorkspaces([]);
-        }
-      } finally {
-        if (mounted) {
-          setWorkspaceLoading(false);
-        }
-      }
-    }
-
-    void load();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadMissionCount() {
-      try {
-        const response = await getMissions();
-
-        if (mounted) {
-          setMissionCount(response.missions?.length || 0);
-        }
-      } catch {
-        if (mounted) {
-          setMissionCount(0);
-        }
-      }
-    }
-
-    void loadMissionCount();
-
-    const timer = window.setInterval(() => {
-      void loadMissionCount();
-    }, 30000);
-
-    return () => {
-      mounted = false;
-      window.clearInterval(timer);
-    };
-  }, []);
 
   useEffect(() => {
     const storedMode = window.localStorage.getItem(STORAGE_KEY) as SidebarMode | null;
@@ -324,7 +268,7 @@ export function Sidebar() {
                       {group.items.map((label) => {
                         const item = navItems.find((entry) => entry.label === label);
                         if (!item) return null;
-                        const active = pathname === item.href;
+                        const active = activeDestination.href === item.href;
                         const Icon = item.icon;
                         return (
                           <Link
@@ -366,29 +310,6 @@ export function Sidebar() {
             );
           })}
 
-          <div className="mb-2 border-t border-white/[0.06] pt-3">
-            <p className={cn("mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-600", compact && "lg:hidden")}>Manage</p>
-            {navItems.filter((item) => ["Settings", "Demo"].includes(item.label)).map((item) => {
-              const active = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={compact ? item.label : undefined}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    "mb-1 flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition",
-                    compact && "lg:justify-center lg:px-0",
-                    active ? "bg-white/[0.075] text-white" : "text-slate-400 hover:bg-white/[0.045] hover:text-white",
-                  )}
-                >
-                  <Icon size={18} className="shrink-0" />
-                  <span className={cn(compact && "lg:hidden")}>{item.label}</span>
-                </Link>
-              );
-            })}
-          </div>
         </nav>
 
         <div className="shrink-0 border-t border-white/[0.07] p-3">

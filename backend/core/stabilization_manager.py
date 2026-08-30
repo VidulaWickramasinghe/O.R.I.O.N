@@ -43,7 +43,7 @@ IMPORTANT_BACKEND_FILES = [
     "backend/tools/vector_memory_tools.py", "backend/tools/workflow_blueprint_tools.py",
     "backend/tools/developer_agent_tools.py", "backend/tools/dashboard_intelligence_tools.py",
     "backend/tools/notification_tools.py", "backend/tools/user_settings_tools.py",
-    "backend/tools/plugin_registry_tools.py", "backend/tools/backend_sidecar_tools.py",
+    "backend/tools/plugin_registry_tools.py",
     "backend/tools/tool_permission_tools.py", "backend/tools/tool_audit_tools.py",
     "backend/tools/security_policy_tools.py", "backend/tools/release_candidate_tools.py",
     "backend/tools/stabilization_tools.py", "backend/tools/frontend_refactor_tools.py",

@@ -29,8 +29,8 @@ cd ~/O.R.I.O.N/
 
 The backend currently configures CORS in `backend/api_main.py`; production and
 desktop origins must remain explicit rather than using credentialed wildcard
-CORS. Tauri should use the same configured API origin and tolerate the sidecar
-startup window through the existing sidecar status workflow.
+CORS. Tauri receives the per-launch API origin and token from its Rust supervisor
+and tolerates the startup window through supervisor health state.
 
 For HTTPS deployments, `NEXT_PUBLIC_ORION_API_URL` must also use HTTPS; browsers
 block an HTTPS page from calling an HTTP API as mixed content. Aurora OS

@@ -1,6 +1,7 @@
 import os
+import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -65,6 +66,11 @@ def init_knowledge_db() -> None:
             "workspace_id": "INTEGER",
             "relative_path": "TEXT DEFAULT ''",
             "source_consent": "INTEGER NOT NULL DEFAULT 0",
+            "sensitivity": "TEXT NOT NULL DEFAULT 'internal'",
+            "expires_at": "TEXT DEFAULT ''",
+            "excluded": "INTEGER NOT NULL DEFAULT 0",
+            "exclusion_reason": "TEXT DEFAULT ''",
+            "provenance_json": "TEXT NOT NULL DEFAULT '{}'",
         }
         for column, definition in migrations.items():
             if column not in columns:
@@ -87,7 +93,18 @@ def init_knowledge_db() -> None:
 
 
 def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def _decode_document(item: Dict[str, Any]) -> Dict[str, Any]:
+    try:
+        provenance = json.loads(item.pop("provenance_json", "{}"))
+        item["provenance"] = provenance if isinstance(provenance, dict) else {}
+    except (json.JSONDecodeError, TypeError):
+        item["provenance"] = {}
+    item["excluded"] = bool(item.get("excluded", 0))
+    item["source_consent"] = bool(item.get("source_consent", 0))
+    return item
 
 
 def _safe_title(path: Path) -> str:
@@ -145,20 +162,24 @@ def _index_document_path(
     now = _now()
 
     with get_connection() as conn:
-        cursor = conn.execute(
+        provenance_json = json.dumps(
+            {
+                "workspace_id": workspace_id,
+                "relative_path": relative_path.replace("\\", "/"),
+                "consent": "explicit",
+                "indexed_at": now,
+            },
+            sort_keys=True,
+        )
+        conn.execute(
             """
-            INSERT OR REPLACE INTO knowledge_documents
-            (id, title, source_path, extension, size_bytes, summary,
-             workspace_id, relative_path, source_consent, indexed_at, updated_at)
-            VALUES (
-                (SELECT id FROM knowledge_documents WHERE source_path = ?),
-                ?, ?, ?, ?, ?, ?, ?, 1,
-                COALESCE((SELECT indexed_at FROM knowledge_documents WHERE source_path = ?), ?),
-                ?
-            )
+            INSERT OR IGNORE INTO knowledge_documents
+            (title, source_path, extension, size_bytes, summary,
+             workspace_id, relative_path, source_consent, sensitivity, expires_at,
+             excluded, exclusion_reason, provenance_json, indexed_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, 'internal', '', 0, '', ?, ?, ?)
             """,
             (
-                logical_source,
                 _safe_title(source_path),
                 logical_source,
                 source_path.suffix.lower(),
@@ -166,18 +187,37 @@ def _index_document_path(
                 summary,
                 workspace_id,
                 relative_path.replace("\\", "/"),
-                logical_source,
+                provenance_json,
                 now,
                 now,
             ),
         )
-        document_id = cursor.lastrowid
+        conn.execute(
+            """
+            UPDATE knowledge_documents
+            SET title = ?, extension = ?, size_bytes = ?, summary = ?, workspace_id = ?,
+                relative_path = ?, source_consent = 1, provenance_json = ?, updated_at = ?
+            WHERE source_path = ?
+            """,
+            (
+                _safe_title(source_path),
+                source_path.suffix.lower(),
+                source_path.stat().st_size,
+                summary,
+                workspace_id,
+                relative_path.replace("\\", "/"),
+                provenance_json,
+                now,
+                logical_source,
+            ),
+        )
         row = conn.execute(
             "SELECT id FROM knowledge_documents WHERE source_path = ?",
             (logical_source,),
         ).fetchone()
-        if row:
-            document_id = int(row[0])
+        if not row:
+            raise RuntimeError("Knowledge document record could not be created.")
+        document_id = int(row[0])
         conn.execute(
             "DELETE FROM knowledge_chunks WHERE document_id = ?",
             (document_id,),
@@ -300,7 +340,7 @@ def list_knowledge_documents(limit: int = 50) -> List[Dict[str, Any]]:
             """,
             (limit,),
         ).fetchall()
-    return [dict(row) for row in rows]
+    return [_decode_document(dict(row)) for row in rows]
 
 
 def get_knowledge_document(document_id: int) -> Optional[Dict[str, Any]]:
@@ -315,7 +355,7 @@ def get_knowledge_document(document_id: int) -> Optional[Dict[str, Any]]:
             """,
             (document_id,),
         ).fetchone()
-    return dict(row) if row else None
+    return _decode_document(dict(row)) if row else None
 
 
 def read_document_chunks(document_id: int, limit: int = 10) -> List[Dict[str, Any]]:
@@ -335,10 +375,16 @@ def read_document_chunks(document_id: int, limit: int = 10) -> List[Dict[str, An
     return [dict(row) for row in rows]
 
 
-def search_knowledge(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+def search_knowledge(
+    query: str,
+    limit: int = 10,
+    *,
+    workspace_id: Optional[int] = None,
+    include_sensitive: bool = False,
+) -> List[Dict[str, Any]]:
     init_knowledge_db()
     clean_query = query.strip()
-    if not clean_query:
+    if not clean_query or workspace_id is None:
         return []
 
     like_query = f"%{clean_query}%"
@@ -353,20 +399,86 @@ def search_knowledge(query: str, limit: int = 10) -> List[Dict[str, Any]]:
                 knowledge_chunks.content,
                 knowledge_documents.title,
                 knowledge_documents.source_path,
-                knowledge_documents.extension
+                knowledge_documents.extension,
+                knowledge_documents.workspace_id,
+                knowledge_documents.relative_path,
+                knowledge_documents.sensitivity,
+                knowledge_documents.provenance_json
             FROM knowledge_chunks
             JOIN knowledge_documents
                 ON knowledge_documents.id = knowledge_chunks.document_id
             WHERE
-                knowledge_chunks.content LIKE ?
+                (knowledge_chunks.content LIKE ?
                 OR knowledge_documents.title LIKE ?
-                OR knowledge_documents.summary LIKE ?
+                OR knowledge_documents.summary LIKE ?)
+                AND knowledge_documents.workspace_id = ?
+                AND knowledge_documents.source_consent = 1
+                AND knowledge_documents.excluded = 0
+                AND (knowledge_documents.expires_at = '' OR knowledge_documents.expires_at > ?)
+                AND (? = 1 OR knowledge_documents.sensitivity != 'sensitive')
             ORDER BY knowledge_documents.updated_at DESC
             LIMIT ?
             """,
-            (like_query, like_query, like_query, limit),
+            (
+                like_query,
+                like_query,
+                like_query,
+                int(workspace_id),
+                _now(),
+                int(include_sensitive),
+                max(1, min(int(limit), 100)),
+            ),
         ).fetchall()
-    return [dict(row) for row in rows]
+    results = []
+    for row in rows:
+        item = dict(row)
+        try:
+            item["provenance"] = json.loads(item.pop("provenance_json"))
+        except (json.JSONDecodeError, TypeError):
+            item["provenance"] = {}
+        item["retrieval_reason"] = (
+            f"Keyword match within explicitly selected workspace {workspace_id}."
+        )
+        results.append(item)
+    return results
+
+
+@requires_gateway
+def set_knowledge_document_excluded(
+    document_id: int,
+    excluded: bool,
+    reason: str = "",
+) -> Optional[Dict[str, Any]]:
+    init_knowledge_db()
+    with get_connection() as conn:
+        cursor = conn.execute(
+            """
+            UPDATE knowledge_documents
+            SET excluded = ?, exclusion_reason = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (
+                int(bool(excluded)),
+                str(reason)[:1000] if excluded else "",
+                _now(),
+                int(document_id),
+            ),
+        )
+    return get_knowledge_document(document_id) if cursor.rowcount else None
+
+
+@requires_gateway
+def delete_knowledge_document(document_id: int) -> bool:
+    init_knowledge_db()
+    with get_connection() as conn:
+        exists = conn.execute(
+            "SELECT 1 FROM knowledge_documents WHERE id = ?", (int(document_id),)
+        ).fetchone()
+        if not exists:
+            return False
+        conn.execute("DELETE FROM knowledge_chunks WHERE document_id = ?", (int(document_id),))
+        conn.execute("DELETE FROM knowledge_documents WHERE id = ?", (int(document_id),))
+    return True
 
 
 def summarize_knowledge_document(document_id: int) -> str:

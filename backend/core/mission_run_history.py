@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -255,6 +256,9 @@ def generate_mission_report(mission: Dict[str, Any]) -> str:
 
     mission_id = int(mission["id"])
     runs = list_runs_for_mission(mission_id=mission_id, limit=100)
+    from core.tool_audit import build_mission_audit_timeline
+
+    audit_timeline = build_mission_audit_timeline(mission_id=mission_id)
 
     safe_title = (
         mission["title"]
@@ -287,6 +291,21 @@ def generate_mission_report(mission: Dict[str, Any]) -> str:
         for run in runs
     ) or "No mission runs recorded yet."
 
+    audit_text = "\n\n".join(
+        f"### {event['timestamp']} — {event['event_type']}\n\n"
+        f"- Correlation ID: {event['correlation_id']}\n"
+        f"- Actor: {event['actor']}\n"
+        f"- Mission / Step / Run: {event.get('mission_id')} / "
+        f"{event.get('step_id') or 'none'} / {event.get('run_id') or 'none'}\n"
+        f"- Tool: {event.get('tool') or 'none'}\n"
+        f"- Policy: {event.get('policy') or 'none'}\n"
+        f"- Approval: {event.get('approval_id') or 'none'}\n"
+        f"- Arguments Hash: {event.get('arguments_hash') or 'none'}\n"
+        f"- Duration: {event.get('duration_ms') if event.get('duration_ms') is not None else 'none'} ms\n"
+        f"- Result: {json.dumps(event.get('result'), ensure_ascii=False, sort_keys=True) if not isinstance(event.get('result'), str) else event.get('result') or 'none'}"
+        for event in audit_timeline
+    ) or "No correlated audit events recorded yet."
+
     content = f"""# Mission Execution Report
 
 ## Mission
@@ -306,6 +325,10 @@ def generate_mission_report(mission: Dict[str, Any]) -> str:
 ## Execution History
 
 {run_text}
+
+## Correlated Audit Timeline
+
+{audit_text}
 """
 
     file_path.write_text(content, encoding="utf-8")

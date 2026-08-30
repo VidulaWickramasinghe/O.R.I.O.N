@@ -1,6 +1,7 @@
 """Regression tests for semantic memory and approval-gated developer mode."""
 
 import os
+import re
 import tempfile
 import tomllib
 import unittest
@@ -609,8 +610,13 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            '"Plugins"',
+            '"Governance"',
             sidebar,
+        )
+
+        self.assertIn(
+            '{ href: "/plugins", label: "Plugins"',
+            navigation,
         )
 
         self.assertIn(
@@ -705,7 +711,7 @@ class FrontendRefactorTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn(
-            "getWorkspaces",
+            "useAuroraWorkspaces",
             sidebar,
         )
 
@@ -836,7 +842,7 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "getMissions",
+            "useAuroraMissions",
             sidebar,
         )
 
@@ -1094,7 +1100,7 @@ class FrontendRefactorTests(unittest.TestCase):
             if "legacy" in path.parts:
                 continue
             text = path.read_text(encoding="utf-8")
-            if "fetch(" in text or "http://127.0.0.1:8000" in text:
+            if re.search(r"\bfetch\s*\(", text) or "http://127.0.0.1:8000" in text:
                 violations.append(str(path.relative_to(frontend_root)))
 
         self.assertEqual(violations, [])
@@ -1171,7 +1177,7 @@ class FrontendRefactorTests(unittest.TestCase):
 
 
 class ReleaseVerificationTests(unittest.TestCase):
-    def test_quality_gate_runs_both_scripts_when_requested(self) -> None:
+    def test_quality_gate_runs_the_single_required_gate_when_requested(self) -> None:
         verification = {
             "status": "passed",
             "generated_at": "now",
@@ -1186,16 +1192,14 @@ class ReleaseVerificationTests(unittest.TestCase):
         ), patch.object(
             release_verification,
             "_run_script",
-            side_effect=[
-                {"ok": True, "command": "backend"},
-                {"ok": False, "command": "frontend"},
-            ],
+            return_value={"ok": False, "command": "quality-gate"},
         ) as run:
             result = release_verification.run_quality_gate_snapshot(True)
 
-        self.assertEqual(run.call_count, 2)
+        self.assertEqual(run.call_count, 1)
         self.assertEqual(result["status"], "failed")
-        self.assertTrue(result["backend_check"]["ok"])
+        self.assertFalse(result["required_gate"]["ok"])
+        self.assertFalse(result["backend_check"]["ok"])
         self.assertFalse(result["frontend_check"]["ok"])
 
     def test_public_release_report_is_read_only(self) -> None:
@@ -1724,44 +1728,35 @@ class PluginRegistryTests(unittest.TestCase):
 
 
 class BackendSidecarTests(unittest.TestCase):
-    def test_sidecar_rejects_non_loopback_bind(self) -> None:
-        with patch.object(backend_sidecar.subprocess, "Popen") as popen:
-            with self.assertRaisesRegex(ValueError, "loopback"):
-                gateway_call(
-                    "start_backend_sidecar",
-                    backend_sidecar.start_backend_sidecar,
-                    "0.0.0.0",
-                    8000,
-                )
-        popen.assert_not_called()
+    def test_python_backend_has_no_process_control_surface(self) -> None:
+        source = Path(backend_sidecar.__file__).read_text(encoding="utf-8")
+        self.assertNotIn("import subprocess", source)
+        self.assertNotIn("os.kill", source)
+        self.assertNotIn("/proc", source)
+        self.assertFalse(hasattr(backend_sidecar, "start_backend_sidecar"))
+        self.assertFalse(hasattr(backend_sidecar, "stop_backend_sidecar"))
+        self.assertFalse(hasattr(backend_sidecar, "restart_backend_sidecar"))
 
-    def test_stop_refuses_unverified_stale_pid(self) -> None:
-        state = {**backend_sidecar.DEFAULT_STATE, "pid": 4242}
-        status = {
-            **state,
-            "pid_running": True,
-            "managed_process": False,
-            "port_open": False,
-            "log_file": "log",
-            "state_file": "state",
-        }
-        with patch.object(backend_sidecar, "load_sidecar_state", return_value=state):
-            with patch.object(backend_sidecar, "save_sidecar_state"):
-                with patch.object(backend_sidecar, "is_pid_running", return_value=True):
-                    with patch.object(
-                        backend_sidecar, "is_managed_backend_process", return_value=False
-                    ):
-                        with patch.object(
-                            backend_sidecar, "get_sidecar_status", return_value=status
-                        ):
-                            with patch.object(backend_sidecar.os, "killpg") as killpg:
-                                result = gateway_call(
-                                    "stop_backend_sidecar",
-                                    backend_sidecar.stop_backend_sidecar,
-                                )
+    def test_sidecar_status_identifies_tauri_as_process_owner(self) -> None:
+        with patch.dict(os.environ, {"ORION_CAPABILITY_TOKEN": "launch-token"}):
+            status = backend_sidecar.get_sidecar_status()
 
-        killpg.assert_not_called()
-        self.assertEqual(result["status"], "stop_blocked")
+        self.assertEqual(status["managed_by"], "Tauri Rust Supervisor")
+        self.assertTrue(status["supervisor_owned"])
+        self.assertIsNone(status["pid"])
+
+    def test_rust_supervisor_owns_generation_safe_lifecycle(self) -> None:
+        source = (
+            Path(__file__).resolve().parents[2]
+            / "frontend"
+            / "src-tauri"
+            / "src"
+            / "main.rs"
+        ).read_text(encoding="utf-8")
+        self.assertIn("Option<CommandChild>", source)
+        self.assertIn("generation", source)
+        self.assertIn("monitor_backend_health", source)
+        self.assertNotIn("/proc", source)
 
 
 class VectorMemoryTests(unittest.TestCase):

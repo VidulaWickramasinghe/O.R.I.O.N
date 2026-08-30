@@ -9,7 +9,7 @@ import {
   useAuroraMissions,
   useAuroraMissionRuns,
 } from "../lib/aurora-queries";
-import { api } from "../lib/api-client";
+import { api } from "@/lib/api/client";
 import {
   createWorkflowMission,
   getWorkflowBlueprint,
@@ -21,6 +21,23 @@ import {
 type MissionsModuleProps = {
   onAssistantMessage: (message: string) => void;
 };
+
+const EXECUTABLE_MISSION_STATES = new Set(["planned", "ready", "running"]);
+const PAUSABLE_MISSION_STATES = new Set([
+  "planned",
+  "ready",
+  "running",
+  "waiting_approval",
+]);
+const CANCELLABLE_MISSION_STATES = new Set([
+  "planned",
+  "ready",
+  "running",
+  "waiting_approval",
+  "paused",
+  "failed",
+  "recovery_required",
+]);
 
 export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
   const queryClient = useQueryClient();
@@ -184,6 +201,43 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
     );
 
     await refreshMissionData();
+  }
+
+  async function transitionMission(missionId: number, action: "pause" | "resume" | "cancel") {
+    setLoadingMissionId(missionId);
+    try {
+      const data = await api.post<{ status: string; transitioned: boolean }>(
+        `/api/missions/${missionId}/${action}`,
+        { cause: `User requested ${action} from Aurora OS mission control.` },
+      );
+      onAssistantMessage(`Mission ${missionId} ${action}: ${data.status}.`);
+      await refreshMissionData();
+    } catch {
+      onAssistantMessage(`Mission ${missionId} could not ${action}; its lifecycle state may have changed.`);
+    } finally {
+      setLoadingMissionId(null);
+    }
+  }
+
+  async function retryFailedStep(missionId: number) {
+    setLoadingMissionId(missionId);
+    try {
+      const detail = await api.get<{ steps: Array<{ id: number; status: string }> }>(`/api/missions/${missionId}`);
+      const step = detail.steps.find((item) => ["failed", "blocked"].includes(item.status));
+      if (!step) {
+        onAssistantMessage(`Mission ${missionId} has no failed or blocked step eligible for retry.`);
+        return;
+      }
+      await api.post(`/api/missions/${missionId}/steps/${step.id}/retry`, {
+        cause: "User requested a bounded retry from Aurora OS mission control.",
+      });
+      onAssistantMessage(`Mission ${missionId} step ${step.id} is queued for an explicit bounded retry.`);
+      await refreshMissionData();
+    } catch {
+      onAssistantMessage(`Mission ${missionId} retry was rejected or its retry limit was reached.`);
+    } finally {
+      setLoadingMissionId(null);
+    }
   }
 
   useEffect(() => {
@@ -405,25 +459,39 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <button
-                      onClick={() => void runNext(mission.id)}
-                      disabled={loadingMissionId === mission.id}
-                      className="rounded-xl bg-cyan-300 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {loadingMissionId === mission.id
-                        ? "Running..."
-                        : "Run Next Step"}
-                    </button>
+                    {EXECUTABLE_MISSION_STATES.has(mission.status) && (
+                      <button
+                        onClick={() => void runNext(mission.id)}
+                        disabled={loadingMissionId === mission.id}
+                        className="rounded-xl bg-cyan-300 px-3 py-2 text-xs font-bold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {loadingMissionId === mission.id
+                          ? "Running..."
+                          : "Run Next Step"}
+                      </button>
+                    )}
 
-                    <button
-                      onClick={() => void runBatch(mission.id)}
-                      disabled={loadingMissionId === mission.id}
-                      className="rounded-xl border border-emerald-400/30 px-3 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {loadingMissionId === mission.id
-                        ? "Running..."
-                        : "Run 3 Steps"}
-                    </button>
+                    {mission.status === "paused" ? (
+                      <button onClick={() => void transitionMission(mission.id, "resume")} disabled={loadingMissionId === mission.id} className="rounded-xl border border-cyan-400/30 px-3 py-2 text-xs font-bold text-cyan-200 disabled:opacity-60">Resume</button>
+                    ) : PAUSABLE_MISSION_STATES.has(mission.status) ? (
+                      <button onClick={() => void transitionMission(mission.id, "pause")} disabled={loadingMissionId === mission.id} className="rounded-xl border border-amber-400/30 px-3 py-2 text-xs font-bold text-amber-200 disabled:opacity-60">Pause</button>
+                    ) : null}
+
+                    {["failed", "recovery_required"].includes(mission.status) && <button onClick={() => void retryFailedStep(mission.id)} disabled={loadingMissionId === mission.id} className="rounded-xl border border-orange-400/30 px-3 py-2 text-xs font-bold text-orange-200 disabled:opacity-60">Retry failed step</button>}
+
+                    {CANCELLABLE_MISSION_STATES.has(mission.status) && <button onClick={() => void transitionMission(mission.id, "cancel")} disabled={loadingMissionId === mission.id} className="rounded-xl border border-rose-400/30 px-3 py-2 text-xs font-bold text-rose-200 disabled:opacity-60">Cancel</button>}
+
+                    {EXECUTABLE_MISSION_STATES.has(mission.status) && (
+                      <button
+                        onClick={() => void runBatch(mission.id)}
+                        disabled={loadingMissionId === mission.id}
+                        className="rounded-xl border border-emerald-400/30 px-3 py-2 text-xs font-bold text-emerald-200 transition hover:bg-emerald-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {loadingMissionId === mission.id
+                          ? "Running..."
+                          : "Run 3 Steps"}
+                      </button>
+                    )}
 
                     <button
                       onClick={() => void generateReport(mission.id)}

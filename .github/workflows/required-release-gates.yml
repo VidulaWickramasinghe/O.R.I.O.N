@@ -1,0 +1,206 @@
+name: Required release gates
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Backend compile and regression suite
+        run: ./scripts/test_backend.sh
+
+  api-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: API authentication, capability, approval, and security regressions
+        run: ./scripts/test_api_security.sh
+
+  migration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Additive migration and upgrade safety
+        run: ./scripts/test_migrations.sh
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - name: Frontend lint
+        run: npm run lint
+        working-directory: frontend
+      - name: Frontend typecheck
+        run: npm run typecheck
+        working-directory: frontend
+      - name: Frontend production build
+        run: npm run build
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-static
+          path: frontend/out
+          if-no-files-found: error
+
+  frontend-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - name: Shared-cache network-count integration
+        run: npm run test:server-state
+        working-directory: frontend
+      - name: Task-navigation information architecture
+        run: npm run test:ux
+        working-directory: frontend
+
+  tauri:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+        working-directory: frontend
+      - run: python -m venv .venv
+      - run: .venv/bin/pip install -r requirements.txt pyinstaller
+      - name: Rust supervisor tests
+        run: cargo test --locked --manifest-path frontend/src-tauri/Cargo.toml
+      - name: Build packaged desktop application
+        run: npm run desktop:build
+        working-directory: frontend
+        env:
+          ORION_PYTHON: ${{ github.workspace }}/.venv/bin/python
+      - name: Packaged backend smoke test
+        run: ./scripts/smoke_desktop_package.sh
+      - name: Packaged supervisor crash-recovery test
+        run: ./scripts/test_desktop_supervisor.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-package
+          path: frontend/src-tauri/target/release/bundle
+          if-no-files-found: error
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - run: pip install pip-audit
+      - run: npm ci
+        working-directory: frontend
+      - name: Python dependencies
+        run: pip-audit --requirement requirements.txt
+      - name: Runtime npm dependencies
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: frontend
+      - name: Rust dependencies
+        uses: rustsec/audit-check@v2.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          working-directory: frontend/src-tauri
+
+  artifact-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/check_tracked_artifacts.py
+
+  release-evidence:
+    needs:
+      - backend
+      - api-security
+      - migration
+      - frontend
+      - frontend-e2e
+      - tauri
+      - dependency-audit
+      - artifact-scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: ci-artifacts
+      - name: Create hash-backed release evidence
+        run: >-
+          python scripts/create_release_evidence.py
+          --artifact-root ci-artifacts
+          --output release_evidence.json
+          --run-url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          --commit-sha "${GITHUB_SHA}"
+          --check backend
+          --check api-security
+          --check migration
+          --check frontend-lint
+          --check frontend-typecheck
+          --check frontend-build
+          --check frontend-e2e
+          --check tauri-test
+          --check tauri-build
+          --check dependency-audit
+          --check artifact-scan
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-evidence
+          path: release_evidence.json
+          if-no-files-found: error

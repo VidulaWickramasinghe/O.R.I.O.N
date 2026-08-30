@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { SystemDoctorResult } from "../aurora-types";
-import { api } from "../lib/api-client";
+import { api } from "@/lib/api/client";
 import { ModuleShell } from "./module-shell";
 
 export function SystemModule() {

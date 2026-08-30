@@ -1,42 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { FolderKanban, RefreshCw, ShieldCheck } from "lucide-react";
 
 import { WorkspacesModule } from "@/components/aurora/modules/workspaces-module";
 import { GlassPanel } from "@/components/aurora/glass-panel";
 import { StatusChip } from "@/components/aurora/status-chip";
-import { getWorkspaces } from "@/lib/api/workspaces";
+import { useAuroraWorkspaces } from "@/components/aurora/lib/aurora-queries";
 import type { WorkspaceItem } from "@/components/aurora/aurora-types";
 
 export function WorkspacesLiveWorkspace() {
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
+  const workspacesQuery = useAuroraWorkspaces();
+  const workspaces = (workspacesQuery.data?.workspaces ?? []) as WorkspaceItem[];
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [lastLoadedAt, setLastLoadedAt] = useState("");
-
-  const loadWorkspaces = useCallback(async () => {
-    setLoading(true);
-    setMessage("");
-
-    try {
-      const data = await getWorkspaces();
-      setWorkspaces((data.workspaces || []) as WorkspaceItem[]);
-      setLastLoadedAt(new Date().toLocaleTimeString([], {
+  const loading = workspacesQuery.isFetching;
+  const lastLoadedAt = workspacesQuery.dataUpdatedAt
+    ? new Date(workspacesQuery.dataUpdatedAt).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
-      }));
-    } catch {
-      setWorkspaces([]);
-      setMessage("Workspace list failed to load. Confirm the backend is running.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      })
+    : "";
 
-  useEffect(() => {
-    void loadWorkspaces();
-  }, [loadWorkspaces]);
+  const loadWorkspaces = async () => {
+    setMessage("");
+    const result = await workspacesQuery.refetch();
+    if (result.isError) {
+      setMessage("Workspace list failed to load. Confirm the backend is running.");
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-5">
@@ -69,9 +60,9 @@ export function WorkspacesLiveWorkspace() {
         </div>
       </header>
 
-      {message && (
+      {(message || workspacesQuery.isError) && (
         <p role="alert" className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
-          {message}
+          {message || "Workspace list failed to load. Confirm the backend is running."}
         </p>
       )}
 

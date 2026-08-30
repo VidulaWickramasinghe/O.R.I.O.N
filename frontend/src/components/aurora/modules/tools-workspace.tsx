@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { ToolPermissionPanel } from "@/components/aurora/panels/ToolPermissionPanel";
 import { ToolsModule } from "@/components/aurora/modules/tools-module";
@@ -22,7 +21,6 @@ function metricValue(
 
 export function ToolsWorkspace() {
   const [message, setMessage] = useState("");
-  const [queryClient] = useState(() => new QueryClient());
   const toolPermissionMatrix = useAuroraStore(
     (state) => state.toolPermissionMatrix,
   );
@@ -41,8 +39,7 @@ export function ToolsWorkspace() {
   }, [loadToolPermissions]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <div className="mx-auto w-full max-w-[1600px] space-y-5">
+    <div className="mx-auto w-full max-w-[1600px] space-y-5">
         <header className="rounded-3xl border border-cyan-300/15 bg-black/25 p-5">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">
             Live tools and approvals
@@ -91,7 +88,6 @@ export function ToolsWorkspace() {
           Safety: this page does not execute commands directly. It only sends approve
           or reject decisions to the existing backend approval endpoints.
         </p>
-      </div>
-    </QueryClientProvider>
+    </div>
   );
 }

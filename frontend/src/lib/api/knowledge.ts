@@ -9,4 +9,4 @@ export const indexKnowledgeFolder = (
   relative_path,
   source_consent,
 });
-export const searchKnowledge = (query: string, limit = 8) => apiPost<{ results: unknown[] }>("/api/knowledge/search", { query, limit });
+export const searchKnowledge = (query: string, workspace_id: number, limit = 8) => apiPost<{ results: unknown[] }>("/api/knowledge/search", { query, workspace_id, limit });

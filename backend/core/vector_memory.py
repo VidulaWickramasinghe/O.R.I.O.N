@@ -3,7 +3,7 @@ import math
 import os
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -13,8 +13,12 @@ if str(BACKEND_DIR) not in sys.path:
 
 from openai import OpenAI
 
-from core.knowledge_base import list_knowledge_documents, read_document_chunks
-from core.persistent_memory import list_recent_memory
+from core.knowledge_base import (
+    get_knowledge_document,
+    list_knowledge_documents,
+    read_document_chunks,
+)
+from core.persistent_memory import get_memory_item, list_recent_memory
 from core.database import managed_connection
 from core.capability_gateway import requires_gateway
 from core.runtime_paths import runtime_data_dir
@@ -48,17 +52,35 @@ def init_vector_db() -> None:
             )
             """
         )
+        columns = {
+            str(row[1]) for row in conn.execute("PRAGMA table_info(vector_items)")
+        }
+        migrations = {
+            "workspace_id": "INTEGER",
+            "project_key": "TEXT DEFAULT ''",
+            "sensitivity": "TEXT NOT NULL DEFAULT 'internal'",
+            "expires_at": "TEXT DEFAULT ''",
+            "excluded": "INTEGER NOT NULL DEFAULT 0",
+            "provenance_json": "TEXT NOT NULL DEFAULT '{}'",
+        }
+        for column, definition in migrations.items():
+            if column not in columns:
+                conn.execute(f"ALTER TABLE vector_items ADD COLUMN {column} {definition}")
         conn.execute(
             """
             CREATE UNIQUE INDEX IF NOT EXISTS idx_vector_source
             ON vector_items(source_type, source_id)
             """
         )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_vector_scope "
+            "ON vector_items(workspace_id, project_key, excluded)"
+        )
         conn.commit()
 
 
 def _now() -> str:
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def create_embedding(text: str) -> List[float]:
@@ -99,19 +121,30 @@ def upsert_vector_item(
     title: str,
     content: str,
     metadata: Optional[Dict[str, Any]] = None,
+    *,
+    workspace_id: Optional[int] = None,
+    project_key: str = "",
+    sensitivity: str = "internal",
+    expires_at: str = "",
+    provenance: Optional[Dict[str, Any]] = None,
 ) -> int:
     init_vector_db()
     embedding = create_embedding(content)
     now = _now()
+    clean_sensitivity = str(sensitivity).strip().lower()
+    if clean_sensitivity not in {"public", "internal", "sensitive"}:
+        raise ValueError("Vector sensitivity must be public, internal, or sensitive.")
 
     with get_connection() as conn:
         cursor = conn.execute(
             """
             INSERT OR REPLACE INTO vector_items
-            (id, source_type, source_id, title, content, embedding_json, metadata_json, created_at, updated_at)
+            (id, source_type, source_id, title, content, embedding_json, metadata_json,
+             workspace_id, project_key, sensitivity, expires_at, excluded,
+             provenance_json, created_at, updated_at)
             VALUES (
                 (SELECT id FROM vector_items WHERE source_type = ? AND source_id = ?),
-                ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?,
                 COALESCE(
                     (SELECT created_at FROM vector_items WHERE source_type = ? AND source_id = ?),
                     ?
@@ -128,6 +161,11 @@ def upsert_vector_item(
                 content,
                 json.dumps(embedding),
                 json.dumps(metadata or {}),
+                int(workspace_id) if workspace_id is not None else None,
+                str(project_key).strip(),
+                clean_sensitivity,
+                str(expires_at).strip(),
+                json.dumps(provenance or {}, sort_keys=True),
                 source_type,
                 source_id,
                 now,
@@ -152,7 +190,9 @@ def list_vector_items(limit: int = 50) -> List[Dict[str, Any]]:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             """
-            SELECT id, source_type, source_id, title, content, metadata_json, created_at, updated_at
+            SELECT id, source_type, source_id, title, content, metadata_json,
+                   workspace_id, project_key, sensitivity, expires_at, excluded,
+                   provenance_json, created_at, updated_at
             FROM vector_items
             ORDER BY updated_at DESC
             LIMIT ?
@@ -168,12 +208,76 @@ def list_vector_items(limit: int = 50) -> List[Dict[str, Any]]:
             item["metadata"] = metadata if isinstance(metadata, dict) else {}
         except (json.JSONDecodeError, TypeError):
             item["metadata"] = {}
+        try:
+            provenance = json.loads(item.pop("provenance_json"))
+            item["provenance"] = provenance if isinstance(provenance, dict) else {}
+        except (json.JSONDecodeError, TypeError):
+            item["provenance"] = {}
+        item["excluded"] = bool(item.get("excluded", 0))
         items.append(item)
 
     return items
 
 
-def semantic_search(query: str, limit: int = 8) -> List[Dict[str, Any]]:
+def _source_is_retrievable(
+    item: Dict[str, Any],
+    *,
+    workspace_id: Optional[int],
+    project_key: str,
+    include_sensitive: bool,
+) -> tuple[bool, Dict[str, Any]]:
+    """Revalidate the authoritative record so stale vectors fail closed."""
+    source_type = str(item.get("source_type", ""))
+    source_id = str(item.get("source_id", ""))
+    if source_type == "persistent_memory":
+        try:
+            source = get_memory_item(int(source_id), include_excluded=True)
+        except ValueError:
+            return False, {}
+        if not source or source.get("excluded"):
+            return False, {}
+        if source.get("expires_at") and str(source["expires_at"]) <= _now():
+            return False, {}
+        if source.get("sensitivity") == "sensitive" and not include_sensitive:
+            return False, {}
+        source_workspace = source.get("workspace_id")
+        if source_workspace is not None and int(source_workspace) != workspace_id:
+            return False, {}
+        source_project = str(source.get("project_key") or "")
+        if source_project and source_project != str(project_key or "").strip():
+            return False, {}
+        return True, source
+
+    if source_type == "knowledge_chunk":
+        if workspace_id is None:
+            return False, {}
+        try:
+            document_id = int(source_id.split(":", 1)[0])
+        except (ValueError, IndexError):
+            return False, {}
+        source = get_knowledge_document(document_id)
+        if not source or source.get("excluded") or not source.get("source_consent"):
+            return False, {}
+        if int(source.get("workspace_id") or -1) != int(workspace_id):
+            return False, {}
+        if source.get("expires_at") and str(source["expires_at"]) <= _now():
+            return False, {}
+        if source.get("sensitivity") == "sensitive" and not include_sensitive:
+            return False, {}
+        return True, source
+
+    # Vector records without an authoritative, scoped source are not prompt-safe.
+    return False, {}
+
+
+def semantic_search(
+    query: str,
+    limit: int = 8,
+    *,
+    workspace_id: Optional[int] = None,
+    project_key: str = "",
+    include_sensitive: bool = False,
+) -> List[Dict[str, Any]]:
     init_vector_db()
     clean_query = query.strip()
     if not clean_query:
@@ -194,6 +298,14 @@ def semantic_search(query: str, limit: int = 8) -> List[Dict[str, Any]]:
     scored = []
     for row in rows:
         item = dict(row)
+        allowed, source = _source_is_retrievable(
+            item,
+            workspace_id=workspace_id,
+            project_key=project_key,
+            include_sensitive=include_sensitive,
+        )
+        if not allowed:
+            continue
         try:
             embedding = json.loads(item["embedding_json"])
             if not isinstance(embedding, list):
@@ -207,6 +319,12 @@ def semantic_search(query: str, limit: int = 8) -> List[Dict[str, Any]]:
                 metadata = {}
         except (json.JSONDecodeError, TypeError):
             metadata = {}
+        try:
+            provenance = json.loads(item.get("provenance_json", "{}"))
+            if not isinstance(provenance, dict):
+                provenance = {}
+        except (json.JSONDecodeError, TypeError):
+            provenance = {}
         scored.append(
             {
                 "id": item["id"],
@@ -215,6 +333,14 @@ def semantic_search(query: str, limit: int = 8) -> List[Dict[str, Any]]:
                 "title": item["title"],
                 "content": item["content"],
                 "metadata": metadata,
+                "workspace_id": source.get("workspace_id"),
+                "project_key": source.get("project_key", ""),
+                "sensitivity": source.get("sensitivity", "internal"),
+                "provenance": source.get("provenance") or provenance,
+                "retrieval_reason": (
+                    "Semantic similarity matched a live, consented source "
+                    "within the active workspace/project scope."
+                ),
                 "score": score,
                 "created_at": item["created_at"],
                 "updated_at": item["updated_at"],
@@ -242,6 +368,11 @@ def index_recent_memories_to_vectors(limit: int = 50) -> Dict[str, Any]:
                     "importance": memory["importance"],
                     "source": memory.get("source", "user"),
                 },
+                workspace_id=memory.get("workspace_id"),
+                project_key=memory.get("project_key", ""),
+                sensitivity=memory.get("sensitivity", "internal"),
+                expires_at=memory.get("expires_at", ""),
+                provenance=memory.get("provenance", {}),
             )
             indexed.append(
                 {
@@ -267,7 +398,11 @@ def index_recent_memories_to_vectors(limit: int = 50) -> Dict[str, Any]:
 
 
 def index_knowledge_documents_to_vectors(limit: int = 50) -> Dict[str, Any]:
-    documents = list_knowledge_documents(limit=limit)
+    documents = [
+        document
+        for document in list_knowledge_documents(limit=limit)
+        if document.get("source_consent") and not document.get("excluded")
+    ]
     indexed = []
     failed = []
 
@@ -287,6 +422,10 @@ def index_knowledge_documents_to_vectors(limit: int = 50) -> Dict[str, Any]:
                         "source_path": document["source_path"],
                         "extension": document["extension"],
                     },
+                    workspace_id=document.get("workspace_id"),
+                    sensitivity=document.get("sensitivity", "internal"),
+                    expires_at=document.get("expires_at", ""),
+                    provenance=document.get("provenance", {}),
                 )
                 indexed.append(
                     {
@@ -334,8 +473,19 @@ def rebuild_vector_index() -> Dict[str, Any]:
     }
 
 
-def render_semantic_search_results(query: str, limit: int = 8) -> str:
-    results = semantic_search(query=query, limit=limit)
+def render_semantic_search_results(
+    query: str,
+    limit: int = 8,
+    *,
+    workspace_id: Optional[int] = None,
+    project_key: str = "",
+) -> str:
+    results = semantic_search(
+        query=query,
+        limit=limit,
+        workspace_id=workspace_id,
+        project_key=project_key,
+    )
     if not results:
         return "No semantic results found."
 

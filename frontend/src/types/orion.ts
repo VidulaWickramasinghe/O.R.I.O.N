@@ -105,6 +105,8 @@ export type BackendSidecarStatus = {
   managed_by: string; status: string; pid?: number | null; host: string; port: number;
   backend_url: string; started_at: string; updated_at: string; last_error: string;
   pid_running: boolean; port_open: boolean; log_file: string; state_file: string; report: string;
+  generation?: number; restarts?: number; stopping?: boolean; child_owned?: boolean;
+  supervisor_owned?: boolean;
 };
 
 export type ReminderItem = {

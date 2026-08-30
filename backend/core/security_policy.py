@@ -19,6 +19,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 PROTECTED_POLICY_PLUGINS = {
     "approval_system",
+    "persistence_manager",
     "plugin_registry",
     "user_settings",
     "dashboard_intelligence",

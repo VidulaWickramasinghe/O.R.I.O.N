@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   Bot,
   BrainCircuit,
@@ -14,9 +14,14 @@ import {
 } from "lucide-react";
 
 import { GlassPanel } from "@/components/aurora/glass-panel";
+import {
+  useAuroraApprovals,
+  useAuroraDashboardIntelligence,
+  useAuroraMissions,
+  useAuroraMissionRuns,
+  useAuroraStatus,
+} from "@/components/aurora/lib/aurora-queries";
 import { StatusChip } from "@/components/aurora/status-chip";
-import { apiGet } from "@/lib/api/client";
-import { getSystemStatus } from "@/lib/api/status";
 
 type SystemSnapshot = Record<string, unknown> & {
   status?: string;
@@ -140,107 +145,63 @@ function isPendingApproval(item: ApprovalItem) {
 }
 
 export function AgentsLiveWorkspace() {
-  const [system, setSystem] = useState<SystemSnapshot | null>(null);
-  const [missions, setMissions] = useState<MissionItem[]>([]);
-  const [runs, setRuns] = useState<MissionRunItem[]>([]);
-  const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
-  const [intelligence, setIntelligence] = useState<IntelligenceSnapshot | null>(null);
-  const [sources, setSources] = useState<SourceState>({
-    status: false,
-    missions: false,
-    runs: false,
-    approvals: false,
-    intelligence: false,
-  });
-
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [lastLoadedAt, setLastLoadedAt] = useState("");
-
-  const loadAgentSources = useCallback(async () => {
-    setLoading(true);
-    setMessage("");
-
-    const [statusResult, missionsResult, runsResult, approvalsResult, intelligenceResult] =
-      await Promise.allSettled([
-        getSystemStatus(),
-        apiGet<unknown>("/api/missions"),
-        apiGet<unknown>("/api/mission-runs"),
-        apiGet<unknown>("/api/approvals"),
-        apiGet<unknown>("/api/dashboard/intelligence"),
-      ]);
-
-    setSources({
-      status: statusResult.status === "fulfilled",
-      missions: missionsResult.status === "fulfilled",
-      runs: runsResult.status === "fulfilled",
-      approvals: approvalsResult.status === "fulfilled",
-      intelligence: intelligenceResult.status === "fulfilled",
-    });
-
-    if (statusResult.status === "fulfilled") {
-      setSystem(statusResult.value as SystemSnapshot);
-    } else {
-      setSystem(null);
-    }
-
-    if (missionsResult.status === "fulfilled") {
-      setMissions(
-        listFrom<MissionItem>(missionsResult.value, ["missions", "items", "results"]),
-      );
-    } else {
-      setMissions([]);
-    }
-
-    if (runsResult.status === "fulfilled") {
-      setRuns(listFrom<MissionRunItem>(runsResult.value, ["runs", "items", "results"]));
-    } else {
-      setRuns([]);
-    }
-
-    if (approvalsResult.status === "fulfilled") {
-      setApprovals(
-        listFrom<ApprovalItem>(approvalsResult.value, ["approvals", "items", "results"]),
-      );
-    } else {
-      setApprovals([]);
-    }
-
-    if (intelligenceResult.status === "fulfilled") {
-      setIntelligence(intelligenceResult.value as IntelligenceSnapshot);
-    } else {
-      setIntelligence(null);
-    }
-
-    const failures = [
-      statusResult,
-      missionsResult,
-      runsResult,
-      approvalsResult,
-      intelligenceResult,
-    ].filter((result) => result.status === "rejected").length;
-
-    if (failures === 5) {
-      setMessage("Agent capability sources failed to load. Confirm the backend is running.");
-    } else if (failures > 0) {
-      setMessage(
-        `${failures} live source${failures === 1 ? "" : "s"} unavailable. Loaded sources are shown without substitute data.`,
-      );
-    }
-
-    setLastLoadedAt(
-      new Date().toLocaleTimeString([], {
+  const statusQuery = useAuroraStatus();
+  const missionsQuery = useAuroraMissions();
+  const runsQuery = useAuroraMissionRuns();
+  const approvalsQuery = useAuroraApprovals();
+  const intelligenceQuery = useAuroraDashboardIntelligence();
+  const queries = [
+    statusQuery,
+    missionsQuery,
+    runsQuery,
+    approvalsQuery,
+    intelligenceQuery,
+  ];
+  const system = (statusQuery.data ?? null) as SystemSnapshot | null;
+  const missions = listFrom<MissionItem>(missionsQuery.data, ["missions", "items", "results"]);
+  const runs = listFrom<MissionRunItem>(runsQuery.data, ["runs", "items", "results"]);
+  const approvals = listFrom<ApprovalItem>(approvalsQuery.data, ["approvals", "items", "results"]);
+  const intelligence = (intelligenceQuery.data ?? null) as IntelligenceSnapshot | null;
+  const sources: SourceState = useMemo(
+    () => ({
+      status: statusQuery.data !== undefined && !statusQuery.isError,
+      missions: missionsQuery.data !== undefined && !missionsQuery.isError,
+      runs: runsQuery.data !== undefined && !runsQuery.isError,
+      approvals: approvalsQuery.data !== undefined && !approvalsQuery.isError,
+      intelligence:
+        intelligenceQuery.data !== undefined && !intelligenceQuery.isError,
+    }),
+    [
+      approvalsQuery.data,
+      approvalsQuery.isError,
+      intelligenceQuery.data,
+      intelligenceQuery.isError,
+      missionsQuery.data,
+      missionsQuery.isError,
+      runsQuery.data,
+      runsQuery.isError,
+      statusQuery.data,
+      statusQuery.isError,
+    ],
+  );
+  const loading = queries.some((query) => query.isFetching);
+  const failures = queries.filter((query) => query.isError).length;
+  const message = failures === queries.length
+    ? "Agent capability sources failed to load. Confirm the backend is running."
+    : failures > 0
+      ? `${failures} live source${failures === 1 ? "" : "s"} unavailable. Loaded sources are shown without substitute data.`
+      : "";
+  const lastUpdatedAt = Math.max(...queries.map((query) => query.dataUpdatedAt));
+  const lastLoadedAt = lastUpdatedAt
+    ? new Date(lastUpdatedAt).toLocaleTimeString([], {
         hour: "2-digit",
         minute: "2-digit",
-      }),
-    );
+      })
+    : "";
 
-    setLoading(false);
-  }, []);
-
-  useEffect(() => {
-    void loadAgentSources();
-  }, [loadAgentSources]);
+  async function loadAgentSources() {
+    await Promise.all(queries.map((query) => query.refetch()));
+  }
 
   const modules = useMemo(
     () =>

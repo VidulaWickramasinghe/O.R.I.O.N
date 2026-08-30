@@ -32,12 +32,22 @@ Knowledge failed: {result['knowledge']['failed_count']}
 @function_tool
 @instrument_tool("semantic_memory_search")
 @enforce_tool_permission("semantic_memory_search")
-def semantic_memory_search(query: str, limit: int = 8) -> str:
+def semantic_memory_search(
+    query: str,
+    limit: int = 8,
+    workspace_id: int | None = None,
+    project_key: str = "",
+) -> str:
     """
     Search memory and knowledge semantically by meaning.
     """
     try:
-        return render_semantic_search_results(query=query, limit=limit)
+        return render_semantic_search_results(
+            query=query,
+            limit=limit,
+            workspace_id=workspace_id,
+            project_key=project_key,
+        )
     except Exception as error:
         return f"Semantic memory search failed: {error}"
 

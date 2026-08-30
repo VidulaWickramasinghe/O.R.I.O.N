@@ -92,11 +92,15 @@ def list_knowledge_documents_tool(limit: int = 20) -> str:
 @function_tool(name_override="search_local_knowledge")
 @instrument_tool("search_local_knowledge")
 @enforce_tool_permission("search_local_knowledge")
-def search_local_knowledge(query: str, limit: int = 10) -> str:
+def search_local_knowledge(query: str, workspace_id: int, limit: int = 10) -> str:
     """
     Search indexed local knowledge documents.
     """
-    results = search_knowledge(query=query, limit=limit)
+    results = search_knowledge(
+        query=query,
+        limit=limit,
+        workspace_id=workspace_id,
+    )
     if not results:
         return "No matching knowledge found."
 

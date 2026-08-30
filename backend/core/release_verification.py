@@ -13,6 +13,7 @@ from core.frontend_refactor import inspect_frontend_architecture
 from core.release_candidate import generate_release_checklist, get_freeze_state
 from core.stabilization_manager import run_stabilization_scan
 from core.runtime_paths import runtime_data_dir
+from core.release_evidence import get_release_evidence_status
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -75,7 +76,13 @@ def generate_release_verification_snapshot() -> Dict[str, Any]:
     frontend = inspect_frontend_architecture()
     stabilization = run_stabilization_scan(False)
     checklist = generate_release_checklist()
+    ci_evidence = get_release_evidence_status()
     checks = [
+        {
+            "name": "Required CI evidence is valid",
+            "ok": ci_evidence["ok"],
+            "details": ci_evidence.get("run_url") or ci_evidence.get("error", "Evidence unavailable"),
+        },
         {
             "name": "Frontend architecture available",
             "ok": frontend.get("status") != "needs_refactor",
@@ -171,20 +178,22 @@ def run_quality_gate_snapshot(
     run_builds: bool = False,
     verification: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    backend = _skipped("./scripts/test_backend.sh")
-    frontend = _skipped("./scripts/test_frontend.sh")
+    required_gate = _skipped("./scripts/quality_gate.sh")
     if run_builds:
-        backend = _run_script("test_backend.sh", timeout=240)
-        frontend = _run_script("test_frontend.sh", timeout=300)
+        required_gate = _run_script("quality_gate.sh", timeout=1800)
 
     verification = verification or generate_release_verification_snapshot()
-    status = verification["status"]
-    if backend["ok"] is False or frontend["ok"] is False:
+    if not run_builds:
+        status = "not_run"
+    elif required_gate["ok"] is True and verification["status"] == "passed":
+        status = "passed"
+    else:
         status = "failed"
     return {
         "status": status,
         "generated_at": _now(),
-        "backend_check": backend,
-        "frontend_check": frontend,
+        "required_gate": required_gate,
+        "backend_check": required_gate,
+        "frontend_check": required_gate,
         "verification": verification,
     }

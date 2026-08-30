@@ -31,7 +31,7 @@ The agent tool list remains stable in this release; protected tools decide at ex
 - Browser research tools
 - Knowledge tools
 - Vector memory tools
-- Backend sidecar tools
+- Desktop and workspace actions (backend lifecycle itself is Tauri-owned)
 
 ## API Endpoints
 

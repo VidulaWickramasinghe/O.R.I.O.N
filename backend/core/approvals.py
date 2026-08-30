@@ -360,6 +360,25 @@ def list_approval_requests(
     return [_row_to_dict(row) for row in rows]
 
 
+def list_approval_requests_for_mission(
+    mission_id: int, limit: int = 500
+) -> List[Dict[str, Any]]:
+    init_approval_db()
+    bounded_limit = max(1, min(int(limit), 1000))
+    with get_connection() as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT * FROM approval_requests
+            WHERE mission_id = ?
+            ORDER BY created_at ASC, id ASC
+            LIMIT ?
+            """,
+            (int(mission_id), bounded_limit),
+        ).fetchall()
+    return [_row_to_dict(row) for row in rows]
+
+
 def get_approval_request(approval_id: int) -> Optional[Dict[str, Any]]:
     init_approval_db()
     with get_connection() as conn:

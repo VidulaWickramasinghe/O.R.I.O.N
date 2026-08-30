@@ -1,6 +1,8 @@
+import asyncio
 import json
 import os
 import sys
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Set
@@ -17,7 +19,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 load_dotenv(dotenv_path=BACKEND_DIR / ".env")
 
-from agents import Agent, Runner, SQLiteSession
+from agents import Agent
 
 from core.capability_gateway import (
     CapabilityContext,
@@ -31,6 +33,23 @@ from core.api_auth import (
     create_local_api_authenticator,
 )
 from core.runtime_paths import runtime_data_path
+from core.agent_runtime import (
+    RecoverableAgentRunError,
+    get_conversation,
+    init_agent_runtime_db,
+    run_scoped_agent,
+)
+from core.operational_telemetry import get_operational_telemetry
+from core.persistence import (
+    apply_pending_runtime_restore,
+    create_runtime_backup,
+    initialize_persistence,
+    list_runtime_backups,
+    persistence_status,
+    recovery_status,
+    schedule_runtime_restore,
+    verify_runtime_backup,
+)
 
 from core.prompt import ORION_SYSTEM_PROMPT
 from core.system_doctor import render_system_doctor_report, run_system_doctor
@@ -38,9 +57,13 @@ from core.system_doctor import render_system_doctor_report, run_system_doctor
 from core.activity import log_activity, get_recent_activity, clear_activity
 
 from core.persistent_memory import (
+    delete_memory_item,
+    get_memory_item,
     init_memory_db,
     list_recent_memory,
     search_memory_items,
+    set_memory_excluded,
+    update_memory_item,
 )
 
 from core.mission_planner import (
@@ -63,6 +86,7 @@ from core.mission_run_history import (
 from core.approvals import (
     claim_approval_execution,
     complete_approval_execution,
+    create_approval_request,
     fail_approval_execution,
     get_approval_request,
     get_latest_mission_continuation,
@@ -73,8 +97,19 @@ from core.approvals import (
 )
 
 from core.mission_manager import (
+    acquire_mission_lease,
+    cancel_mission,
+    evaluate_mission_step,
+    list_mission_checkpoints,
+    list_mission_transitions,
+    pause_mission,
+    recover_expired_mission_leases,
     recover_mission_continuations,
+    release_mission_lease,
     resolve_mission_continuation,
+    resume_mission,
+    retry_mission_step,
+    transition_step_state,
 )
 
 from core.workspace_manager import (
@@ -134,11 +169,14 @@ from core.context_engine import (
 )
 
 from core.knowledge_base import (
+    delete_knowledge_document,
+    get_knowledge_document,
     init_knowledge_db,
     index_document,
     index_knowledge_folder,
     list_knowledge_documents,
     search_knowledge,
+    set_knowledge_document_excluded,
     summarize_knowledge_document,
 )
 
@@ -202,9 +240,6 @@ from core.plugin_registry import (
 
 from core.backend_sidecar import (
     get_sidecar_status,
-    start_backend_sidecar,
-    stop_backend_sidecar,
-    restart_backend_sidecar,
     render_sidecar_report,
 )
 
@@ -440,13 +475,6 @@ from tools.plugin_registry_tools import (
     inspect_orion_plugin,
     set_orion_plugin_enabled,
     get_plugin_registry_report,
-)
-
-from tools.backend_sidecar_tools import (
-    get_backend_sidecar_status,
-    start_backend_sidecar_tool,
-    stop_backend_sidecar_tool,
-    restart_backend_sidecar_tool,
 )
 
 from tools.tool_permission_tools import (
@@ -800,22 +828,27 @@ class PostReleaseMaintenanceResponse(BaseModel):
 
 @asynccontextmanager
 async def app_lifespan(_app: FastAPI):
-    init_memory_db()
-    init_mission_db()
-    init_approval_db()
-    init_mission_run_db()
-    init_workspace_db()
-    init_knowledge_db()
-    init_vector_db()
-    init_developer_agent_db()
-    init_notification_db()
-    init_user_settings_db()
-    init_plugin_registry_db()
-    init_tool_audit_db()
-    init_security_policy_db()
-    init_release_candidate_db()
+    restored = apply_pending_runtime_restore()
+    initialize_persistence()
+    if restored:
+        log_activity(
+            "PERSISTENCE_RESTORED",
+            f"Verified backup restored during startup: {restored['backup_id']}",
+            "API",
+        )
 
     try:
+        lease_recovery = execute_capability(
+            "recover_mission_state",
+            CapabilityContext(actor="internal", source="api_startup"),
+            recover_expired_mission_leases,
+        )
+        if lease_recovery["count"]:
+            log_activity(
+                "MISSION_LEASE_RECOVERY",
+                f"Recovered {lease_recovery['count']} mission execution lease(s).",
+                "API",
+            )
         recovery = execute_capability(
             "recover_mission_continuations",
             CapabilityContext(actor="internal", source="api_startup"),
@@ -943,10 +976,6 @@ orion = Agent(
         inspect_orion_plugin,
         set_orion_plugin_enabled,
         get_plugin_registry_report,
-        get_backend_sidecar_status,
-        start_backend_sidecar_tool,
-        stop_backend_sidecar_tool,
-        restart_backend_sidecar_tool,
         get_tool_permission_report,
         check_tool_permission,
         get_tool_permission_metrics_tool,
@@ -1012,15 +1041,27 @@ orion = Agent(
     ],
 )
 
-session = SQLiteSession("orion_core_v38_tool_audit_center")
-
-
 class ChatRequest(BaseModel):
     message: str
+    conversation_id: str = ""
+    client_scope_id: str = ""
+    provider: str = ""
+    model: str = ""
+    workspace_id: Optional[int] = None
+    project_key: str = ""
+    include_sensitive_context: bool = False
 
 
 class ChatResponse(BaseModel):
     response: str
+    conversation_id: str = ""
+    client_scope_id: str = ""
+    agent_run_id: Optional[int] = None
+    provider: str = ""
+    model: str = ""
+    status: str = "completed"
+    recoverable: bool = False
+    usage: Dict[str, int] = Field(default_factory=dict)
 
 
 class SystemStatusResponse(BaseModel):
@@ -1066,6 +1107,28 @@ class MemoryItem(BaseModel):
     importance: int
     created_at: str
     updated_at: str
+    workspace_id: Optional[int] = None
+    project_key: str = ""
+    sensitivity: str = "internal"
+    expires_at: str = ""
+    excluded: bool = False
+    exclusion_reason: str = ""
+    provenance: Dict[str, Any] = Field(default_factory=dict)
+    retrieval_reason: str = ""
+
+
+class MemoryUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    content: Optional[str] = None
+    category: Optional[str] = None
+    importance: Optional[int] = Field(default=None, ge=1, le=5)
+    sensitivity: Optional[Literal["public", "internal", "sensitive"]] = None
+    expires_at: Optional[str] = None
+
+
+class SourceExclusionRequest(BaseModel):
+    excluded: bool = True
+    reason: str = "user_excluded"
 
 
 class MemoryResponse(BaseModel):
@@ -1081,6 +1144,11 @@ class MissionStepItem(BaseModel):
     status: str
     created_at: str
     updated_at: str
+    attempt_count: int = 0
+    max_attempts: int = 3
+    evaluator_outcome: str = ""
+    last_error: str = ""
+    checkpoint_id: Optional[int] = None
 
 
 class MissionItem(BaseModel):
@@ -1091,6 +1159,14 @@ class MissionItem(BaseModel):
     priority: int
     created_at: str
     updated_at: str
+    state_version: int = 1
+    terminal_reason: str = ""
+    paused_at: str = ""
+    cancelled_at: str = ""
+    completed_at: str = ""
+    retry_count: int = 0
+    max_retries: int = 3
+    last_transition_id: Optional[int] = None
 
 
 class MissionDetailItem(MissionItem):
@@ -1107,6 +1183,11 @@ class MissionRunResponse(BaseModel):
     status: str
     output: str
     result: Optional[str] = None
+    conversation_id: str = ""
+    agent_run_id: Optional[int] = None
+    provider: str = ""
+    model: str = ""
+    recoverable: bool = False
 
 
 class MultiStepMissionRunRequest(BaseModel):
@@ -1146,6 +1227,24 @@ class MissionReportResponse(BaseModel):
     mission_id: int
     report_path: str
     status: str
+
+
+class MissionLifecycleRequest(BaseModel):
+    cause: str = Field(min_length=1, max_length=500)
+
+
+class MissionLifecycleResponse(BaseModel):
+    mission_id: int
+    status: str
+    transitioned: bool = False
+    replayed: bool = False
+    transition: Optional[Dict[str, Any]] = None
+
+
+class MissionTimelineResponse(BaseModel):
+    mission_id: int
+    transitions: List[Dict[str, Any]]
+    checkpoints: List[Dict[str, Any]]
 
 
 class ApprovalItem(BaseModel):
@@ -1274,6 +1373,10 @@ class VoiceStatusResponse(BaseModel):
 
 class ContextPreviewRequest(BaseModel):
     message: str
+    workspace_id: Optional[int] = None
+    project_key: str = ""
+    mission_id: Optional[int] = None
+    include_sensitive: bool = False
 
 
 class ContextPreviewResponse(BaseModel):
@@ -1315,12 +1418,6 @@ class BackendSidecarStatusResponse(BaseModel):
     log_file: str
     state_file: str
     report: str
-
-
-class BackendSidecarActionResponse(BaseModel):
-    status: str
-    message: str
-    sidecar: BackendSidecarStatusResponse
 
 
 class ToolPermissionItem(BaseModel):
@@ -1533,6 +1630,8 @@ class KnowledgeFolderIndexRequest(BaseModel):
 class KnowledgeSearchRequest(BaseModel):
     query: str
     limit: int = 10
+    workspace_id: Optional[int] = None
+    include_sensitive: bool = False
 
 
 class KnowledgeDocumentItem(BaseModel):
@@ -1544,6 +1643,14 @@ class KnowledgeDocumentItem(BaseModel):
     summary: str
     indexed_at: str
     updated_at: str
+    workspace_id: Optional[int] = None
+    relative_path: str = ""
+    source_consent: bool = False
+    sensitivity: str = "internal"
+    expires_at: str = ""
+    excluded: bool = False
+    exclusion_reason: str = ""
+    provenance: Dict[str, Any] = Field(default_factory=dict)
 
 
 class KnowledgeDocumentsResponse(BaseModel):
@@ -1558,6 +1665,11 @@ class KnowledgeSearchItem(BaseModel):
     title: str
     source_path: str
     extension: str
+    workspace_id: int
+    relative_path: str = ""
+    sensitivity: str = "internal"
+    provenance: Dict[str, Any] = Field(default_factory=dict)
+    retrieval_reason: str = ""
 
 
 class KnowledgeSearchResponse(BaseModel):
@@ -1593,6 +1705,9 @@ class VectorItemsResponse(BaseModel):
 class SemanticSearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=8000)
     limit: int = Field(default=8, ge=1, le=100)
+    workspace_id: Optional[int] = None
+    project_key: str = ""
+    include_sensitive: bool = False
 
 
 class SemanticSearchItem(BaseModel):
@@ -1605,6 +1720,11 @@ class SemanticSearchItem(BaseModel):
     score: float
     created_at: str
     updated_at: str
+    workspace_id: Optional[int] = None
+    project_key: str = ""
+    sensitivity: str = "internal"
+    provenance: Dict[str, Any] = Field(default_factory=dict)
+    retrieval_reason: str = ""
 
 
 class SemanticSearchResponse(BaseModel):
@@ -1847,7 +1967,7 @@ def get_next_actionable_step(mission: Dict[str, Any]) -> Optional[Dict[str, Any]
     steps = mission.get("steps", [])
 
     for step in steps:
-        if step.get("status") in ["pending", "in_progress"]:
+        if step.get("status") in ["pending", "retry_pending"]:
             return step
 
     return None
@@ -2100,23 +2220,85 @@ def project_detail(project_key: str):
 
 
 @app.get("/api/memory", response_model=MemoryResponse)
-def memory_items():
+def memory_items(
+    workspace_id: Optional[int] = None,
+    project_key: str = "",
+    include_excluded: bool = False,
+    include_sensitive: bool = False,
+    include_expired: bool = False,
+):
     log_activity(
         "MEMORY_VIEW",
         "Aurora OS requested persistent memory items.",
         "Aurora OS",
     )
-    return MemoryResponse(items=list_recent_memory(limit=20))
+    return MemoryResponse(
+        items=list_recent_memory(
+            limit=100,
+            workspace_id=workspace_id,
+            project_key=project_key,
+            include_excluded=include_excluded,
+            include_sensitive=include_sensitive,
+            include_expired=include_expired,
+        )
+    )
+
+
+@app.get("/api/analytics/operational")
+def operational_analytics(range: Literal["24h", "7d", "30d"] = "7d"):
+    return get_operational_telemetry(range)
 
 
 @app.get("/api/memory/search", response_model=MemoryResponse)
-def memory_search(q: str):
+def memory_search(
+    q: str,
+    workspace_id: Optional[int] = None,
+    project_key: str = "",
+):
     log_activity(
         "MEMORY_SEARCH",
         f"Aurora OS searched memory for: {q}",
         "Aurora OS",
     )
-    return MemoryResponse(items=search_memory_items(query=q, limit=20))
+    return MemoryResponse(
+        items=search_memory_items(
+            query=q,
+            limit=20,
+            workspace_id=workspace_id,
+            project_key=project_key,
+        )
+    )
+
+
+@app.get("/api/memory/{memory_id}", response_model=MemoryItem)
+def memory_item(memory_id: int):
+    item = get_memory_item(memory_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Memory item not found.")
+    return MemoryItem(**item)
+
+
+@app.patch("/api/memory/{memory_id}", response_model=MemoryItem)
+def memory_update(memory_id: int, request: MemoryUpdateRequest):
+    item = update_memory_item(memory_id, **request.model_dump(exclude_unset=True))
+    if not item:
+        raise HTTPException(status_code=404, detail="Memory item not found.")
+    return MemoryItem(**item)
+
+
+@app.post("/api/memory/{memory_id}/exclusion", response_model=MemoryItem)
+def memory_exclusion(memory_id: int, request: SourceExclusionRequest):
+    item = set_memory_excluded(memory_id, request.excluded, request.reason)
+    if not item:
+        raise HTTPException(status_code=404, detail="Memory item not found.")
+    return MemoryItem(**item)
+
+
+@app.delete("/api/memory/{memory_id}")
+def memory_delete(memory_id: int):
+    if not delete_memory_item(memory_id):
+        raise HTTPException(status_code=404, detail="Memory item not found.")
+    return {"status": "deleted", "memory_id": memory_id}
 
 
 @app.get("/api/missions", response_model=MissionsResponse)
@@ -2158,6 +2340,78 @@ def mission_detail(mission_id: int):
     )
 
     return MissionDetailItem(**mission_record)
+
+
+@app.get("/api/missions/{mission_id}/timeline", response_model=MissionTimelineResponse)
+def mission_timeline(mission_id: int):
+    if not get_mission_record(mission_id):
+        raise HTTPException(status_code=404, detail="Mission not found.")
+    return MissionTimelineResponse(
+        mission_id=mission_id,
+        transitions=list_mission_transitions(mission_id),
+        checkpoints=list_mission_checkpoints(mission_id),
+    )
+
+
+def _mission_lifecycle_actor() -> str:
+    authorization = get_active_authorization()
+    session_id = authorization.context.session_id if authorization else ""
+    return f"aurora_user:{session_id or 'local'}"
+
+
+@app.post("/api/missions/{mission_id}/pause", response_model=MissionLifecycleResponse)
+def mission_pause(mission_id: int, request: MissionLifecycleRequest):
+    try:
+        return MissionLifecycleResponse(
+            **pause_mission(mission_id, request.cause, _mission_lifecycle_actor())
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/missions/{mission_id}/resume", response_model=MissionLifecycleResponse)
+def mission_resume(mission_id: int, request: MissionLifecycleRequest):
+    try:
+        return MissionLifecycleResponse(
+            **resume_mission(mission_id, request.cause, _mission_lifecycle_actor())
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post("/api/missions/{mission_id}/cancel", response_model=MissionLifecycleResponse)
+def mission_cancel(mission_id: int, request: MissionLifecycleRequest):
+    try:
+        return MissionLifecycleResponse(
+            **cancel_mission(mission_id, request.cause, _mission_lifecycle_actor())
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+
+
+@app.post(
+    "/api/missions/{mission_id}/steps/{step_id}/retry",
+    response_model=MissionLifecycleResponse,
+)
+def mission_retry_step(
+    mission_id: int,
+    step_id: int,
+    request: MissionLifecycleRequest,
+):
+    mission = get_mission_record(mission_id)
+    if not mission or not any(int(step["id"]) == step_id for step in mission["steps"]):
+        raise HTTPException(status_code=404, detail="Mission step not found.")
+    try:
+        result = retry_mission_step(step_id, request.cause, _mission_lifecycle_actor())
+    except ValueError as error:
+        raise HTTPException(status_code=409, detail=str(error)) from error
+    return MissionLifecycleResponse(
+        mission_id=mission_id,
+        status=result["status"],
+        transitioned=bool(result.get("transitioned")),
+        replayed=bool(result.get("replayed")),
+        transition=result.get("transition"),
+    )
 
 
 @app.get("/api/mission-runs", response_model=MissionRunsResponse)
@@ -2242,6 +2496,11 @@ def _resolve_linked_approval(approval: Dict[str, Any]) -> Optional[Dict[str, Any
         step_id=int(approval["step_id"]),
         run_id=int(approval["run_id"]) if approval.get("run_id") is not None else None,
         approval_id=int(approval["id"]),
+        correlation_id=(
+            get_active_authorization().context.correlation_id
+            if get_active_authorization()
+            else ""
+        ),
     )
     try:
         return execute_capability(
@@ -2306,6 +2565,14 @@ def approve_request(
             result = execute_approved_desktop_action(approval_id, approval)
         elif approval["action_type"] == "APPLY_WORKSPACE_FILE_PATCH":
             result = execute_approved_workspace_patch(approval)
+        elif approval["action_type"] == "RESTORE_RUNTIME_BACKUP":
+            restore = schedule_runtime_restore(
+                str(approval["payload"].get("backup_id", "")),
+                expected_manifest_sha256=str(
+                    approval["payload"].get("manifest_sha256", "")
+                ),
+            )
+            result = json.dumps(restore, sort_keys=True)
         elif approval["action_type"] in {"WRITE_PROJECT_FILE", "RUN_SAFE_COMMAND"}:
             result = execute_approved_dev_action(approval_id, approval)
         else:
@@ -2373,34 +2640,9 @@ def reject_request(approval_id: int):
 
 @app.post("/api/missions/{mission_id}/run-next", response_model=MissionRunResponse)
 async def run_next_mission_step(mission_id: int):
-    if not os.getenv("OPENAI_API_KEY"):
-        log_activity(
-            "MISSION_RUN_FAILED",
-            "Missing OPENAI_API_KEY in backend/.env",
-            "API",
-        )
-
-        output = "Missing OPENAI_API_KEY in backend/.env"
-
-        return MissionRunResponse(
-            mission_id=mission_id,
-            step_id=None,
-            status="missing_api_key",
-            output=output,
-            result=output,
-        )
-
     mission_record = get_mission_record(mission_id)
-
     if not mission_record:
-        log_activity(
-            "MISSION_RUN_FAILED",
-            f"Mission not found: {mission_id}",
-            "O.R.I.O.N.",
-        )
-
         output = "Mission not found."
-
         return MissionRunResponse(
             mission_id=mission_id,
             step_id=None,
@@ -2409,8 +2651,19 @@ async def run_next_mission_step(mission_id: int):
             result=output,
         )
 
-    next_step = get_next_actionable_step(mission_record)
+    mission_state = str(mission_record["status"])
+    if mission_state in {"paused", "cancelled", "completed", "failed", "recovery_required"}:
+        output = f"Mission execution is unavailable while mission is {mission_state}."
+        return MissionRunResponse(
+            mission_id=mission_id,
+            step_id=None,
+            status=mission_state,
+            output=output,
+            result=output,
+            recoverable=mission_state in {"failed", "recovery_required"},
+        )
 
+    next_step = get_next_actionable_step(mission_record)
     if not next_step:
         waiting_step = next(
             (
@@ -2429,30 +2682,66 @@ async def run_next_mission_step(mission_id: int):
                 output=output,
                 result=output,
             )
-        log_activity(
-            "MISSION_RUN_COMPLETE",
-            f"No pending steps for mission: {mission_record['title']}",
-            "O.R.I.O.N.",
-        )
-
-        output = "No pending mission steps found. Mission appears complete."
-
+        output = "No actionable mission step exists; explicit recovery or editing is required."
         return MissionRunResponse(
             mission_id=mission_id,
             step_id=None,
-            status="complete",
+            status="blocked",
             output=output,
             result=output,
+            recoverable=True,
         )
 
     step_id = int(next_step["id"])
     prior_continuation = get_latest_mission_continuation(mission_id, step_id)
+    authorization = get_active_authorization()
+    local_session_id = authorization.context.session_id if authorization else ""
+    lease_owner = f"mission_runner:{local_session_id or 'local'}:{uuid.uuid4().hex}"
+    try:
+        execution_timeout = max(
+            5,
+            min(int(os.getenv("ORION_MISSION_STEP_TIMEOUT_SECONDS", "300")), 3600),
+        )
+    except ValueError:
+        execution_timeout = 300
+    try:
+        lease = acquire_mission_lease(
+            mission_id, lease_owner, timeout_seconds=execution_timeout
+        )
+    except ValueError as error:
+        output = str(error)
+        return MissionRunResponse(
+            mission_id=mission_id,
+            step_id=step_id,
+            status="lease_denied",
+            output=output,
+            result=output,
+            recoverable=True,
+        )
+    if lease.get("recovery_required"):
+        output = "The prior mission lease expired; explicit recovery is required."
+        return MissionRunResponse(
+            mission_id=mission_id,
+            step_id=step_id,
+            status="recovery_required",
+            output=output,
+            result=output,
+            recoverable=True,
+        )
 
     run_id = start_mission_run(
         mission_id=mission_id,
         mission_title=mission_record["title"],
         step_id=step_id,
         step_title=next_step["title"],
+    )
+    transition_step_state(
+        step_id,
+        "running",
+        cause="mission_run_started",
+        actor=lease_owner,
+        run_id=run_id,
+        metadata={"lease_id": lease["lease_id"]},
     )
 
     log_activity(
@@ -2485,36 +2774,57 @@ Rules:
 2. Use available safe tools if needed.
 3. If file writing or terminal command execution is needed, create an approval request through the existing tools.
 4. Do not bypass the Command Approval System.
-5. If you completed the step, update mission step {step_id} status to completed.
-6. If approval is required, update mission step {step_id} status to waiting_approval.
-7. If more user input is needed, update mission step {step_id} status to blocked.
+5. Report completion through mission step {step_id}'s validated status tool.
+6. If approval is required, transition mission step {step_id} to waiting_approval.
+7. If more user input is needed, transition mission step {step_id} to blocked.
 8. Return a clear execution summary.
 9. If the prior approval continuation is resumed/approved, do not request or execute
    that same side effect again. Evaluate its recorded result and continue this step.
 """
 
+    agent_outcome = None
     try:
         with execution_identity(
             CapabilityContext(
                 actor="mission_agent",
                 source="mission_runner",
-                session_id=(
-                    get_active_authorization().context.session_id
-                    if get_active_authorization()
-                    else ""
-                ),
+                session_id=local_session_id,
                 mission_id=mission_id,
                 step_id=step_id,
                 run_id=run_id,
+                correlation_id=(
+                    authorization.context.correlation_id if authorization else ""
+                ),
             )
         ):
-            result = await Runner.run(
-                orion,
-                internal_prompt,
-                session=session,
+            agent_outcome = await asyncio.wait_for(
+                run_scoped_agent(
+                    orion,
+                    internal_prompt,
+                    scope_type="mission",
+                    scope_id=str(mission_id),
+                    mission_id=mission_id,
+                    step_id=step_id,
+                    mission_run_id=run_id,
+                ),
+                timeout=execution_timeout,
             )
 
-        final_output = result.final_output or "Mission cycle completed."
+        final_output = agent_outcome.result.final_output or "Mission cycle completed."
+        current_mission = get_mission_record(mission_id)
+        if not current_mission or current_mission["status"] == "cancelled":
+            fail_mission_run(run_id=run_id, error="Mission was cancelled during execution.")
+            return MissionRunResponse(
+                mission_id=mission_id,
+                step_id=step_id,
+                status="cancelled",
+                output="Mission was cancelled; the returned model output was not applied.",
+                result="Mission was cancelled; the returned model output was not applied.",
+                conversation_id=agent_outcome.conversation_id,
+                agent_run_id=agent_outcome.run_id,
+                provider=agent_outcome.provider,
+                model=agent_outcome.model,
+            )
 
         continuation = get_mission_continuation_for_run(run_id)
         if continuation and continuation["status"] in {
@@ -2523,23 +2833,48 @@ Rules:
             "ready_to_resume",
             "ready_to_block",
         }:
-            update_mission_step_status_record(step_id, "waiting_approval")
+            evaluator_outcome = "waiting_approval"
+            cycle_status = "waiting_approval"
+            approval_id = int(continuation["approval_id"])
+        else:
+            refreshed = get_mission_record(mission_id) or {}
+            refreshed_step = next(
+                (step for step in refreshed.get("steps", []) if int(step["id"]) == step_id),
+                {},
+            )
+            step_state = str(refreshed_step.get("status", "running"))
+            evaluator_outcome = {
+                "completed": "completed",
+                "waiting_approval": "waiting_approval",
+                "failed": "retryable_failure",
+                "blocked": "blocked",
+                "cancelled": "cancelled",
+            }.get(step_state, "blocked")
+            cycle_status = evaluator_outcome
+            approval_id = None
+
+        evaluation = evaluate_mission_step(
+            mission_id,
+            step_id,
+            run_id,
+            evaluator_outcome,
+            cause="validated_agent_cycle_outcome",
+            output=final_output,
+        )
+        if evaluator_outcome == "waiting_approval":
             complete_mission_run(
                 run_id=run_id,
                 status="waiting_approval",
                 output=final_output,
-                approval_id=int(continuation["approval_id"]),
+                approval_id=approval_id,
             )
-            cycle_status = "waiting_approval"
-        elif continuation:
-            cycle_status = str(continuation["status"])
         else:
             complete_mission_run(
                 run_id=run_id,
-                status="cycle_complete",
+                status=f"evaluated_{evaluator_outcome}",
                 output=final_output,
             )
-            cycle_status = "cycle_complete"
+        cycle_status = evaluation["mission_status"] if evaluator_outcome == "completed" else cycle_status
 
         log_activity(
             "MISSION_STEP_COMPLETE",
@@ -2553,15 +2888,50 @@ Rules:
             status=cycle_status,
             output=final_output,
             result=final_output,
+            conversation_id=agent_outcome.conversation_id,
+            agent_run_id=agent_outcome.run_id,
+            provider=agent_outcome.provider,
+            model=agent_outcome.model,
         )
 
+    except RecoverableAgentRunError as error:
+        error_message = str(error)
+        try:
+            evaluate_mission_step(
+                mission_id,
+                step_id,
+                run_id,
+                "retryable_failure",
+                cause="provider_failure",
+                error=error_message,
+            )
+        except ValueError:
+            pass
+        fail_mission_run(run_id=run_id, error=error_message)
+        return MissionRunResponse(
+            mission_id=mission_id,
+            step_id=step_id,
+            status="recoverable_provider_failure",
+            output=error_message,
+            result=error_message,
+            conversation_id=error.conversation_id,
+            agent_run_id=error.run_id,
+            recoverable=True,
+        )
     except Exception as error:
         error_message = str(error)
-
-        fail_mission_run(
-            run_id=run_id,
-            error=error_message,
-        )
+        try:
+            evaluate_mission_step(
+                mission_id,
+                step_id,
+                run_id,
+                "retryable_failure",
+                cause="mission_cycle_exception",
+                error=error_message,
+            )
+        except ValueError:
+            pass
+        fail_mission_run(run_id=run_id, error=error_message)
 
         log_activity(
             "MISSION_STEP_ERROR",
@@ -2577,7 +2947,10 @@ Rules:
             status="error",
             output=output,
             result=output,
+            recoverable=True,
         )
+    finally:
+        release_mission_lease(mission_id, str(lease["lease_id"]), lease_owner)
 
 
 @app.post("/api/missions/{mission_id}/run-batch", response_model=MultiStepMissionRunResponse)
@@ -2919,7 +3292,13 @@ def context_preview(request: ContextPreviewRequest):
             context="No message provided.",
         )
 
-    context = get_context_preview(clean_message)
+    context = get_context_preview(
+        clean_message,
+        workspace_id=request.workspace_id,
+        project_key=request.project_key,
+        mission_id=request.mission_id,
+        include_sensitive=request.include_sensitive,
+    )
 
     log_activity(
         "CONTEXT_PREVIEW",
@@ -3166,6 +3545,8 @@ def knowledge_search(request: KnowledgeSearchRequest):
     results = search_knowledge(
         query=request.query,
         limit=request.limit,
+        workspace_id=request.workspace_id,
+        include_sensitive=request.include_sensitive,
     )
     log_activity(
         "KNOWLEDGE_SEARCH",
@@ -3173,6 +3554,26 @@ def knowledge_search(request: KnowledgeSearchRequest):
         "O.R.I.O.N.",
     )
     return KnowledgeSearchResponse(results=results)
+
+
+@app.post(
+    "/api/knowledge/documents/{document_id}/exclusion",
+    response_model=KnowledgeDocumentItem,
+)
+def knowledge_document_exclusion(document_id: int, request: SourceExclusionRequest):
+    document = set_knowledge_document_excluded(
+        document_id, request.excluded, request.reason
+    )
+    if not document:
+        raise HTTPException(status_code=404, detail="Knowledge document not found.")
+    return KnowledgeDocumentItem(**document)
+
+
+@app.delete("/api/knowledge/documents/{document_id}")
+def knowledge_document_delete(document_id: int):
+    if not delete_knowledge_document(document_id):
+        raise HTTPException(status_code=404, detail="Knowledge document not found.")
+    return {"status": "deleted", "document_id": document_id}
 
 
 @app.get(
@@ -3237,6 +3638,9 @@ def vector_search(request: SemanticSearchRequest):
         results = semantic_search(
             query=request.query,
             limit=request.limit,
+            workspace_id=request.workspace_id,
+            project_key=request.project_key,
+            include_sensitive=request.include_sensitive,
         )
         log_activity(
             "SEMANTIC_SEARCH",
@@ -3877,51 +4281,6 @@ def sidecar_status():
     return _sidecar_response(status_data)
 
 
-@app.post("/api/sidecar/start", response_model=BackendSidecarActionResponse)
-def sidecar_start():
-    status_data = start_backend_sidecar()
-    log_activity(
-        "SIDECAR_START",
-        f"Backend sidecar start requested. Status: {status_data['status']}.",
-        "O.R.I.O.N.",
-    )
-    return BackendSidecarActionResponse(
-        status=status_data["status"],
-        message="Backend sidecar start requested.",
-        sidecar=_sidecar_response(status_data),
-    )
-
-
-@app.post("/api/sidecar/stop", response_model=BackendSidecarActionResponse)
-def sidecar_stop():
-    status_data = stop_backend_sidecar()
-    log_activity(
-        "SIDECAR_STOP",
-        f"Backend sidecar stop requested. Status: {status_data['status']}.",
-        "O.R.I.O.N.",
-    )
-    return BackendSidecarActionResponse(
-        status=status_data["status"],
-        message="Backend sidecar stop requested.",
-        sidecar=_sidecar_response(status_data),
-    )
-
-
-@app.post("/api/sidecar/restart", response_model=BackendSidecarActionResponse)
-def sidecar_restart():
-    status_data = restart_backend_sidecar()
-    log_activity(
-        "SIDECAR_RESTART",
-        f"Backend sidecar restart requested. Status: {status_data['status']}.",
-        "O.R.I.O.N.",
-    )
-    return BackendSidecarActionResponse(
-        status=status_data["status"],
-        message="Backend sidecar restart requested.",
-        sidecar=_sidecar_response(status_data),
-    )
-
-
 @app.get("/api/desktop-shell/status", response_model=DesktopShellStatusResponse)
 def desktop_shell_status():
     log_activity(
@@ -4207,6 +4566,53 @@ def system_doctor():
     return SystemDoctorResponse(**result, report=report)
 
 
+@app.get("/api/system/persistence")
+def persistence_overview():
+    backups = [
+        {key: value for key, value in item.items() if key != "path"}
+        for item in list_runtime_backups()
+    ]
+    return {**persistence_status(), **recovery_status(), "backups": backups}
+
+
+@app.post("/api/system/persistence/backups")
+def persistence_backup_create():
+    result = create_runtime_backup()
+    log_activity(
+        "PERSISTENCE_BACKUP_CREATED",
+        f"Verified runtime backup created: {result['backup_id']}",
+        "Aurora OS",
+    )
+    return {key: value for key, value in result.items() if key != "path"}
+
+
+@app.post("/api/system/persistence/backups/{backup_id}/restore-request")
+def persistence_restore_request(backup_id: str):
+    verified = verify_runtime_backup(backup_id)
+    approval_id = create_approval_request(
+        action_type="RESTORE_RUNTIME_BACKUP",
+        title=f"Restore O.R.I.O.N. backup {backup_id}",
+        description=(
+            "Replace all runtime SQLite stores with this verified backup during "
+            "the next backend restart."
+        ),
+        payload={
+            "backup_id": backup_id,
+            "manifest_sha256": verified["manifest_sha256"],
+        },
+        risk_level="critical",
+        source="Aurora OS Persistence",
+        idempotency_key=f"restore:{backup_id}:{verified['manifest_sha256']}",
+    )
+    approval = get_approval_request(approval_id)
+    log_activity(
+        "PERSISTENCE_RESTORE_REQUESTED",
+        f"Restore approval requested for verified backup: {backup_id}",
+        "Aurora OS",
+    )
+    return {"status": "approval_required", "approval": approval}
+
+
 @app.get("/api/post-release-maintenance/status", response_model=PostReleaseMaintenanceResponse)
 def post_release_maintenance_status():
     snapshot = generate_maintenance_snapshot()
@@ -4440,17 +4846,6 @@ def patch_release_package():
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
-    if not os.getenv("OPENAI_API_KEY"):
-        log_activity(
-            "ERROR",
-            "Missing OPENAI_API_KEY in backend/.env",
-            "API",
-        )
-
-        return ChatResponse(
-            response="Missing OPENAI_API_KEY in backend/.env"
-        )
-
     clean_message = request.message.strip()
 
     if not clean_message:
@@ -4477,7 +4872,24 @@ async def chat(request: ChatRequest):
     )
 
     try:
-        contextual_input = prepare_context_enriched_input(clean_message)
+        contextual_input = prepare_context_enriched_input(
+            clean_message,
+            workspace_id=request.workspace_id,
+            project_key=request.project_key,
+            include_sensitive=request.include_sensitive_context,
+        )
+        existing_conversation = (
+            get_conversation(request.conversation_id)
+            if request.conversation_id
+            else None
+        )
+        if request.conversation_id and not existing_conversation:
+            raise HTTPException(status_code=404, detail="Conversation not found.")
+        client_scope_id = (
+            str(existing_conversation["scope_id"])
+            if existing_conversation
+            else request.client_scope_id.strip() or uuid.uuid4().hex
+        )
 
         log_activity(
             "CONTEXT_RETRIEVAL",
@@ -4494,15 +4906,24 @@ async def chat(request: ChatRequest):
                     if get_active_authorization()
                     else ""
                 ),
+                correlation_id=(
+                    get_active_authorization().context.correlation_id
+                    if get_active_authorization()
+                    else ""
+                ),
             )
         ):
-            result = await Runner.run(
+            outcome = await run_scoped_agent(
                 orion,
                 contextual_input,
-                session=session,
+                scope_type="chat",
+                scope_id=client_scope_id,
+                conversation_id=request.conversation_id,
+                provider=request.provider,
+                model=request.model,
             )
 
-        final_output = result.final_output or "No response generated."
+        final_output = outcome.result.final_output or "No response generated."
 
         log_activity(
             "AGENT_COMPLETE",
@@ -4510,8 +4931,33 @@ async def chat(request: ChatRequest):
             "O.R.I.O.N.",
         )
 
-        return ChatResponse(response=final_output)
+        return ChatResponse(
+            response=final_output,
+            conversation_id=outcome.conversation_id,
+            client_scope_id=client_scope_id,
+            agent_run_id=outcome.run_id,
+            provider=outcome.provider,
+            model=outcome.model,
+            usage=outcome.usage,
+        )
 
+    except RecoverableAgentRunError as error:
+        log_activity(
+            "AGENT_PROVIDER_RECOVERABLE_FAILURE",
+            str(error),
+            "O.R.I.O.N.",
+        )
+        conversation = get_conversation(error.conversation_id) or {}
+        return ChatResponse(
+            response=str(error),
+            conversation_id=error.conversation_id,
+            client_scope_id=str(conversation.get("scope_id", "")),
+            agent_run_id=error.run_id,
+            status="recoverable_failure",
+            recoverable=True,
+        )
+    except HTTPException:
+        raise
     except Exception as error:
         log_activity(
             "ERROR",

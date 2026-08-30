@@ -8,7 +8,7 @@ v3.9 adds security profiles that control plugin states according to risk mode.
 
 ### Strict Mode
 
-Maximum safety. Disables high-risk operational plugins such as desktop control, developer agent, browser research, vector memory, and backend sidecar.
+Maximum safety. Disables high-risk operational plugins such as desktop control, developer agent, browser research, and vector memory. Backend lifecycle remains outside the agent/plugin surface and is owned by Tauri.
 
 ### Balanced Mode
 
@@ -22,6 +22,8 @@ Development-focused mode. Enables advanced developer modules while preserving ap
 
 - Approval gates remain active.
 - Protected plugins cannot be disabled by policy profiles.
+- Persistence Recovery remains protected in every profile; restore still
+  requires an explicit critical approval and applies only during restart.
 - Strict Mode disables newly registered, non-protected plugins by default until
   they are explicitly classified in the profile.
 - A failed policy audit restores the previous plugin states, safety setting, and

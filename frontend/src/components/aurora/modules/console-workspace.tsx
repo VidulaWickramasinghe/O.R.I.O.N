@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
-  Activity,
   CircleAlert,
   RefreshCw,
   ShieldCheck,
@@ -11,9 +10,12 @@ import {
 } from "lucide-react";
 
 import { GlassPanel } from "@/components/aurora/glass-panel";
+import {
+  useAuroraActivity,
+  useAuroraApprovals,
+  useAuroraStatus,
+} from "@/components/aurora/lib/aurora-queries";
 import { StatusChip } from "@/components/aurora/status-chip";
-import { apiGet } from "@/lib/api/client";
-import { getSystemStatus } from "@/lib/api/status";
 
 type StatusRecord = Record<string, unknown>;
 
@@ -86,11 +88,19 @@ function eventTime(event: ActivityEvent | ApprovalItem) {
 }
 
 export function ConsoleLiveWorkspace() {
-  const [status, setStatus] = useState<StatusRecord | null>(null);
-  const [activity, setActivity] = useState<ActivityEvent[]>([]);
-  const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const statusQuery = useAuroraStatus();
+  const activityQuery = useAuroraActivity();
+  const approvalsQuery = useAuroraApprovals();
+  const status = (statusQuery.data ?? null) as StatusRecord | null;
+  const activity = normalizeActivity(activityQuery.data).slice(0, 40);
+  const approvals = normalizeApprovals(approvalsQuery.data).slice(0, 40);
+  const queries = [statusQuery, activityQuery, approvalsQuery];
+  const loading = queries.some((query) => query.isFetching);
+  const message = queries.every((query) => query.isError)
+    ? "Live console data failed to load. Confirm the backend is running."
+    : queries.some((query) => query.isError)
+      ? "Some live console sources are unavailable. Loaded sources remain visible."
+      : "";
 
   const pendingApprovals = useMemo(
     () =>
@@ -101,32 +111,12 @@ export function ConsoleLiveWorkspace() {
   );
 
   async function refreshConsole() {
-    setLoading(true);
-    setMessage("");
-
-    try {
-      const [statusData, activityData, approvalData] = await Promise.all([
-        getSystemStatus(),
-        apiGet<unknown>("/api/activity"),
-        apiGet<unknown>("/api/approvals"),
-      ]);
-
-      setStatus(statusData as StatusRecord);
-      setActivity(normalizeActivity(activityData).slice(0, 40));
-      setApprovals(normalizeApprovals(approvalData).slice(0, 40));
-    } catch {
-      setStatus(null);
-      setActivity([]);
-      setApprovals([]);
-      setMessage("Live console data failed to load. Confirm the backend is running.");
-    } finally {
-      setLoading(false);
-    }
+    await Promise.all([
+      statusQuery.refetch(),
+      activityQuery.refetch(),
+      approvalsQuery.refetch(),
+    ]);
   }
-
-  useEffect(() => {
-    void refreshConsole();
-  }, []);
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-5">

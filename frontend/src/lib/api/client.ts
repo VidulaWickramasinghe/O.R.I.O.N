@@ -2,6 +2,7 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { getBrowserApiBaseUrl, RuntimeConfigurationError, runtimeConfig } from "@/lib/config/runtime";
 
 export const ORION_API_BASE = runtimeConfig.apiBaseUrl;
+export const ORION_API_MUTATION_EVENT = "orion:api-mutated";
 
 export type ApiErrorShape = {
   status: number;
@@ -125,6 +126,16 @@ export async function apiRequest<T>(method: string, path: string, options: ApiRe
     });
     const payload = await responsePayload(response);
     if (!response.ok) throw errorFromResponse(response, payload);
+    if (
+      typeof window !== "undefined" &&
+      !["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())
+    ) {
+      window.dispatchEvent(
+        new CustomEvent(ORION_API_MUTATION_EVENT, {
+          detail: { method: method.toUpperCase(), path },
+        }),
+      );
+    }
     return payload as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;
@@ -146,6 +157,18 @@ export const apiPost = <T>(path: string, body?: unknown, options?: ApiRequestOpt
 export const apiPut = <T>(path: string, body?: unknown, options?: ApiRequestOptions) => apiRequest<T>("PUT", path, { ...options, body });
 export const apiPatch = <T>(path: string, body?: unknown, options?: ApiRequestOptions) => apiRequest<T>("PATCH", path, { ...options, body });
 export const apiDelete = <T>(path: string, options?: ApiRequestOptions) => apiRequest<T>("DELETE", path, options);
+
+export const api = {
+  get: <T>(path: string, options?: ApiRequestOptions) => apiGet<T>(path, options),
+  post: <T>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+    apiPost<T>(path, body, options),
+  put: <T>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+    apiPut<T>(path, body, options),
+  patch: <T>(path: string, body?: unknown, options?: ApiRequestOptions) =>
+    apiPatch<T>(path, body, options),
+  delete: <T>(path: string, options?: ApiRequestOptions) =>
+    apiDelete<T>(path, options),
+};
 
 export function getValidationFieldErrors(error: unknown): Record<string, string> {
   if (!(error instanceof ApiError) || error.status !== 422 || !Array.isArray(error.details)) return {};
