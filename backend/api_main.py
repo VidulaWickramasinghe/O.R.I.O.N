@@ -835,51 +835,55 @@ class PostReleaseMaintenanceResponse(BaseModel):
 
 @asynccontextmanager
 async def app_lifespan(_app: FastAPI):
-    restored = apply_pending_runtime_restore()
-    initialize_persistence()
-    if restored:
-        log_activity(
-            "PERSISTENCE_RESTORED",
-            f"Verified backup restored during startup: {restored['backup_id']}",
-            "API",
-        )
-
+    LOCAL_API_AUTHENTICATOR.start_development_broker()
     try:
-        lease_recovery = execute_capability(
-            "recover_mission_state",
-            CapabilityContext(actor="internal", source="api_startup"),
-            recover_expired_mission_leases,
-        )
-        if lease_recovery["count"]:
+        restored = apply_pending_runtime_restore()
+        initialize_persistence()
+        if restored:
             log_activity(
-                "MISSION_LEASE_RECOVERY",
-                f"Recovered {lease_recovery['count']} mission execution lease(s).",
+                "PERSISTENCE_RESTORED",
+                f"Verified backup restored during startup: {restored['backup_id']}",
                 "API",
             )
-        recovery = execute_capability(
-            "recover_mission_continuations",
-            CapabilityContext(actor="internal", source="api_startup"),
-            recover_mission_continuations,
-        )
-        if recovery["errors"]:
+
+        try:
+            lease_recovery = execute_capability(
+                "recover_mission_state",
+                CapabilityContext(actor="internal", source="api_startup"),
+                recover_expired_mission_leases,
+            )
+            if lease_recovery["count"]:
+                log_activity(
+                    "MISSION_LEASE_RECOVERY",
+                    f"Recovered {lease_recovery['count']} mission execution lease(s).",
+                    "API",
+                )
+            recovery = execute_capability(
+                "recover_mission_continuations",
+                CapabilityContext(actor="internal", source="api_startup"),
+                recover_mission_continuations,
+            )
+            if recovery["errors"]:
+                log_activity(
+                    "MISSION_CONTINUATION_RECOVERY_INCOMPLETE",
+                    f"Mission approval recovery reported {len(recovery['errors'])} ownership or state errors.",
+                    "API",
+                )
+        except Exception as error:
             log_activity(
-                "MISSION_CONTINUATION_RECOVERY_INCOMPLETE",
-                f"Mission approval recovery reported {len(recovery['errors'])} ownership or state errors.",
+                "MISSION_CONTINUATION_RECOVERY_FAILED",
+                f"Mission approval recovery was blocked or failed: {error}",
                 "API",
             )
-    except Exception as error:
+
         log_activity(
-            "MISSION_CONTINUATION_RECOVERY_FAILED",
-            f"Mission approval recovery was blocked or failed: {error}",
+            "SYSTEM_START",
+            f"O.R.I.O.N. API {VERSION_LABEL} started ({RELEASE_NAME}).",
             "API",
         )
-
-    log_activity(
-        "SYSTEM_START",
-        f"O.R.I.O.N. API {VERSION_LABEL} started ({RELEASE_NAME}).",
-        "API",
-    )
-    yield
+        yield
+    finally:
+        LOCAL_API_AUTHENTICATOR.close_development_broker()
 
 
 app = FastAPI(

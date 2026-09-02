@@ -35,12 +35,25 @@ The main dashboard and application shell have been redesigned as a responsive, c
 
 ## Run locally
 
+Start the services in two terminals from the repository root:
+
 ```bash
-npm install
-npm run dev
+# Terminal 1
+cd ~/O.R.I.O.N/
+./scripts/run_backend.sh
+
+# Terminal 2
+cd ~/O.R.I.O.N/
+./scripts/run_frontend.sh
 ```
 
 Open `http://localhost:3000`.
+
+The development backend creates an ephemeral API credential and exposes it only
+through an owner-only local socket. The custom Next.js development server
+negotiates that credential in memory for the browser; it is not printed, placed
+in a `.env` file, or written into the frontend bundle. Tauri development uses
+the Rust supervisor handshake instead.
 
 ## Production validation
 
@@ -85,6 +98,10 @@ startup so interrupted route compilation cannot retain stale module handlers:
 cd ~/O.R.I.O.N/frontend/
 npm run dev
 ```
+
+`npm run dev` may be started before or after the backend. Until the backend is
+available, Aurora renders its explicit offline state; retrying the connection
+after backend startup establishes the authenticated session automatically.
 
 On a fast local filesystem, Turbopack remains available explicitly with
 `npm run dev:turbo`. If a development server was interrupted while writing its

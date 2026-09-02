@@ -44,6 +44,7 @@ run_step "Command palette keyboard and route regression" npm --prefix frontend r
 run_step "Recovery, voice confirmation, and accessibility regression" npm --prefix frontend run test:recovery
 run_step "Pet visibility, persistence, and accessibility regression" npm --prefix frontend run test:pet
 run_step "Settings control-plane regression" npm --prefix frontend run test:settings
+run_step "Standalone development API authentication regression" npm --prefix frontend run test:api-auth
 run_step "Tauri tests and package build" env ORION_TAURI_PACKAGE=1 ./scripts/test_tauri.sh
 run_step "Dependency vulnerability audits" ./scripts/dependency_audit.sh
 run_step "Tracked artifact and secret scan" python3 scripts/check_tracked_artifacts.py

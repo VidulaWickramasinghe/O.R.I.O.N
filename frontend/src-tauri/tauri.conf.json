@@ -4,7 +4,7 @@
   "version": "6.7.0",
   "identifier": "com.orion.auroraos",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "npm run dev:tauri",
     "devUrl": "http://localhost:3000",
     "beforeBuildCommand": "npm run desktop:prepare && npm run build",
     "frontendDist": "../out"

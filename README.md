@@ -353,6 +353,12 @@ cd ~/O.R.I.O.N/
 
 Press `Ctrl+C` in the launcher terminal to stop both services.
 
+To run the services in separate terminals, use `./scripts/run_backend.sh` and
+`./scripts/run_frontend.sh`. Their development authentication handshake shares
+the per-launch API credential through an owner-only local socket without
+printing or persisting it. Protected routes remain authenticated; only
+`/api/health` is public.
+
 ## Desktop application
 
 Start the local backend when needed and open Aurora OS in its Tauri shell:

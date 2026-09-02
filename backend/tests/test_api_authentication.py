@@ -1,5 +1,8 @@
 """Regression coverage for the launch-scoped local control API identity."""
 
+import json
+import os
+import socket
 import tempfile
 import unittest
 from contextlib import contextmanager
@@ -10,7 +13,7 @@ from fastapi.testclient import TestClient
 
 import api_main
 from core import approvals, capability_gateway, knowledge_base, tool_audit
-from core.api_auth import LocalApiAuthenticator
+from core.api_auth import DEVELOPMENT_BROKER_REQUEST, LocalApiAuthenticator
 from core.capability_gateway import CapabilityContext
 
 
@@ -74,6 +77,37 @@ class LocalApiAuthenticationTests(unittest.TestCase):
         self.assertEqual(authenticator.authenticate(f"Bearer {token}"), authenticator.session_id)
         self.assertIsNone(authenticator.authenticate("Bearer wrong-token"))
         self.assertNotIn(token, repr(vars(authenticator)))
+
+    def test_development_broker_hands_the_ephemeral_token_over_an_owner_only_socket(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            socket_path = Path(directory) / "api-session.sock"
+            with patch.dict(
+                os.environ,
+                {
+                    "ORION_DEV_AUTH_SOCKET": str(socket_path),
+                    "ORION_BACKEND_PORT": "8123",
+                },
+                clear=False,
+            ):
+                os.environ.pop("ORION_CAPABILITY_TOKEN", None)
+                authenticator = LocalApiAuthenticator()
+                authenticator.start_development_broker()
+                try:
+                    self.assertEqual(socket_path.stat().st_mode & 0o777, 0o600)
+                    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as client:
+                        client.connect(str(socket_path))
+                        client.sendall(DEVELOPMENT_BROKER_REQUEST)
+                        payload = json.loads(client.recv(4096).decode("utf-8"))
+
+                    self.assertEqual(payload["baseUrl"], "http://127.0.0.1:8123")
+                    self.assertEqual(
+                        authenticator.authenticate(f"Bearer {payload['token']}"),
+                        authenticator.session_id,
+                    )
+                    self.assertNotIn(payload["token"], repr(vars(authenticator)))
+                finally:
+                    authenticator.close_development_broker()
+            self.assertFalse(socket_path.exists())
 
 
 class ApprovalSessionTests(unittest.TestCase):

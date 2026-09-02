@@ -23,7 +23,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-.venv/bin/uvicorn backend.api_main:app --host 127.0.0.1 --port 8000 &
+ORION_BACKEND_PORT=8000 .venv/bin/uvicorn backend.api_main:app --host 127.0.0.1 --port 8000 &
 backend_pid=$!
 npm --prefix frontend run dev &
 frontend_pid=$!
