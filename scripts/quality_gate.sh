@@ -31,6 +31,7 @@ run_step() {
   fi
 }
 
+run_step "Release manifest consistency" python3 scripts/sync_release_manifest.py --check
 run_step "Backend compile and regression tests" ./scripts/test_backend.sh
 run_step "API and security integration tests" ./scripts/test_api_security.sh
 run_step "Persistence migration tests" ./scripts/test_migrations.sh
@@ -39,6 +40,10 @@ run_step "Frontend typecheck" npm --prefix frontend run typecheck
 run_step "Frontend production build" npm --prefix frontend run build
 run_step "Frontend cache/network integration" npm --prefix frontend run test:server-state
 run_step "Aurora task-navigation UX regression" npm --prefix frontend run test:ux
+run_step "Command palette keyboard and route regression" npm --prefix frontend run test:command-palette
+run_step "Recovery, voice confirmation, and accessibility regression" npm --prefix frontend run test:recovery
+run_step "Pet visibility, persistence, and accessibility regression" npm --prefix frontend run test:pet
+run_step "Settings control-plane regression" npm --prefix frontend run test:settings
 run_step "Tauri tests and package build" env ORION_TAURI_PACKAGE=1 ./scripts/test_tauri.sh
 run_step "Dependency vulnerability audits" ./scripts/dependency_audit.sh
 run_step "Tracked artifact and secret scan" python3 scripts/check_tracked_artifacts.py

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Set
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -50,6 +50,7 @@ from core.persistence import (
     schedule_runtime_restore,
     verify_runtime_backup,
 )
+from core.version import RELEASE_NAME, VERSION, VERSION_LABEL
 
 from core.prompt import ORION_SYSTEM_PROMPT
 from core.system_doctor import render_system_doctor_report, run_system_doctor
@@ -162,6 +163,12 @@ except ImportError:
 
 
 from core.voice_state import load_voice_state, update_voice_state
+from core.voice_transcription import (
+    ALLOWED_VOICE_CONTENT_TYPES,
+    MAX_VOICE_BYTES,
+    VoiceTranscriptionError,
+    transcribe_audio_bytes,
+)
 
 from core.context_engine import (
     prepare_context_enriched_input,
@@ -869,7 +876,7 @@ async def app_lifespan(_app: FastAPI):
 
     log_activity(
         "SYSTEM_START",
-        "O.R.I.O.N. API v6.5.2 started with the Patch Release Manager enabled.",
+        f"O.R.I.O.N. API {VERSION_LABEL} started ({RELEASE_NAME}).",
         "API",
     )
     yield
@@ -878,7 +885,7 @@ async def app_lifespan(_app: FastAPI):
 app = FastAPI(
     title="O.R.I.O.N. API",
     description="Operational Response and Intelligent Orchestration Network backend API.",
-    version="6.5.2",
+    version=VERSION,
     lifespan=app_lifespan,
     dependencies=[Depends(api_capability_guard)],
 )
@@ -1369,6 +1376,12 @@ class VoiceStatusResponse(BaseModel):
     last_response: str
     last_event: str
     updated_at: str
+
+
+class VoiceTranscriptionResponse(BaseModel):
+    status: Literal["review_required"]
+    transcript: str
+    auto_submitted: Literal[False] = False
 
 
 class ContextPreviewRequest(BaseModel):
@@ -1929,7 +1942,7 @@ class DashboardIntelligenceResponse(BaseModel):
 def root():
     return {
         "name": "O.R.I.O.N.",
-        "version": "6.5.2",
+        "version": VERSION,
         "status": "online",
         "mode": "Aurora OS API Bridge",
     }
@@ -1990,7 +2003,7 @@ def get_pending_approval_ids() -> Set[int]:
 def status():
     return SystemStatusResponse(
         name="O.R.I.O.N.",
-        version="6.5",
+        version=VERSION,
         mode="Aurora OS Dashboard",
         status="online",
         tagline="Think. Plan. Act. Learn.",
@@ -2053,7 +2066,7 @@ def health():
     return {
         "status": "healthy",
         "system": "O.R.I.O.N.",
-        "version": "6.5.2",
+        "version": VERSION,
         "message": "O.R.I.O.N. Mission Control backend is operational.",
     }
 
@@ -2065,7 +2078,7 @@ def mission():
         "full_name": "Operational Response and Intelligent Orchestration Network",
         "interface": "Aurora OS",
         "tagline": "Think. Plan. Act. Learn.",
-        "release": "v6.5 Patch Release Manager + Hotfix Workflow",
+        "release": f"{VERSION_LABEL} · {RELEASE_NAME}",
         "capabilities": [
             "AI chat console",
             "Project memory",
@@ -3282,6 +3295,31 @@ def voice_reset():
     }
 
 
+@app.post("/api/voice/transcribe", response_model=VoiceTranscriptionResponse)
+async def voice_transcribe(audio: UploadFile = File(...)):
+    content_type = str(audio.content_type or "").split(";", 1)[0].strip().lower()
+    if content_type not in ALLOWED_VOICE_CONTENT_TYPES:
+        raise HTTPException(status_code=415, detail="Voice capture type is not supported.")
+    content = await audio.read(MAX_VOICE_BYTES + 1)
+    if not content:
+        raise HTTPException(status_code=422, detail="Voice capture was empty.")
+    if len(content) > MAX_VOICE_BYTES:
+        raise HTTPException(status_code=413, detail="Voice capture exceeds the 10 MiB limit.")
+    try:
+        transcript = transcribe_audio_bytes(
+            content,
+            audio.filename or "voice-capture.webm",
+            content_type,
+        )
+    except VoiceTranscriptionError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    return VoiceTranscriptionResponse(
+        status="review_required",
+        transcript=transcript,
+        auto_submitted=False,
+    )
+
+
 @app.post("/api/context/preview", response_model=ContextPreviewResponse)
 def context_preview(request: ContextPreviewRequest):
     clean_message = request.message.strip()
@@ -4292,7 +4330,7 @@ def desktop_shell_status():
     return DesktopShellStatusResponse(
         status="online",
         app_name="O.R.I.O.N. Aurora OS",
-        shell_version="6.5.2",
+        shell_version=VERSION,
         backend_url="http://127.0.0.1:8000",
         frontend_mode="tauri_static_shell",
         message="Desktop shell connected to O.R.I.O.N. backend with sidecar support.",

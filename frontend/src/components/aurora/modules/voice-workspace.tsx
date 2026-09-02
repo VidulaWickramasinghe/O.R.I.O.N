@@ -1,6 +1,7 @@
 "use client";
 
 import { VoiceModule } from "@/components/aurora/modules/voice-module";
+import { VoiceCapture } from "@/components/aurora/modules/voice-capture";
 
 export function VoiceWorkspace() {
   return (
@@ -11,21 +12,23 @@ export function VoiceWorkspace() {
         </p>
 
         <h1 className="mt-2 text-3xl font-semibold text-white">
-          Wake phrase and voice readiness
+          Explicit voice capture and review
         </h1>
 
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-          Monitor O.R.I.O.N.&apos;s local voice state, wake phrase, listening mode,
-          latest transcript, and latest voice event from the backend.
+          Use explicit push-to-talk, review the transcript, then hand it to the
+          normal Assistant flow without bypassing mission or approval controls.
         </p>
       </header>
+
+      <VoiceCapture />
 
       <VoiceModule />
 
       <p className="rounded-2xl border border-white/10 bg-black/25 p-4 text-xs leading-5 text-slate-500">
-        Safety: this page reads and resets local voice state only. It does not
-        start microphone capture, record audio, or bypass browser/system
-        permission controls.
+        Safety: wake phrase listening is disabled in Aurora OS. There is no
+        always-listening default. Audio capture requires a visible user action,
+        and reviewed text enters the Assistant as an unsent draft.
       </p>
     </div>
   );

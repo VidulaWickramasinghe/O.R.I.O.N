@@ -1,3 +1,26 @@
-import { AlertTriangle, Inbox, LoaderCircle, RefreshCw, WifiOff } from "lucide-react";
-const icons={loading:LoaderCircle,empty:Inbox,error:AlertTriangle,offline:WifiOff};
-export function WorkspaceState({ kind, title, description, onRetry }: { kind:keyof typeof icons; title:string; description:string; onRetry?:()=>void }) { const Icon=icons[kind]; return <div role={kind==="error"?"alert":"status"} className="flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed border-white/15 bg-white/[0.025] p-6 text-center"><Icon className={kind==="loading"?"animate-spin text-cyan-300":"text-slate-400"}/><h2 className="mt-4 font-semibold text-white">{title}</h2><p className="mt-2 max-w-md text-sm leading-6 text-slate-400">{description}</p>{onRetry&&<button onClick={onRetry} className="aurora-button mt-4"><RefreshCw size={15}/>Retry</button>}</div>; }
+import { RecoveryState } from "./RecoveryState";
+
+type WorkspaceStateKind = "loading" | "empty" | "error" | "offline";
+
+export function WorkspaceState({
+  kind,
+  title,
+  description,
+  onRetry,
+}: {
+  kind: WorkspaceStateKind;
+  title: string;
+  description: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <RecoveryState
+      code={kind === "loading" ? "loading" : kind === "offline" ? "backend_offline" : kind === "empty" ? "empty_database" : "tool_failed"}
+      title={title}
+      description={description}
+      actionLabel={onRetry ? "Retry" : undefined}
+      onAction={onRetry}
+      focusOnChange={kind !== "empty"}
+    />
+  );
+}

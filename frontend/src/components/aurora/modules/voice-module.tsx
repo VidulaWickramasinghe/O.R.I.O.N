@@ -1,25 +1,35 @@
 "use client";
 
 import { resetVoiceStatus } from "@/lib/api/voice";
+import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
+import { recoveryFromError, type RecoveryCode } from "@/lib/recovery";
+import { useState } from "react";
 import { useAuroraVoiceStatus } from "../lib/aurora-queries";
 import { ModuleShell } from "./module-shell";
 
 export function VoiceModule() {
   const voiceStatusQuery = useAuroraVoiceStatus();
   const voiceStatus = voiceStatusQuery.data ?? null;
+  const [recovery, setRecovery] = useState<RecoveryCode | null>(null);
 
   async function resetVoice() {
-    await resetVoiceStatus();
+    setRecovery(null);
+    try {
+      await resetVoiceStatus();
+      await voiceStatusQuery.refetch();
+    } catch (error) {
+      setRecovery(recoveryFromError(error, "tool_failed"));
+    }
   }
 
   return (
     <ModuleShell
       title="Voice"
-      description="Wake phrase status, transcripts, concise spoken replies, and voice controls."
+      description="Read-only voice state and explicit reset. Wake phrase listening is not started by Aurora OS."
       badge={voiceStatus?.listening ? "listening" : "idle"}
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <VoiceCard label="Wake Phrase" value={voiceStatus?.wake_phrase || "Hey Orion"} />
+        <VoiceCard label="Wake Phrase" value="Disabled by design" />
         <VoiceCard label="Mode" value={voiceStatus?.mode || "idle"} />
         <VoiceCard label="Listening" value={voiceStatus?.listening ? "Yes" : "No"} />
 
@@ -41,7 +51,19 @@ export function VoiceModule() {
           </p>
         </div>
 
+        {(voiceStatusQuery.isError || recovery) && (
+          <div className="md:col-span-2 xl:col-span-3">
+            <RecoveryState
+              code={recovery ?? "backend_offline"}
+              onAction={() => void voiceStatusQuery.refetch()}
+              actionLabel="Retry voice status"
+              compact
+            />
+          </div>
+        )}
+
         <button
+          type="button"
           onClick={resetVoice}
           className="rounded-2xl border border-cyan-400/30 px-4 py-3 text-sm font-bold text-cyan-200 hover:bg-cyan-500/10"
         >

@@ -6,6 +6,7 @@ import { FolderKanban, RefreshCw, ShieldCheck } from "lucide-react";
 import { WorkspacesModule } from "@/components/aurora/modules/workspaces-module";
 import { GlassPanel } from "@/components/aurora/glass-panel";
 import { StatusChip } from "@/components/aurora/status-chip";
+import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
 import { useAuroraWorkspaces } from "@/components/aurora/lib/aurora-queries";
 import type { WorkspaceItem } from "@/components/aurora/aurora-types";
 
@@ -61,9 +62,17 @@ export function WorkspacesLiveWorkspace() {
       </header>
 
       {(message || workspacesQuery.isError) && (
-        <p role="alert" className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
-          {message || "Workspace list failed to load. Confirm the backend is running."}
-        </p>
+        <RecoveryState
+          code={workspacesQuery.isError ? "backend_offline" : "tool_failed"}
+          description={message || "Workspace list failed to load. Confirm the backend is running."}
+          onAction={() => void loadWorkspaces()}
+          actionLabel="Refresh workspaces"
+          compact
+        />
+      )}
+
+      {loading && !workspacesQuery.data && (
+        <RecoveryState code="loading" title="Loading trusted workspaces" description="Aurora OS is reading the backend workspace registry." focusOnChange={false} compact />
       )}
 
       <section className="grid gap-4 md:grid-cols-3">

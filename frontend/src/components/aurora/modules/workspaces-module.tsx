@@ -1,6 +1,7 @@
 import { WorkspaceItem } from "../aurora-types";
 import { runDesktopWorkspaceAction } from "@/lib/api/desktop";
 import { ModuleShell } from "./module-shell";
+import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
 
 type WorkspacesModuleProps = {
   workspaces: WorkspaceItem[];
@@ -50,9 +51,7 @@ export function WorkspacesModule({
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {workspaces.length === 0 ? (
-          <div className="rounded-3xl border border-white/10 bg-black/30 p-6 text-sm text-slate-500">
-            No workspaces registered yet.
-          </div>
+          <RecoveryState code="no_workspaces" actionHref="/workspaces#register-workspace" compact />
         ) : (
           workspaces.map((workspace) => (
             <div

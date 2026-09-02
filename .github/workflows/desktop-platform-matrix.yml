@@ -1,0 +1,75 @@
+name: Desktop platform preview matrix
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "platform-support.json"
+      - "requirements.txt"
+      - "scripts/verify_desktop_bundle.py"
+      - ".github/workflows/desktop-platform-matrix.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: ${{ matrix.platform }} package and lifecycle
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos
+            runner: macos-14
+            bundles: app,dmg
+          - platform: windows
+            runner: windows-latest
+            bundles: msi,nsis
+          - platform: linux
+            runner: ubuntu-24.04
+            bundles: deb,appimage
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux desktop build prerequisites
+        if: matrix.platform == 'linux'
+        run: >-
+          sudo apt-get update && sudo apt-get install -y
+          libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: npm ci
+        working-directory: frontend
+      - run: python -m pip install -r requirements.txt pyinstaller
+      - name: Export build Python
+        shell: bash
+        run: echo "ORION_PYTHON=$(python -c 'import sys; print(sys.executable)')" >> "$GITHUB_ENV"
+      - name: Rust supervisor lifecycle tests
+        run: cargo test --locked --manifest-path frontend/src-tauri/Cargo.toml
+      - name: Build explicit platform bundles
+        run: npm run desktop:build -- --config src-tauri/tauri.${{ matrix.platform }}.conf.json --bundles ${{ matrix.bundles }}
+        working-directory: frontend
+      - name: Verify installer layout, clean sidecar, authentication, and prior-schema upgrade
+        run: >-
+          python scripts/verify_desktop_bundle.py
+          --platform ${{ matrix.platform }}
+          --bundle-root frontend/src-tauri/target/release/bundle
+          --output desktop-evidence/${{ matrix.platform }}.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}-preview
+          path: |
+            frontend/src-tauri/target/release/bundle
+            desktop-evidence/${{ matrix.platform }}.json
+          if-no-files-found: error

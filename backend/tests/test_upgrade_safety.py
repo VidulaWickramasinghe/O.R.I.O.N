@@ -205,7 +205,7 @@ class FrontendRefactorTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn(
-            'version: "6.5.2"',
+            'version: "6.7.0"',
             orion_build,
         )
 
@@ -991,7 +991,7 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            'version: "6.5.2"',
+            'version: "6.7.0"',
             build,
         )
 

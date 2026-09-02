@@ -11,9 +11,12 @@ import {
 } from "lucide-react";
 
 import { GlassPanel } from "@/components/aurora/glass-panel";
+import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
 import { StatusChip } from "@/components/aurora/status-chip";
 import { previewChatContext, sendChatMessage } from "@/lib/api/chat";
 import { getSystemStatus } from "@/lib/api/status";
+import { recoveryFromError, type RecoveryCode } from "@/lib/recovery";
+import { consumeReviewedVoiceDraft } from "@/lib/voice-handoff";
 
 type ChatMessage = {
   id: string;
@@ -57,8 +60,11 @@ export function AssistantWorkspace() {
   const [contextPreview, setContextPreview] = useState("");
   const [backend, setBackend] = useState<BackendState | null>(null);
   const [backendError, setBackendError] = useState("");
+  const [recovery, setRecovery] = useState<RecoveryCode | null>(null);
+  const [lastFailedDraft, setLastFailedDraft] = useState("");
 
   const threadRef = useRef<HTMLDivElement | null>(null);
+  const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const conversationIdRef = useRef("");
   const clientScopeIdRef = useRef(
     typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -74,16 +80,24 @@ export function AssistantWorkspace() {
     return "warning";
   }, [backendOnline, backendError]);
 
-  async function loadBackendStatus() {
+  async function loadBackendStatus(clearRecovery = true) {
     setBackendError("");
 
     try {
       const data = await getSystemStatus();
       setBackend(data as BackendState);
-    } catch {
+      if (clearRecovery) setRecovery(null);
+    } catch (error) {
       setBackend(null);
       setBackendError("Backend unavailable. Start O.R.I.O.N. on port 8000.");
+      setRecovery(recoveryFromError(error, "backend_offline"));
     }
+  }
+
+  function restoreFailedDraft() {
+    if (lastFailedDraft) setDraft(lastFailedDraft);
+    setRecovery(null);
+    requestAnimationFrame(() => draftRef.current?.focus());
   }
 
   function appendMessage(message: ChatMessage) {
@@ -99,6 +113,8 @@ export function AssistantWorkspace() {
     setDraft("");
     setThinking(true);
     setContextPreview("");
+    setRecovery(null);
+    setLastFailedDraft(cleanMessage);
 
     appendMessage({
       id: newId("user"),
@@ -121,10 +137,17 @@ export function AssistantWorkspace() {
         time: nowLabel(),
       });
 
-      if (!backendOnline) {
-        await loadBackendStatus();
+      const recoverableResponse = data.recoverable || data.status !== "completed";
+      if (recoverableResponse) {
+        setRecovery(recoveryFromError(new Error(data.response), "provider_unavailable"));
+      } else {
+        setLastFailedDraft("");
       }
-    } catch {
+
+      if (!backendOnline) {
+        await loadBackendStatus(!recoverableResponse);
+      }
+    } catch (error) {
       appendMessage({
         id: newId("assistant-error"),
         role: "assistant",
@@ -133,7 +156,9 @@ export function AssistantWorkspace() {
         time: nowLabel(),
       });
 
-      await loadBackendStatus();
+      setRecovery(recoveryFromError(error, "request_interrupted"));
+
+      await loadBackendStatus(false);
     } finally {
       setThinking(false);
     }
@@ -145,14 +170,16 @@ export function AssistantWorkspace() {
 
     setContextLoading(true);
     setContextPreview("");
+    setRecovery(null);
 
     try {
       const data = await previewChatContext(cleanMessage);
       setContextPreview(data.context || "No context returned for this query.");
-    } catch {
+    } catch (error) {
       setContextPreview(
         "Context preview failed. Confirm /api/context/preview is available.",
       );
+      setRecovery(recoveryFromError(error, "tool_failed"));
     } finally {
       setContextLoading(false);
     }
@@ -170,14 +197,22 @@ export function AssistantWorkspace() {
       ),
     );
 
+    const reviewedVoiceDraft = consumeReviewedVoiceDraft();
+    if (reviewedVoiceDraft) {
+      setDraft(reviewedVoiceDraft);
+      requestAnimationFrame(() => draftRef.current?.focus());
+    }
+
     void loadBackendStatus();
   }, []);
 
   useEffect(() => {
-    threadRef.current?.scrollTo({
-      top: threadRef.current.scrollHeight,
-      behavior: "smooth",
-    });
+    if (threadRef.current && typeof threadRef.current.scrollTo === "function") {
+      threadRef.current.scrollTo({
+        top: threadRef.current.scrollHeight,
+        behavior: "smooth",
+      });
+    }
   }, [messages, thinking]);
 
   return (
@@ -205,10 +240,16 @@ export function AssistantWorkspace() {
             remains controlled by O.R.I.O.N.&apos;s approval and permission layers.
           </p>
 
-          {backendError && (
-            <p role="alert" className="mt-3 rounded-2xl border border-red-400/30 bg-red-400/10 p-3 text-sm text-red-200">
-              {backendError}
-            </p>
+          {recovery && (
+            <div className="mt-3">
+              <RecoveryState
+                code={recovery}
+                description={backendError || undefined}
+                onAction={recovery === "backend_offline" ? () => void loadBackendStatus() : restoreFailedDraft}
+                actionLabel={recovery === "backend_offline" ? "Retry connection" : "Restore draft"}
+                compact
+              />
+            </div>
           )}
         </div>
 
@@ -238,7 +279,7 @@ export function AssistantWorkspace() {
           ))}
 
           {thinking && (
-            <p className="text-sm text-cyan-300">
+            <p role="status" aria-live="polite" className="text-sm text-cyan-300">
               O.R.I.O.N. is processing through the backend...
             </p>
           )}
@@ -246,6 +287,8 @@ export function AssistantWorkspace() {
 
         <form onSubmit={submit} className="border-t border-white/10 p-4">
           <textarea
+            ref={draftRef}
+            aria-label="Message O.R.I.O.N."
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
@@ -254,7 +297,7 @@ export function AssistantWorkspace() {
                 void submit();
               }
             }}
-            className="min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-[#05070B]/70 p-4 text-sm text-white outline-none focus:border-cyan-300/40"
+            className="min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-[#05070B]/70 p-4 text-sm text-white outline-none focus:border-cyan-300/40 focus-visible:ring-2 focus-visible:ring-cyan-300"
             placeholder="Ask O.R.I.O.N. to plan, inspect memory, review missions, or explain system status..."
           />
 

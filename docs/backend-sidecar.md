@@ -16,15 +16,11 @@ http://127.0.0.1:<per-launch-port>
 
 This script starts Tauri development mode. Tauri starts and supervises the backend; Python never starts, stops, signals, or restarts itself.
 
-## Desktop Shortcut
+## Platform scope
 
-Install the Linux desktop shortcut:
-
-```bash
-./scripts/install_linux_desktop_shortcut.sh
-```
-
-Then search for **O.R.I.O.N. Aurora OS** in your app launcher.
+macOS is the supported primary desktop target. Windows and Linux packaging is
+exercised as an unadvertised preview matrix; a developer shortcut is not release
+evidence. See [desktop platform support](platform-support.md).
 
 ## Status interfaces
 

@@ -6,7 +6,6 @@ import {
   ChevronDown,
   Command,
   Menu,
-  PanelLeft,
   PanelLeftOpen,
   PanelRight,
   Search,
@@ -24,6 +23,7 @@ export function Topbar() {
   const setMobileSidebarOpen = useUiStore((state) => state.setMobileSidebarOpen);
   const sidebarMode = useUiStore((state) => state.sidebarMode);
   const setSidebarMode = useUiStore((state) => state.setSidebarMode);
+  const use24HourTime = useUiStore((state) => state.use24HourTime);
   const contextOpen = useUiStore((state) => state.contextOpen);
   const setContextOpen = useUiStore((state) => state.setContextOpen);
   const securityProfiles = useAuroraStore(
@@ -127,14 +127,17 @@ export function Topbar() {
         <Menu size={19} />
       </button>
 
-      <button
-        aria-label={sidebarMode === "hidden" ? "Show navigation" : "Toggle navigation width"}
-        title={sidebarMode === "hidden" ? "Show navigation" : "Toggle navigation width (Ctrl/Cmd+B)"}
-        onClick={() => setSidebarMode(sidebarMode === "hidden" ? "expanded" : sidebarMode === "expanded" ? "compact" : "expanded")}
-        className={`hidden rounded-xl border p-2.5 transition lg:inline-flex ${sidebarMode === "hidden" ? "border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-200" : "border-white/[0.08] bg-white/[0.035] text-slate-300 hover:bg-white/[0.06] hover:text-white"}`}
-      >
-        {sidebarMode === "hidden" ? <PanelLeftOpen size={18} /> : <PanelLeft size={18} />}
-      </button>
+      {sidebarMode === "hidden" && (
+        <button
+          type="button"
+          aria-label="Show navigation"
+          title="Show navigation (Ctrl/Cmd+B)"
+          onClick={() => setSidebarMode("expanded")}
+          className="hidden rounded-xl border border-cyan-300/20 bg-cyan-300/[0.08] p-2.5 text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/[0.12] lg:inline-flex"
+        >
+          <PanelLeftOpen size={18} />
+        </button>
+      )}
 
       <button
         onClick={() => setCommandOpen(true)}
@@ -270,8 +273,19 @@ export function Topbar() {
         </div>
 
         <div className="hidden min-w-[92px] text-right 2xl:block">
-          <p className="font-mono text-xs font-semibold text-slate-200">{now ? now.toLocaleTimeString("en-AU", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "--:--:--"}</p>
-          <p className="mt-0.5 text-[10px] text-slate-600">Melbourne · AEST</p>
+          <p className="font-mono text-xs font-semibold text-slate-200">
+            {now
+              ? now.toLocaleTimeString("en-AU", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: !use24HourTime,
+                })
+              : "--:--:--"}
+          </p>
+          <p className="mt-0.5 text-[10px] text-slate-600">
+            Melbourne · local time
+          </p>
         </div>
 
         <button

@@ -8,9 +8,20 @@ if [[ -z "${ORION_PYTHON:-}" && -n "${ORION_PYTHON_BIN:-}" ]]; then
 fi
 cargo test --locked --manifest-path frontend/src-tauri/Cargo.toml
 if [[ "${ORION_TAURI_PACKAGE:-0}" == "1" ]]; then
-  npm --prefix frontend run desktop:build
-  if [[ "$(uname -s)" == "Darwin" ]]; then
+  case "$(uname -s)" in
+    Darwin) platform="macos"; bundles="app,dmg" ;;
+    Linux) platform="linux"; bundles="deb,appimage" ;;
+    *) platform="windows"; bundles="msi,nsis" ;;
+  esac
+  npm --prefix frontend run desktop:build -- --config "src-tauri/tauri.${platform}.conf.json" --bundles "$bundles"
+  if [[ "$platform" == "macos" ]]; then
     ./scripts/smoke_desktop_package.sh
     ./scripts/test_desktop_supervisor.sh
   fi
+  package_evidence="$(mktemp)"
+  python3 scripts/verify_desktop_bundle.py \
+    --platform "$platform" \
+    --bundle-root frontend/src-tauri/target/release/bundle \
+    --output "$package_evidence"
+  rm -f "$package_evidence"
 fi

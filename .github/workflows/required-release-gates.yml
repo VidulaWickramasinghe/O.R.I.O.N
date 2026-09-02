@@ -11,6 +11,16 @@ permissions:
   checks: write
 
 jobs:
+  version-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify release manifest and generated versions
+        run: python scripts/sync_release_manifest.py --check
+
   backend:
     runs-on: ubuntu-latest
     steps:
@@ -90,6 +100,18 @@ jobs:
       - name: Task-navigation information architecture
         run: npm run test:ux
         working-directory: frontend
+      - name: Command palette keyboard and route behavior
+        run: npm run test:command-palette
+        working-directory: frontend
+      - name: Recovery, voice confirmation, and accessibility behavior
+        run: npm run test:recovery
+        working-directory: frontend
+      - name: Pet visibility, persistence, and accessibility behavior
+        run: npm run test:pet
+        working-directory: frontend
+      - name: Settings control-plane behavior
+        run: npm run test:settings
+        working-directory: frontend
 
   tauri:
     runs-on: macos-14
@@ -112,7 +134,7 @@ jobs:
       - name: Rust supervisor tests
         run: cargo test --locked --manifest-path frontend/src-tauri/Cargo.toml
       - name: Build packaged desktop application
-        run: npm run desktop:build
+        run: npm run desktop:build -- --config src-tauri/tauri.macos.conf.json --bundles app,dmg
         working-directory: frontend
         env:
           ORION_PYTHON: ${{ github.workspace }}/.venv/bin/python
@@ -120,10 +142,18 @@ jobs:
         run: ./scripts/smoke_desktop_package.sh
       - name: Packaged supervisor crash-recovery test
         run: ./scripts/test_desktop_supervisor.sh
+      - name: Package layout, authentication, and prior-schema upgrade test
+        run: >-
+          python scripts/verify_desktop_bundle.py
+          --platform macos
+          --bundle-root frontend/src-tauri/target/release/bundle
+          --output desktop-evidence/macos-required-gate.json
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-package
-          path: frontend/src-tauri/target/release/bundle
+          path: |
+            frontend/src-tauri/target/release/bundle
+            desktop-evidence/macos-required-gate.json
           if-no-files-found: error
 
   dependency-audit:
@@ -167,6 +197,7 @@ jobs:
 
   release-evidence:
     needs:
+      - version-consistency
       - backend
       - api-security
       - migration
@@ -189,14 +220,17 @@ jobs:
           --run-url "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           --commit-sha "${GITHUB_SHA}"
           --check backend
+          --check version-consistency
           --check api-security
           --check migration
           --check frontend-lint
           --check frontend-typecheck
           --check frontend-build
           --check frontend-e2e
+          --check command-palette
           --check tauri-test
           --check tauri-build
+          --check desktop-package-upgrade
           --check dependency-audit
           --check artifact-scan
       - uses: actions/upload-artifact@v4

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { BrowserResearchResult } from "../aurora-types";
 import { researchBrowserPage } from "@/lib/api/browser";
+import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
 import { ModuleShell } from "./module-shell";
 
 type BrowserModuleProps = {
@@ -14,9 +15,12 @@ export function BrowserModule({ onAssistantMessage }: BrowserModuleProps) {
   const [url, setUrl] = useState("https://docs.python.org/3/");
   const [result, setResult] = useState<BrowserResearchResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   async function research() {
     setLoading(true);
+    setFailed(false);
 
     try {
       const data = await researchBrowserPage(url);
@@ -28,6 +32,7 @@ export function BrowserModule({ onAssistantMessage }: BrowserModuleProps) {
         }`
       );
     } catch {
+      setFailed(true);
       onAssistantMessage("Browser research failed.");
     } finally {
       setLoading(false);
@@ -45,9 +50,11 @@ export function BrowserModule({ onAssistantMessage }: BrowserModuleProps) {
           <h3 className="text-lg font-bold text-white">Research Page</h3>
 
           <input
+            ref={inputRef}
+            aria-label="Public webpage URL"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
-            className="mt-4 w-full rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2"
+            className="mt-4 w-full rounded-2xl border border-cyan-400/20 bg-black/40 px-4 py-3 text-sm outline-none ring-cyan-400/30 placeholder:text-slate-500 focus:ring-2 focus-visible:ring-2 focus-visible:ring-cyan-300"
           />
 
           <button
@@ -66,6 +73,18 @@ export function BrowserModule({ onAssistantMessage }: BrowserModuleProps) {
 
         <section className="rounded-3xl border border-white/10 bg-black/30 p-5">
           <h3 className="text-lg font-bold text-white">Research Output</h3>
+
+          {loading && (
+            <div className="mt-4">
+              <RecoveryState code="loading" title="Researching public page" description="O.R.I.O.N. is validating the destination and applying bounded network limits." focusOnChange={false} compact />
+            </div>
+          )}
+
+          {failed && (
+            <div className="mt-4">
+              <RecoveryState code="research_failed" onAction={() => inputRef.current?.focus()} compact />
+            </div>
+          )}
 
           <pre className="mt-4 max-h-[620px] overflow-y-auto whitespace-pre-wrap rounded-2xl border border-white/10 bg-white/[0.04] p-4 text-xs leading-6 text-slate-300">
             {result?.content || "No browser research output yet."}
