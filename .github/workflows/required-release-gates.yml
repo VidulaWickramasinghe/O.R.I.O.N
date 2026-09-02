@@ -112,6 +112,9 @@ jobs:
       - name: Settings control-plane behavior
         run: npm run test:settings
         working-directory: frontend
+      - name: Standalone development API authentication behavior
+        run: npm run test:api-auth
+        working-directory: frontend
 
   tauri:
     runs-on: macos-14

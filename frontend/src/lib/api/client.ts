@@ -39,6 +39,7 @@ export type ApiRequestOptions = Omit<RequestInit, "body" | "method"> & {
 
 type DesktopApiSession = { baseUrl: string; token: string };
 let desktopApiSession: Promise<DesktopApiSession | null> | null = null;
+let browserDevelopmentApiSession: Promise<DesktopApiSession | null> | null = null;
 
 async function getDesktopApiSession(): Promise<DesktopApiSession | null> {
   if (typeof window === "undefined" || !isTauri()) return null;
@@ -46,6 +47,53 @@ async function getDesktopApiSession(): Promise<DesktopApiSession | null> {
     desktopApiSession = invoke<DesktopApiSession>("get_api_session").catch(() => null);
   }
   return desktopApiSession;
+}
+
+function validLocalDevelopmentSession(value: unknown): value is DesktopApiSession {
+  if (!value || typeof value !== "object") return false;
+  const session = value as Partial<DesktopApiSession>;
+  if (typeof session.token !== "string" || session.token.length < 32) return false;
+  if (typeof session.baseUrl !== "string") return false;
+  try {
+    const url = new URL(session.baseUrl);
+    return (
+      url.protocol === "http:" &&
+      ["127.0.0.1", "localhost"].includes(url.hostname) &&
+      Boolean(url.port)
+    );
+  } catch {
+    return false;
+  }
+}
+
+async function getBrowserDevelopmentApiSession(refresh = false): Promise<DesktopApiSession | null> {
+  if (typeof window === "undefined" || process.env.NODE_ENV !== "development" || isTauri()) {
+    return null;
+  }
+  if (refresh) browserDevelopmentApiSession = null;
+  if (!browserDevelopmentApiSession) {
+    browserDevelopmentApiSession = fetch("/__orion/api-session", {
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const value: unknown = await response.json();
+        return validLocalDevelopmentSession(value) ? value : null;
+      })
+      .catch(() => null);
+  }
+  const session = await browserDevelopmentApiSession;
+  if (!session) browserDevelopmentApiSession = null;
+  return session;
+}
+
+async function getApiSession(path: string, refresh = false): Promise<DesktopApiSession | null> {
+  if (path === "/api/health") return null;
+  const desktop = await getDesktopApiSession();
+  if (desktop) return desktop;
+  return getBrowserDevelopmentApiSession(refresh);
 }
 
 function apiUrl(path: string, baseUrl: string, query?: ApiRequestOptions["query"]): string {
@@ -108,22 +156,33 @@ export async function apiRequest<T>(method: string, path: string, options: ApiRe
   if (options.body !== undefined && !isFormData && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
 
   try {
-    const session = path === "/api/health"
-      ? null
-      : await getDesktopApiSession();
-    if (session) headers.set("Authorization", `Bearer ${session.token}`);
+    let session = await getApiSession(path);
     const body = options.body;
     const requestInit = { ...options };
     delete requestInit.body;
     delete requestInit.query;
     delete requestInit.timeoutMs;
-    const response = await fetch(apiUrl(path, session?.baseUrl ?? getBrowserApiBaseUrl(), options.query), {
-      ...(requestInit as RequestInit),
-      method,
-      headers,
-      signal: controller.signal,
-      body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
-    });
+    const send = (activeSession: DesktopApiSession | null) => {
+      const requestHeaders = new Headers(headers);
+      if (activeSession) requestHeaders.set("Authorization", `Bearer ${activeSession.token}`);
+      return fetch(apiUrl(path, activeSession?.baseUrl ?? getBrowserApiBaseUrl(), options.query), {
+        ...(requestInit as RequestInit),
+        method,
+        headers: requestHeaders,
+        signal: controller.signal,
+        body: body === undefined ? undefined : isFormData ? (body as FormData) : JSON.stringify(body),
+      });
+    };
+    let response = await send(session);
+    // Authentication is checked before a route can execute, so one retry with
+    // a freshly negotiated dev token is safe even for mutation requests.
+    if (response.status === 401 && typeof window !== "undefined" && !isTauri()) {
+      const refreshedSession = await getApiSession(path, true);
+      if (refreshedSession && refreshedSession.token !== session?.token) {
+        session = refreshedSession;
+        response = await send(session);
+      }
+    }
     const payload = await responsePayload(response);
     if (!response.ok) throw errorFromResponse(response, payload);
     if (

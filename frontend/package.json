@@ -3,7 +3,7 @@
   "version": "6.7.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/prepare-dev.mjs && next dev --webpack",
+    "dev": "node scripts/prepare-dev.mjs && node scripts/dev-server.mjs --webpack",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
@@ -18,9 +18,11 @@
     "test:recovery": "vitest run tests/recovery-accessibility.test.tsx tests/voice-capture.test.tsx tests/assistant-recovery.test.tsx",
     "test:pet": "vitest run tests/orion-pet.test.tsx",
     "test:settings": "vitest run tests/settings-control-plane.test.tsx",
+    "test:api-auth": "vitest run tests/api-auth-session.test.ts",
     "release:sync": "python3 ../scripts/sync_release_manifest.py",
     "release:check": "python3 ../scripts/sync_release_manifest.py --check",
-    "dev:turbo": "node scripts/prepare-dev.mjs && next dev"
+    "dev:tauri": "node scripts/prepare-dev.mjs && next dev --webpack",
+    "dev:turbo": "node scripts/prepare-dev.mjs && node scripts/dev-server.mjs --turbo"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.101.2",

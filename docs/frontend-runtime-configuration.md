@@ -27,6 +27,14 @@ cd ~/O.R.I.O.N/
 ./scripts/run_frontend.sh
 ```
 
+These scripts can run in separate terminals. When no packaged launch token is
+supplied, FastAPI creates an ephemeral development token and an owner-only local
+socket. The Next.js development server obtains the current session through that
+socket and serves it to Aurora from a loopback-only, no-store development
+endpoint. The token remains in process/browser memory and is renegotiated once
+if a backend reload invalidates it. Never add a token to a `NEXT_PUBLIC_*`
+variable or `.env.local`.
+
 The backend currently configures CORS in `backend/api_main.py`; production and
 desktop origins must remain explicit rather than using credentialed wildcard
 CORS. Tauri receives the per-launch API origin and token from its Rust supervisor
