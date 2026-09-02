@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw, Settings2, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
 import { GlassPanel } from "@/components/aurora/glass-panel";
+import { InterfacePreferencesPanel } from "@/components/aurora/interface-preferences-panel";
 import { StatusChip } from "@/components/aurora/status-chip";
 import { UserSettingsPanel } from "@/components/aurora/panels/UserSettingsPanel";
 import {
@@ -12,6 +13,7 @@ import {
   updateUserSetting,
 } from "@/lib/api/settings";
 import type { UserSettingsProfile } from "@/types/orion";
+import { useAuroraStore } from "@/store/auroraStore";
 
 function valueFromMap(
   profile: UserSettingsProfile | null,
@@ -36,6 +38,7 @@ export function SettingsLiveWorkspace() {
     try {
       const data = await getUserSettingsProfile();
       setProfileState(data);
+      useAuroraStore.setState({ userSettingsProfile: data });
       setLastLoadedAt(
         new Date().toLocaleTimeString([], {
           hour: "2-digit",
@@ -58,6 +61,7 @@ export function SettingsLiveWorkspace() {
       await updateUserSetting(key, value);
       const data = await getUserSettingsProfile();
       setProfileState(data);
+      useAuroraStore.setState({ userSettingsProfile: data });
       setMessage(`Setting updated: ${key}`);
     } catch {
       setMessage(`Setting update failed: ${key}`);
@@ -73,6 +77,7 @@ export function SettingsLiveWorkspace() {
     try {
       const data = await resetUserSettings();
       setProfileState(data);
+      useAuroraStore.setState({ userSettingsProfile: data });
       setMessage("User settings reset to backend defaults.");
     } catch {
       setMessage("User settings reset failed.");
@@ -123,13 +128,12 @@ export function SettingsLiveWorkspace() {
             </p>
 
             <h1 className="mt-2 text-3xl font-semibold text-white">
-              Backend profile and preferences
+              Profile and interface preferences
             </h1>
 
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-              Manage supported local O.R.I.O.N. profile settings through the
-              backend settings API. This route does not use the old static form,
-              fake saved state, or unsupported setting writes.
+              Manage supported O.R.I.O.N. profile settings through the backend
+              and choose local interface preferences for this device.
             </p>
           </div>
 
@@ -153,7 +157,7 @@ export function SettingsLiveWorkspace() {
         </p>
       )}
 
-      <section className="grid gap-4 md:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 min-[1800px]:grid-cols-4">
         {quickStats.map((item) => (
           <MetricCard
             key={item.label}
@@ -164,8 +168,9 @@ export function SettingsLiveWorkspace() {
         ))}
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-5 min-[1800px]:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
+          <InterfacePreferencesPanel />
           <UserSettingsPanel
             profile={profile}
             loadingKey={loadingKey}

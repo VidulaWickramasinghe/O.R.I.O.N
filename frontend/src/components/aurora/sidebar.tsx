@@ -1,38 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
   ChevronsUpDown,
   CircleUserRound,
   Command,
   Cpu,
-  Hexagon,
   PanelLeftClose,
-  Plus,
   Settings2,
   ShieldCheck,
-  Sparkles,
   X,
 } from "lucide-react";
-import { destinationForPath, navItems } from "@/lib/aurora-data";
+
 import {
   useAuroraMissions,
   useAuroraWorkspaces,
 } from "@/components/aurora/lib/aurora-queries";
+import { sidebarGroups } from "@/lib/aurora-data";
+import { ORION_BUILD } from "@/lib/orion-build";
 import { cn } from "@/lib/utils";
 import { useAuroraStore } from "@/store/auroraStore";
 import { useUiStore, type SidebarMode } from "@/store/ui-store";
-
-const groups = [
-  { label: "Operate", items: ["Dashboard", "Assistant", "Missions", "Context", "Workspaces"] },
-  { label: "Control", items: ["Governance", "System"] },
-];
 
 const STORAGE_KEY = "orion-sidebar-mode";
 const GROUPS_KEY = "orion-sidebar-groups";
@@ -53,37 +45,38 @@ export function Sidebar() {
     (state) => state.updateUserSettingFromStore,
   );
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
+    Object.fromEntries(sidebarGroups.map((group) => [group.label, true])),
+  );
   const workspacesQuery = useAuroraWorkspaces();
   const missionsQuery = useAuroraMissions();
   const workspaces = workspacesQuery.data?.workspaces ?? [];
   const workspaceLoading = workspacesQuery.isLoading;
   const missionCount = missionsQuery.data?.missions.length ?? 0;
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
-    Object.fromEntries(groups.map((group) => [group.label, true])),
-  );
-
-  const compact = mode === "compact";
   const hidden = mode === "hidden";
-  const activeDestination = destinationForPath(pathname);
 
   useEffect(() => {
     if (!userSettingsProfile) {
       void loadUserSettingsProfile();
     }
-  }, [userSettingsProfile, loadUserSettingsProfile]);
+  }, [loadUserSettingsProfile, userSettingsProfile]);
 
   useEffect(() => {
-    const storedMode = window.localStorage.getItem(STORAGE_KEY) as SidebarMode | null;
-    if (storedMode && ["expanded", "compact", "hidden"].includes(storedMode)) {
-      setMode(storedMode);
-    }
+    const storedMode = window.localStorage.getItem(STORAGE_KEY) as
+      | SidebarMode
+      | "compact"
+      | null;
+    setMode(storedMode === "hidden" ? "hidden" : "expanded");
+
     const storedGroups = window.localStorage.getItem(GROUPS_KEY);
-    if (storedGroups) {
-      try {
-        setOpenGroups((current) => ({ ...current, ...(JSON.parse(storedGroups) as Record<string, boolean>) }));
-      } catch {
-        // Ignore malformed local preferences.
-      }
+    if (!storedGroups) return;
+    try {
+      setOpenGroups((current) => ({
+        ...current,
+        ...(JSON.parse(storedGroups) as Record<string, boolean>),
+      }));
+    } catch {
+      // Ignore malformed local preferences and keep every group visible.
     }
   }, [setMode]);
 
@@ -99,40 +92,25 @@ export function Sidebar() {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
         event.preventDefault();
-        setMode(mode === "expanded" ? "compact" : "expanded");
+        setMode(mode === "hidden" ? "expanded" : "hidden");
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mode, setMode]);
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups((current) => ({ ...current, [label]: !current[label] }));
-  };
-
   const displayName =
-    userSettingsProfile?.settings_map?.display_name ||
-    "O.R.I.O.N. User";
-
+    userSettingsProfile?.settings_map?.display_name || "O.R.I.O.N. User";
   const roleTitle =
-    userSettingsProfile?.settings_map?.role_title ||
-    "System Architect";
-
+    userSettingsProfile?.settings_map?.role_title || "System Architect";
   const defaultWorkspaceId =
     userSettingsProfile?.settings_map?.default_workspace_id || "";
-
-  const selectedWorkspace =
-    defaultWorkspaceId
-      ? workspaces.find(
-          (workspace) =>
-            String(workspace.id) === defaultWorkspaceId,
-        ) || null
-      : null;
-
+  const selectedWorkspace = defaultWorkspaceId
+    ? workspaces.find((workspace) => String(workspace.id) === defaultWorkspaceId) ||
+      null
+    : null;
   const environmentMode =
-    userSettingsProfile?.settings_map?.environment_mode ||
-    "production";
-
+    userSettingsProfile?.settings_map?.environment_mode || "production";
   const environmentLabel =
     environmentMode === "development"
       ? "Development environment"
@@ -140,23 +118,25 @@ export function Sidebar() {
         ? "Demo environment"
         : "Production environment";
 
-  async function selectWorkspace(workspaceId: number) {
-    await updateUserSettingFromStore(
-      "default_workspace_id",
-      String(workspaceId),
-    );
+  const toggleGroup = (label: string) => {
+    setOpenGroups((current) => ({
+      ...current,
+      [label]: !current[label],
+    }));
+  };
 
+  const routeIsActive = (href: string) =>
+    pathname === href || (href === "/context" && pathname === "/memory");
+
+  async function selectWorkspace(workspaceId: number) {
+    await updateUserSettingFromStore("default_workspace_id", String(workspaceId));
     setWorkspaceMenuOpen(false);
   }
 
   async function selectEnvironment(
     environment: "production" | "development" | "demo",
   ) {
-    await updateUserSettingFromStore(
-      "environment_mode",
-      environment,
-    );
-
+    await updateUserSettingFromStore("environment_mode", environment);
     setWorkspaceMenuOpen(false);
   }
 
@@ -164,6 +144,7 @@ export function Sidebar() {
     <>
       {mobileOpen && (
         <button
+          type="button"
           aria-label="Close navigation"
           className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileOpen(false)}
@@ -172,131 +153,128 @@ export function Sidebar() {
 
       <aside
         aria-label="Primary navigation"
+        aria-hidden={hidden && !mobileOpen ? true : undefined}
+        inert={hidden && !mobileOpen ? true : undefined}
         className={cn(
-          "orion-sidebar fixed inset-y-0 left-0 z-50 flex shrink-0 flex-col border-r border-white/[0.08] bg-[#080b12]/96 backdrop-blur-2xl transition-[width,transform,opacity] duration-300 ease-out lg:static lg:z-auto lg:translate-x-0",
-          hidden ? "lg:w-0 lg:overflow-hidden lg:border-r-0 lg:opacity-0" : compact ? "lg:w-[84px]" : "lg:w-[284px]",
-          mobileOpen ? "w-[292px] translate-x-0 opacity-100" : "w-[292px] -translate-x-full",
+          "orion-sidebar fixed inset-y-0 left-0 z-50 flex w-[304px] shrink-0 flex-col border-r border-white/[0.08] bg-[#080b12]/97 backdrop-blur-2xl transition-[width,transform,opacity] duration-300 ease-out lg:static lg:z-auto lg:translate-x-0",
+          hidden
+            ? "lg:w-0 lg:overflow-hidden lg:border-r-0 lg:opacity-0"
+            : "lg:w-[304px] lg:opacity-100",
+          mobileOpen
+            ? "translate-x-0 opacity-100"
+            : "-translate-x-full lg:translate-x-0",
         )}
       >
-        <div className="flex h-[76px] shrink-0 items-center gap-3 border-b border-white/[0.07] px-3.5">
-          <div className="orion-brand-mark relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-300/[0.08] text-cyan-200">
-            <Hexagon size={22} strokeWidth={1.6} />
-            <span className="absolute h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_15px_rgba(103,232,249,0.95)]" />
-          </div>
-
-          <div className={cn("min-w-0 flex-1 transition-opacity", compact && "lg:pointer-events-none lg:w-0 lg:opacity-0")}>
-            <p className="truncate text-[13px] font-black tracking-[0.32em] text-white">O.R.I.O.N.</p>
-            <p className="mt-0.5 truncate text-[11px] text-slate-500">Mission Control · Aurora OS</p>
-          </div>
+        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-white/[0.07] px-4">
+          <Link
+            href="/"
+            aria-label="Open O.R.I.O.N. dashboard"
+            onClick={() => setMobileOpen(false)}
+            className="group relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-[#081322] shadow-[0_0_26px_rgba(34,211,238,0.12)] transition hover:border-cyan-300/40"
+          >
+            <Image
+              src="/brand/orion-app-icon.png"
+              alt=""
+              width={48}
+              height={48}
+              priority
+              className="h-full w-full object-cover"
+            />
+          </Link>
 
           <button
-            aria-label="Close navigation"
-            onClick={() => setMobileOpen(false)}
-            className="rounded-xl border border-white/10 p-2 text-slate-400 hover:bg-white/[0.05] hover:text-white lg:hidden"
+            type="button"
+            aria-label="Hide navigation"
+            title="Hide navigation (Ctrl/Cmd+B)"
+            onClick={() => {
+              if (mobileOpen) setMobileOpen(false);
+              else setMode("hidden");
+            }}
+            className="rounded-xl border border-white/10 p-2.5 text-slate-400 transition hover:border-cyan-300/25 hover:bg-white/[0.05] hover:text-cyan-100"
           >
-            <X size={17} />
+            {mobileOpen ? <X size={17} /> : <PanelLeftClose size={17} />}
           </button>
-
-          <div className={cn("hidden items-center gap-1 lg:flex", compact && "lg:hidden")}>
-            <button
-              aria-label="Collapse navigation to icon rail"
-              title="Collapse navigation (Ctrl/Cmd+B)"
-              onClick={() => setMode("compact")}
-              className="rounded-xl border border-white/10 p-2 text-slate-400 transition hover:border-cyan-300/20 hover:bg-white/[0.05] hover:text-white"
-            >
-              <ChevronLeft size={16} />
-            </button>
-            <button
-              aria-label="Hide navigation"
-              title="Hide navigation"
-              onClick={() => setMode("hidden")}
-              className="rounded-xl border border-white/10 p-2 text-slate-500 transition hover:border-cyan-300/20 hover:bg-white/[0.05] hover:text-white"
-            >
-              <PanelLeftClose size={16} />
-            </button>
-          </div>
-
-          {compact && (
-            <button
-              aria-label="Expand navigation"
-              title="Expand navigation (Ctrl/Cmd+B)"
-              onClick={() => setMode("expanded")}
-              className="hidden rounded-xl border border-white/10 p-2 text-slate-400 transition hover:border-cyan-300/20 hover:bg-white/[0.05] hover:text-white lg:block"
-            >
-              <ChevronRight size={16} />
-            </button>
-          )}
         </div>
 
         <div className="p-3">
           <button
+            type="button"
             onClick={() => useUiStore.getState().setCommandOpen(true)}
-            title={compact ? "Open command centre" : undefined}
-            className={cn(
-              "group flex w-full items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.055] px-3 py-3 text-sm text-cyan-100 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.09]",
-              compact && "lg:justify-center lg:px-0",
-            )}
+            className="group flex w-full items-center gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.055] px-3 py-3 text-sm text-cyan-100 transition hover:border-cyan-300/30 hover:bg-cyan-300/[0.09]"
           >
             <Command size={17} className="shrink-0" />
-            <span className={cn("min-w-0 flex-1 text-left font-semibold", compact && "lg:hidden")}>Command centre</span>
-            <span className={cn("text-[10px] text-cyan-200/60", compact && "lg:hidden")}>⌘K</span>
+            <span className="min-w-0 flex-1 text-left font-semibold">
+              Command centre
+            </span>
+            <span className="text-[10px] text-cyan-200/60">⌘K</span>
           </button>
         </div>
 
         <nav className="orion-scrollbar flex-1 overflow-y-auto px-3 pb-3">
-          {groups.map((group) => {
-            const isOpen = compact || openGroups[group.label];
+          {sidebarGroups.map((group) => {
+            const isOpen = openGroups[group.label] !== false;
             return (
-              <div key={group.label} className="mb-3">
+              <section key={group.label} className="mb-3">
                 <button
                   type="button"
-                  onClick={() => !compact && toggleGroup(group.label)}
-                  className={cn(
-                    "mb-1 flex w-full items-center rounded-xl px-3 py-2 text-left text-[10px] font-bold uppercase tracking-[0.24em] text-slate-600 transition hover:bg-white/[0.025] hover:text-slate-400",
-                    compact && "lg:pointer-events-none lg:justify-center lg:px-0",
-                  )}
+                  onClick={() => toggleGroup(group.label)}
+                  className="mb-1 flex w-full items-center rounded-xl px-3 py-2 text-left text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600 transition hover:bg-white/[0.025] hover:text-slate-400"
                   aria-expanded={isOpen}
                 >
-                  <span className={cn("flex-1", compact && "lg:hidden")}>{group.label}</span>
-                  <ChevronDown size={12} className={cn("transition-transform", !isOpen && "-rotate-90", compact && "lg:hidden")} />
-                  {compact && <span className="hidden h-px w-7 bg-white/[0.08] lg:block" />}
+                  <span className="flex-1">{group.label}</span>
+                  <ChevronDown
+                    size={12}
+                    className={cn(
+                      "transition-transform",
+                      !isOpen && "-rotate-90",
+                    )}
+                  />
                 </button>
 
-                <div className={cn("grid transition-[grid-template-rows,opacity] duration-200", isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0")}>
+                <div
+                  className={cn(
+                    "grid transition-[grid-template-rows,opacity] duration-200",
+                    isOpen
+                      ? "grid-rows-[1fr] opacity-100"
+                      : "grid-rows-[0fr] opacity-0",
+                  )}
+                >
                   <div className="min-h-0 overflow-hidden">
                     <div className="space-y-1">
-                      {group.items.map((label) => {
-                        const item = navItems.find((entry) => entry.label === label);
-                        if (!item) return null;
-                        const active = activeDestination.href === item.href;
+                      {group.items.map((item) => {
+                        const active = routeIsActive(item.href);
                         const Icon = item.icon;
                         return (
                           <Link
                             key={item.href}
                             href={item.href}
-                            title={compact ? item.label : undefined}
+                            title={item.description}
+                            aria-current={active ? "page" : undefined}
                             onClick={() => setMobileOpen(false)}
                             className={cn(
                               "group relative flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition",
-                              compact && "lg:justify-center lg:px-0",
                               active
                                 ? "bg-white/[0.075] text-white"
                                 : "text-slate-400 hover:bg-white/[0.045] hover:text-slate-100",
                             )}
                           >
-                            {active && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,.8)]" />}
-                            <Icon size={18} className={cn("shrink-0", active ? "text-cyan-200" : "text-slate-500 group-hover:text-slate-300")} />
-                            <span className={cn("min-w-0 flex-1", compact && "lg:hidden")}>{item.label}</span>
-                            {item.label === "Missions" && missionCount > 0 && (
-                              <span
-                                className={cn(
-                                  "rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] text-cyan-200",
-                                  compact && "lg:hidden",
-                                )}
-                                title={`${missionCount} recent mission${
-                                  missionCount === 1 ? "" : "s"
-                                } returned by backend`}
-                              >
+                            {active && (
+                              <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,.8)]" />
+                            )}
+                            <Icon
+                              size={17}
+                              className={cn(
+                                "shrink-0",
+                                active
+                                  ? "text-cyan-200"
+                                  : "text-slate-500 group-hover:text-slate-300",
+                              )}
+                            />
+                            <span className="min-w-0 flex-1 truncate">
+                              {item.label}
+                            </span>
+                            {item.href === "/missions" && missionCount > 0 && (
+                              <span className="rounded-full bg-cyan-300/10 px-2 py-0.5 text-[10px] text-cyan-200">
                                 {missionCount >= 20 ? "20+" : missionCount}
                               </span>
                             )}
@@ -306,162 +284,148 @@ export function Sidebar() {
                     </div>
                   </div>
                 </div>
-              </div>
+              </section>
             );
           })}
-
         </nav>
 
         <div className="shrink-0 border-t border-white/[0.07] p-3">
-          {!compact ? (
-            <>
-              <div className="relative mb-3">
-                <button
-                  type="button"
-                  aria-expanded={workspaceMenuOpen}
-                  aria-haspopup="menu"
-                  onClick={() => setWorkspaceMenuOpen((open) => !open)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3 text-left transition hover:border-violet-300/20 hover:bg-white/[0.055]"
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-400/10 text-violet-200">
-                    <Sparkles size={17} />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-semibold text-white">
-                      {selectedWorkspace?.name || "No workspace selected"}
-                    </p>
-
-                    <p className="truncate text-[10px] text-slate-500">
-                      {environmentLabel}
-                    </p>
-                  </div>
-
-                  <ChevronsUpDown
-                    size={14}
-                    className="text-slate-500"
-                  />
-                </button>
-
-                {workspaceMenuOpen && (
-                  <div
-                    role="menu"
-                    className="absolute bottom-[calc(100%+8px)] left-0 z-[90] w-full rounded-2xl border border-white/[0.1] bg-[#0a0d14]/98 p-2 shadow-2xl backdrop-blur-2xl"
-                  >
-                    <div className="px-2 pb-2 pt-1">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-slate-600">
-                        Workspace
-                      </p>
-                    </div>
-
-                    <div className="space-y-1">
-                      {workspaceLoading ? (
-                        <p className="px-3 py-2 text-xs text-slate-500">
-                          Loading workspaces…
-                        </p>
-                      ) : workspaces.length === 0 ? (
-                        <p className="px-3 py-2 text-xs text-slate-500">
-                          No registered workspaces
-                        </p>
-                      ) : (
-                        workspaces.map((workspace) => {
-                          const active =
-                            selectedWorkspace?.id === workspace.id;
-
-                          return (
-                            <button
-                              key={workspace.id}
-                              type="button"
-                              role="menuitem"
-                              onClick={() => void selectWorkspace(workspace.id)}
-                              className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition ${
-                                active
-                                  ? "bg-cyan-300/[0.08] text-cyan-100"
-                                  : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
-                              }`}
-                            >
-                              <span className="truncate">
-                                {workspace.name}
-                              </span>
-
-                              {active && (
-                                <span className="text-[10px] text-cyan-300">
-                                  Active
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    <div className="my-2 border-t border-white/[0.07]" />
-
-                    <div className="px-2 pb-2">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.22em] text-slate-600">
-                        Environment
-                      </p>
-                    </div>
-
-                    {(
-                      [
-                        ["production", "Production"],
-                        ["development", "Development"],
-                        ["demo", "Demo"],
-                      ] as const
-                    ).map(([value, label]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => void selectEnvironment(value)}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition ${
-                          environmentMode === value
-                            ? "bg-violet-300/[0.08] text-violet-100"
-                            : "text-slate-400 hover:bg-white/[0.05] hover:text-white"
-                        }`}
-                      >
-                        <span>{label}</span>
-
-                        {environmentMode === value && (
-                          <span className="text-[10px] text-violet-300">
-                            Active
-                          </span>
-                        )}
-                      </button>
-                    ))}
-
-                    <Link
-                      href="/workspaces"
-                      onClick={() => setWorkspaceMenuOpen(false)}
-                      className="mt-2 block rounded-xl px-3 py-2 text-xs text-cyan-300 transition hover:bg-cyan-300/[0.05]"
-                    >
-                      Manage workspaces →
-                    </Link>
-                  </div>
-                )}
+          <div className="relative mb-3">
+            <button
+              type="button"
+              aria-expanded={workspaceMenuOpen}
+              aria-haspopup="menu"
+              onClick={() => setWorkspaceMenuOpen((open) => !open)}
+              className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3 text-left transition hover:border-cyan-300/20 hover:bg-white/[0.055]"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-semibold text-white">
+                  {selectedWorkspace?.name || "No workspace selected"}
+                </p>
+                <p className="truncate text-[10px] text-slate-500">
+                  {environmentLabel}
+                </p>
               </div>
-              <Link
-                href="/settings"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]"
-                aria-label="Open user settings"
+              <ChevronsUpDown size={14} className="text-slate-500" />
+            </button>
+
+            {workspaceMenuOpen && (
+              <div
+                role="menu"
+                className="absolute bottom-[calc(100%+8px)] left-0 z-[90] w-full rounded-2xl border border-white/[0.1] bg-[#0a0d14]/98 p-2 shadow-2xl backdrop-blur-2xl"
               >
-                <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-slate-200"><CircleUserRound size={19} /><span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#080b12] bg-emerald-400" /></div>
-                <div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-white">{displayName}</p><p className="truncate text-[10px] text-slate-500">{roleTitle}</p></div>
-                <Settings2 size={15} className="text-slate-500" />
-              </Link>
-              <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
-                <span className="flex items-center gap-1.5"><ShieldCheck size={12} className="text-emerald-300" /> Secure</span>
-                <span className="flex items-center justify-end gap-1.5"><Cpu size={12} className="text-cyan-300" /> v6.7</span>
+                <p className="px-2 pb-2 pt-1 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-600">
+                  Workspace
+                </p>
+                <div className="space-y-1">
+                  {workspaceLoading ? (
+                    <p className="px-3 py-2 text-xs text-slate-500">
+                      Loading workspaces…
+                    </p>
+                  ) : workspaces.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-slate-500">
+                      No registered workspaces
+                    </p>
+                  ) : (
+                    workspaces.map((workspace) => {
+                      const active = selectedWorkspace?.id === workspace.id;
+                      return (
+                        <button
+                          key={workspace.id}
+                          type="button"
+                          role="menuitem"
+                          onClick={() => void selectWorkspace(workspace.id)}
+                          className={cn(
+                            "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition",
+                            active
+                              ? "bg-cyan-300/[0.08] text-cyan-100"
+                              : "text-slate-400 hover:bg-white/[0.05] hover:text-white",
+                          )}
+                        >
+                          <span className="truncate">{workspace.name}</span>
+                          {active && (
+                            <span className="text-[10px] text-cyan-300">
+                              Active
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+
+                <div className="my-2 border-t border-white/[0.07]" />
+                <p className="px-2 pb-2 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-600">
+                  Environment
+                </p>
+                {(
+                  [
+                    ["production", "Production"],
+                    ["development", "Development"],
+                    ["demo", "Demo"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => void selectEnvironment(value)}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition",
+                      environmentMode === value
+                        ? "bg-violet-300/[0.08] text-violet-100"
+                        : "text-slate-400 hover:bg-white/[0.05] hover:text-white",
+                    )}
+                  >
+                    <span>{label}</span>
+                    {environmentMode === value && (
+                      <span className="text-[10px] text-violet-300">
+                        Active
+                      </span>
+                    )}
+                  </button>
+                ))}
+                <Link
+                  href="/workspaces"
+                  onClick={() => setWorkspaceMenuOpen(false)}
+                  className="mt-2 block rounded-xl px-3 py-2 text-xs text-cyan-300 transition hover:bg-cyan-300/[0.05]"
+                >
+                  Manage workspaces →
+                </Link>
               </div>
-            </>
-          ) : (
-            <div className="space-y-2">
-              <button title="New mission" className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] text-cyan-200"><Plus size={18} /></button>
-              <button title="Hide navigation" onClick={() => setMode("hidden")} className="mx-auto hidden h-10 w-10 items-center justify-center rounded-xl border border-white/[0.08] text-slate-500 hover:bg-white/[0.05] hover:text-white lg:flex"><ChevronsLeft size={16} /></button>
+            )}
+          </div>
+
+          <Link
+            href="/settings"
+            onClick={() => setMobileOpen(false)}
+            className="flex items-center gap-3 rounded-2xl px-2 py-2 transition hover:bg-white/[0.04]"
+            aria-label="Open user settings"
+          >
+            <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-slate-200">
+              <CircleUserRound size={19} />
+              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#080b12] bg-emerald-400" />
             </div>
-          )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-white">
+                {displayName}
+              </p>
+              <p className="truncate text-[10px] text-slate-500">
+                {roleTitle}
+              </p>
+            </div>
+            <Settings2 size={15} className="text-slate-500" />
+          </Link>
+
+          <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <ShieldCheck size={12} className="text-emerald-300" /> Secure
+            </span>
+            <span className="flex items-center justify-end gap-1.5">
+              <Cpu size={12} className="text-cyan-300" />
+              {ORION_BUILD.versionLabel}
+            </span>
+          </div>
         </div>
       </aside>
     </>

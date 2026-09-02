@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "primaryPlatform": "macos",
+  "platforms": {
+    "macos": {
+      "advertised": true,
+      "status": "supported",
+      "runner": "macos-14",
+      "bundles": ["app", "dmg"],
+      "productionSignatureRequired": true,
+      "notarizationRequired": true,
+      "requiredChecks": [
+        "rust-supervisor",
+        "installer-layout",
+        "clean-sidecar-smoke",
+        "prior-schema-upgrade",
+        "production-signature",
+        "notarization"
+      ]
+    },
+    "windows": {
+      "advertised": false,
+      "status": "preview",
+      "runner": "windows-latest",
+      "bundles": ["msi", "nsis"],
+      "productionSignatureRequired": true,
+      "notarizationRequired": false,
+      "requiredChecks": [
+        "rust-supervisor",
+        "installer-layout",
+        "clean-sidecar-smoke",
+        "prior-schema-upgrade"
+      ],
+      "promotionBlockers": [
+        "Passing signed release workflow",
+        "Installed GUI lifecycle smoke test",
+        "In-place upgrade test from the prior release"
+      ]
+    },
+    "linux": {
+      "advertised": false,
+      "status": "preview",
+      "runner": "ubuntu-24.04",
+      "bundles": ["deb", "appimage"],
+      "productionSignatureRequired": false,
+      "notarizationRequired": false,
+      "requiredChecks": [
+        "rust-supervisor",
+        "installer-layout",
+        "clean-sidecar-smoke",
+        "prior-schema-upgrade"
+      ],
+      "promotionBlockers": [
+        "Installed GUI lifecycle smoke test on supported distributions",
+        "AppImage and package signature policy",
+        "In-place upgrade test from the prior release"
+      ]
+    }
+  }
+}

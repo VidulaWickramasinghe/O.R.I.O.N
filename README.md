@@ -8,9 +8,8 @@
 
 Local-first AI mission control with approval-gated autonomy.
 
-[![Public release](https://img.shields.io/badge/public_release-v6.5-22d3ee?style=for-the-badge)](docs/PUBLIC_HANDOFF_SUMMARY_v6.5.md)
-[![Desktop patch](https://img.shields.io/badge/desktop-v6.5.2-8b5cf6?style=for-the-badge)](CHANGELOG.md)
-[![Aurora OS](https://img.shields.io/badge/Aurora_OS-frontend%406.7.0-0f172a?style=for-the-badge)](frontend/package.json)
+[![Current version](https://img.shields.io/badge/version-v6.7.0-22d3ee?style=for-the-badge)](release-manifest.json)
+[![Release manifest](https://img.shields.io/badge/version_source-release--manifest.json-8b5cf6?style=for-the-badge)](docs/versioning.md)
 [![Safety](https://img.shields.io/badge/execution-approval_gated-10b981?style=for-the-badge)](docs/safety-model.md)
 
 </div>
@@ -21,7 +20,7 @@ Local-first AI mission control with approval-gated autonomy.
 
 Its visual command center, **Aurora OS**, is a responsive Next.js interface backed by FastAPI and packaged as a Tauri desktop application. The system is designed for useful autonomy without invisible authority: sensitive actions pass through policy checks, plugin permissions, explicit approval gates, and an auditable activity trail.
 
-> The governed public-release baseline is **O.R.I.O.N. v6.5**. The maintained desktop patch line is **v6.5.2**, while the Aurora OS workspace currently identifies as `frontend@6.7.0`. The frontend package version does not replace the governed v6.5 public baseline.
+> The active product version is **O.R.I.O.N. v6.7.0**. Backend, API, frontend, Aurora UI, Tauri configuration, and Rust package metadata are synchronized from [`release-manifest.json`](release-manifest.json). References to v6.5.x describe historical release workflows, not the current runtime version.
 
 ![Aurora OS dashboard preview](assets/screenshots/aurora-dashboard.png)
 
@@ -42,9 +41,8 @@ Its visual command center, **Aurora OS**, is a responsive Next.js interface back
 | --- | --- |
 | Product | Local-first AI agent and mission-control desktop system |
 | Command center | Aurora OS — chat, missions, memory, workspaces, tools, security, analytics, and governance |
-| Public baseline | v6.5 — Safety Review Board + Feature Approval Workflow |
-| Desktop patch | v6.5.2 — Plugin Management & UI Reality Patch |
-| Frontend workspace | `frontend@6.7.0` |
+| Current version | v6.7.0 — generated from `release-manifest.json` |
+| Release channel | Development; local quality gates pass, CI evidence remains required for an official candidate |
 | Execution model | User-controlled, policy-aware, approval-gated, and audited |
 | Runtime | FastAPI backend + Next.js frontend + optional Tauri desktop shell |
 | Data posture | Local application state; generated databases, reports, credentials, and builds stay out of version control |
@@ -54,7 +52,7 @@ Its visual command center, **Aurora OS**, is a responsive Next.js interface back
 
 Most assistant prototypes stop at a chat box or give an agent broad access to a machine. O.R.I.O.N. explores the space between those extremes: an assistant that can plan and act, while keeping the operator in control of consequential execution.
 
-The completed project combines four concerns that are often built separately:
+The current codebase combines four concerns that are often built separately:
 
 1. **Intelligence** — conversational assistance, contextual retrieval, memory, semantic search, and research.
 2. **Orchestration** — goals, mission steps, workflow blueprints, capped execution cycles, and run history.
@@ -241,18 +239,31 @@ The principal boundaries are:
 
 See the [safety model](docs/safety-model.md), [tool permission enforcement](docs/tool-permission-enforcement.md), [security policy profiles](docs/security-policy-profiles.md), and [Safety Review Board](docs/safety-review-board-v6-5.md) for implementation details.
 
-## Core capabilities
+## Evidence-based capability matrix
 
-| Domain | Completed capabilities |
-| --- | --- |
-| Assistant and context | AI chat console, project memory, context preview, automatic project/workspace context, notes, voice mode, wake phrase mode |
-| Missions and workflows | Goal and step planning, run-next execution, three-step capped cycles, approval-aware pauses, run history, execution reports, reusable workflow blueprints, React Flow mission graph |
-| Knowledge and research | Local document indexing, knowledge search, vector memory, semantic retrieval, safe public-page research, comparisons, saved research reports |
-| Workspaces and development | Local workspace registration, tree and stack inspection, project launcher, diagnosis, patch planning, backup-aware safe patching, GitHub release preparation |
-| Security and tools | Plugin registry, protected plugins, tool-to-plugin ownership, permission matrix, allowed/blocked audit history, Strict/Balanced/Developer Lab profiles |
-| Desktop and experience | Responsive Aurora OS shell, command palette, customizable dashboard views, notifications, reminders, settings, Tauri packaging, sidecar status and one-click launch |
-| Intelligence and operations | System health, activity timeline, mission/workspace analytics, readiness recommendations, environment diagnostics, frontend architecture checks |
-| Release governance | Stabilization scans, quality gate, release candidate freeze, production readiness, stable-release lock, patch planning, roadmap classification, Safety Review Board, portfolio/demo packages |
+Status means **COMPLETE** when the repository contains an exercised end-to-end implementation, **PARTIAL** when a usable implementation still has a material boundary, and **PLANNED** when the capability is intentionally not implemented. Historical release notes are not treated as evidence.
+
+| Capability | Status | Current evidence and boundary |
+| --- | --- | --- |
+| Capability Gateway and tool policy | **COMPLETE** | All mapped side effects pass through `backend/core/capability_gateway.py`; direct-call, route, mission, plugin, and tool bypass regressions fail closed. |
+| Transactional approvals and mission continuation | **COMPLETE** | Atomic claims, idempotency, payload hashes, terminal guards, and durable mission/step continuations are covered in `backend/tests/test_approval_transactions.py`. |
+| Durable mission lifecycle | **COMPLETE** | Validated transitions, leases, pause/resume/cancel/retry, checkpoints, restart recovery, and bounded retries live in `backend/core/mission_manager.py`. |
+| Scoped agent sessions and model execution | **PARTIAL** | Conversation isolation, configured model selection, fallback, and usage accounting work; the provider registry currently ships only an OpenAI adapter. |
+| Memory, knowledge, and context controls | **COMPLETE** | Workspace/project scope, provenance, sensitivity, expiry, exclusion, edit/delete, and retrieval explanations have regression coverage. |
+| Browser research security | **COMPLETE** | DNS/IP validation, redirect revalidation, response limits, proxy isolation, and SSRF cases are exercised in `backend/tests/test_browser_research_security.py`. |
+| Trusted workspace and filesystem access | **COMPLETE** | Registered roots, consent, `Path.relative_to` containment, symlink defenses, and sensitive-file denials are backend enforced. |
+| Correlated security and mission audit | **COMPLETE** | Actor, policy, mission, step, approval, argument hash, result, duration, and correlation data can reconstruct a mission timeline. |
+| Persistent storage migrations and recovery | **COMPLETE** | Fifteen SQLite stores use version tracking, WAL and foreign keys; verified, hash-bound backup/restore is exposed under System. |
+| Local control API authentication | **COMPLETE** | Tauri creates an ephemeral launch token; every non-health route authenticates it and records the local session identity. |
+| Aurora information architecture | **COMPLETE** | Seven primary destinations plus contextual task navigation are route-tested and rendered through the shared application shell. |
+| Command palette | **COMPLETE** | Registry search, arrow-key selection, Enter navigation, route validation, and explicit mutation confirmation are component-tested. |
+| Operational analytics | **COMPLETE** | Production UI metrics come from persisted event queries; unavailable sources render as unavailable rather than synthetic values. |
+| Plugin management | **PARTIAL** | Registry, enable/disable controls, ownership, permission enforcement, and audit exist; there is no third-party SDK or process sandbox. |
+| Explicit voice capture | **PARTIAL** | Push-to-talk permission, bounded transcription, transcript confirmation, and unsent Assistant handoff are integrated. Packaged microphone behavior still requires release-device validation; wake phrase listening is disabled in Aurora OS. |
+| Desktop packaging and supervision | **PARTIAL** | macOS is the supported primary target with release-time signing/notarization enforcement. Windows and Linux are explicitly unadvertised previews until their promotion evidence is complete. |
+| Release governance | **PARTIAL** | Local quality gates, artifact hashes, scans, and required CI workflows exist; an actual passing CI run and signed release artifacts are still required. |
+| Third-party plugin sandbox and SDK | **PLANNED** | Intentionally deferred until a stable capability ABI and isolation model are designed. |
+| Automatic updates and multi-platform distribution | **PLANNED** | No updater channel or production signing/notarization pipeline is implemented. |
 
 ## Governed feature and release lifecycle
 
@@ -358,7 +369,7 @@ For desktop development and packaging:
 ./scripts/build_desktop_app.sh
 ```
 
-Bundles are generated under `frontend/src-tauri/target/release/bundle/` and are intentionally excluded from version control. Linux users can install the included local shortcut with `./scripts/install_linux_desktop_shortcut.sh`.
+Bundles are generated under `frontend/src-tauri/target/release/bundle/` and are intentionally excluded from version control. See the [desktop platform support matrix](docs/platform-support.md) before making distribution claims; Windows and Linux are preview targets, not supported releases.
 
 ## Verification and quality gate
 

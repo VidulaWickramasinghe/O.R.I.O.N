@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { SystemDoctorResult } from "../aurora-types";
+import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
 import { api } from "@/lib/api/client";
 import { ModuleShell } from "./module-shell";
 
@@ -47,9 +48,15 @@ export function SystemModule() {
       </div>
 
       {error && (
-        <p role="alert" className="mt-4 rounded-2xl border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-200">
-          {error}
-        </p>
+        <div className="mt-4">
+          <RecoveryState code="backend_offline" description={error} onAction={() => void runDoctor()} compact />
+        </div>
+      )}
+
+      {loading && (
+        <div className="mt-4">
+          <RecoveryState code="loading" title="Running System Doctor" description="Read-only local checks are in progress. Secret values are never returned." focusOnChange={false} compact />
+        </div>
       )}
 
       {!doctor && !error && (

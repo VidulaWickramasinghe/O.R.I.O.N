@@ -8,9 +8,10 @@ The main dashboard and application shell have been redesigned as a responsive, c
 
 ### New interface capabilities
 
-- Three-state desktop navigation: expanded, compact icon rail and fully hidden
+- Complete product navigation in one foldable left sidebar
+- One-at-a-time hide and restore controls with a persistent Ctrl/Cmd+B shortcut
+- Production O.R.I.O.N. app icon branding without a redundant sidebar tagline
 - Persistent sidebar and foldable navigation-group preferences
-- Ctrl/Cmd+B navigation shortcut and top-bar restore control
 - Responsive mobile navigation drawer independent of desktop state
 - Search-first command bar with live system, safety and notification controls
 - Mission-awareness context rail with Context and Activity views
@@ -24,6 +25,7 @@ The main dashboard and application shell have been redesigned as a responsive, c
 - Activity-density heatmap, reliability statistics, forecasting and anomaly insights
 - Reorganised advanced workspace for existing API-backed modules
 - Improved visual hierarchy, accessibility, focus states and reduced-motion support
+- Grouped backend profile settings and immediate device-only interface preferences
 
 ## Requirements
 

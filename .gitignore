@@ -74,6 +74,8 @@ backend/data/github_launch/
 !frontend/src-tauri/icons/*.png
 !frontend/src-tauri/icons/*.ico
 !frontend/src-tauri/icons/*.icns
+!frontend/public/brand/orion-app-icon.png
+!frontend/public/pet/orion-prime-sprites.png
 
 # OS / editor temp files
 .DS_Store

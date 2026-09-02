@@ -10,6 +10,8 @@ import {
   useAuroraMissionRuns,
 } from "../lib/aurora-queries";
 import { api } from "@/lib/api/client";
+import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
+import { recoveryFromError, type RecoveryCode } from "@/lib/recovery";
 import {
   createWorkflowMission,
   getWorkflowBlueprint,
@@ -58,8 +60,10 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
   const [missionTitle, setMissionTitle] = useState("");
   const [customGoal, setCustomGoal] = useState("");
   const [workspaceId, setWorkspaceId] = useState("");
+  const [recovery, setRecovery] = useState<RecoveryCode | null>(null);
 
   async function refreshMissionData() {
+    setRecovery(null);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["aurora-missions"] }),
       queryClient.invalidateQueries({ queryKey: ["aurora-mission-runs"] }),
@@ -80,9 +84,10 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
       if (!selectedBlueprintKey && nextBlueprints[0]) {
         setSelectedBlueprintKey(nextBlueprints[0].key);
       }
-    } catch {
+    } catch (error) {
       setBlueprints([]);
       setBlueprintMessage("Workflow blueprints failed to load. Confirm backend is running.");
+      setRecovery(recoveryFromError(error, "backend_offline"));
     } finally {
       setBlueprintLoading(false);
     }
@@ -98,9 +103,10 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
       const detail = await getWorkflowBlueprint(blueprintKey);
       setSelectedBlueprint(detail);
       setSelectedBlueprintKey(detail.key);
-    } catch {
+    } catch (error) {
       setSelectedBlueprint(null);
       setBlueprintMessage("Workflow blueprint failed to open.");
+      setRecovery(recoveryFromError(error, "tool_failed"));
     } finally {
       setBlueprintLoading(false);
     }
@@ -144,8 +150,9 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
         setCustomGoal("");
         await refreshMissionData();
       }
-    } catch {
+    } catch (error) {
       setBlueprintMessage("Mission creation failed. Confirm backend is running.");
+      setRecovery(recoveryFromError(error, "mission_failed"));
     } finally {
       setBlueprintLoading(false);
     }
@@ -153,6 +160,7 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
 
   async function runNext(missionId: number) {
     setLoadingMissionId(missionId);
+    setRecovery(null);
 
     try {
       const data = await api.post<{ output: string }>(
@@ -164,6 +172,9 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
       );
 
       await refreshMissionData();
+    } catch (error) {
+      setRecovery(recoveryFromError(error, "mission_failed"));
+      onAssistantMessage(`Mission ${missionId} stopped before the next step completed. Review its durable state before retrying.`);
     } finally {
       setLoadingMissionId(null);
     }
@@ -171,6 +182,7 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
 
   async function runBatch(missionId: number) {
     setLoadingMissionId(missionId);
+    setRecovery(null);
 
     try {
       const data = await api.post<{
@@ -186,6 +198,9 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
       );
 
       await refreshMissionData();
+    } catch (error) {
+      setRecovery(recoveryFromError(error, "mission_failed"));
+      onAssistantMessage(`Mission ${missionId} batch stopped safely. No unconfirmed continuation was started.`);
     } finally {
       setLoadingMissionId(null);
     }
@@ -212,7 +227,8 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
       );
       onAssistantMessage(`Mission ${missionId} ${action}: ${data.status}.`);
       await refreshMissionData();
-    } catch {
+    } catch (error) {
+      setRecovery(recoveryFromError(error, action === "cancel" ? "mission_cancelled" : "mission_failed"));
       onAssistantMessage(`Mission ${missionId} could not ${action}; its lifecycle state may have changed.`);
     } finally {
       setLoadingMissionId(null);
@@ -233,7 +249,8 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
       });
       onAssistantMessage(`Mission ${missionId} step ${step.id} is queued for an explicit bounded retry.`);
       await refreshMissionData();
-    } catch {
+    } catch (error) {
+      setRecovery(recoveryFromError(error, "mission_failed"));
       onAssistantMessage(`Mission ${missionId} retry was rejected or its retry limit was reached.`);
     } finally {
       setLoadingMissionId(null);
@@ -256,6 +273,29 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
       description="Mission planner, controlled execution, run history, and execution reports."
       badge={`${missions.length} missions`}
     >
+      {(missionsQuery.isError || runsQuery.isError || recovery) && (
+        <div className="mb-5">
+          <RecoveryState
+            code={recovery ?? "backend_offline"}
+            onAction={() => void refreshMissionData()}
+            actionLabel="Reload mission state"
+            compact
+          />
+        </div>
+      )}
+
+      {(missionsQuery.isLoading || runsQuery.isLoading) && (
+        <div className="mb-5">
+          <RecoveryState code="loading" title="Loading durable mission state" description="Aurora OS is loading missions, steps, runs, and approval-linked continuation state." focusOnChange={false} compact />
+        </div>
+      )}
+
+      {!missionsQuery.isLoading && !missionsQuery.isError && missions.length === 0 && (
+        <div className="mb-5">
+          <RecoveryState code="no_missions" actionHref="#create-mission" compact />
+        </div>
+      )}
+
       <div className="mb-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
@@ -273,7 +313,7 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
         <MissionFlowGraph missions={missions} runs={runs} />
       </div>
 
-      <section className="mb-6 rounded-3xl border border-cyan-400/15 bg-cyan-300/[0.04] p-5">
+      <section id="create-mission" className="mb-6 rounded-3xl border border-cyan-400/15 bg-cyan-300/[0.04] p-5">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">
