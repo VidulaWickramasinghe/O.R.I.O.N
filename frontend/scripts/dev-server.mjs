@@ -1,6 +1,5 @@
 import http from "node:http";
 import next from "next";
-import { parse } from "node:url";
 
 import { readDevelopmentApiSession } from "./dev-auth-session.mjs";
 
@@ -33,6 +32,7 @@ const application = next({
 });
 await application.prepare();
 const handle = application.getRequestHandler();
+const handleUpgrade = application.getUpgradeHandler();
 
 const server = http.createServer(async (request, response) => {
   const requestUrl = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
@@ -57,7 +57,11 @@ const server = http.createServer(async (request, response) => {
     }
     return;
   }
-  await handle(request, response, parse(request.url ?? "/", true));
+  await handle(request, response);
+});
+
+server.on("upgrade", (request, socket, head) => {
+  void handleUpgrade(request, socket, head);
 });
 
 server.listen(port, hostname, () => {
