@@ -84,6 +84,39 @@ export type ToolPermissionItem = {
 export type ToolAuditEventItem = {
   id: number; tool_name: string; plugin_key: string; decision: string; reason: string;
   risk_level: string; category: string; source: string; created_at: string;
+  actor?: string; session_id?: string; policy_profile?: string; mission_id?: number | null;
+  step_id?: number | null; run_id?: number | null; approval_id?: number | null;
+  scope?: string; side_effect?: boolean; correlation_id?: string;
+  arguments_hash?: string; result?: string; duration_ms?: number | null;
+};
+
+export type DurableAuditEventItem = {
+  id: number;
+  correlation_id: string;
+  sequence: number;
+  parent_event_id?: number | null;
+  event_type: string;
+  phase: "decision" | "execution" | "action" | "activity" | string;
+  status: string;
+  actor: string;
+  source: string;
+  session_id: string;
+  mission_id?: number | null;
+  step_id?: number | null;
+  run_id?: number | null;
+  tool_name: string;
+  plugin_key: string;
+  policy_profile: string;
+  approval_id?: number | null;
+  scope: string;
+  decision: string;
+  arguments_hash: string;
+  result: string;
+  result_hash: string;
+  duration_ms?: number | null;
+  reason: string;
+  created_at: string;
+  completed_at: string;
 };
 
 export type SecurityProfileItem = {

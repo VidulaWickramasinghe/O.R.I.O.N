@@ -1,8 +1,8 @@
 "use client";
 
-import { ORION_API_MUTATION_EVENT } from "@/lib/api/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Activity,
   ArrowUpRight,
@@ -32,7 +32,6 @@ import {
   SlidersHorizontal,
   Sparkles,
   SquareTerminal,
-  Workflow,
   X,
   Zap,
 } from "lucide-react";
@@ -76,6 +75,7 @@ import {
   useAuroraDashboardIntelligence,
   useAuroraMissions,
   useAuroraMissionRuns,
+  useAuroraStatus,
   useAuroraWorkspaces,
 } from "./lib/aurora-queries";
 
@@ -180,18 +180,7 @@ type DeveloperInspectResult = {
 
 const DEFAULT_WIDGETS = [
   "Hero",
-  "Metrics",
-  "Analytics",
   "Quick Actions",
-  "Models",
-  "Timeline",
-  "Dashboard Intelligence",
-  "Notification Engine",
-  "Security Policy",
-  "Desktop Shell",
-  "Backend Sidecar",
-  "Guided Walkthrough",
-  "Presenter Controls",
 ];
 
 const GOVERNANCE_WIDGETS = [
@@ -282,6 +271,7 @@ function dashboardMissionActive(
 }
 
 function useLiveDashboardReality() {
+  const statusQuery = useAuroraStatus();
   const activityQuery = useAuroraActivity();
   const approvalsQuery = useAuroraApprovals();
   const missionsQuery = useAuroraMissions();
@@ -338,6 +328,11 @@ function useLiveDashboardReality() {
     .filter(Boolean);
 
   return {
+    backendOnline: statusQuery.isSuccess,
+    backendPending: statusQuery.isPending,
+    backendLastCheckedAt: statusQuery.dataUpdatedAt ? new Date(statusQuery.dataUpdatedAt).toISOString() : "",
+    backendLastError: statusQuery.error instanceof Error ? statusQuery.error.message : "",
+    refreshStatus: statusQuery.refetch,
     activity,
     approvals,
     pendingApprovals,
@@ -437,7 +432,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     updateReminderStatusFromStore, updateUserSettingFromStore, resetUserSettingsFromStore,
     recordingModeState, startRecordingModeFromStore, stopRecordingModeFromStore, setRecordingSceneFromStore, toggleRecordingLargeCalloutFromStore, toggleRecordingHideNoisyPanelsFromStore, toggleRecordingTimerFromStore, toggleRecordingChecklistFromStore, resetRecordingModeFromStore,
     demoWalkthroughState, startDemoWalkthroughFromStore, stopDemoWalkthroughFromStore, nextDemoWalkthroughStepFromStore, previousDemoWalkthroughStepFromStore, resetDemoWalkthroughFromStore,
-    panelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, applyDashboardViewPreset, backendOnline, backendLastCheckedAt, backendLastError, checkBackendHealth,
+    panelLayout, togglePanelVisibility, togglePanelPinned, movePanelUp, movePanelDown, resetPanelLayout, activeDashboardView, applyDashboardViewPreset,
   } = useAuroraStore();
   const dashboardIntelligenceMessage = "";
   const notificationMessage = "";
@@ -508,7 +503,10 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     );
   }, []);
 
+  const usesAdvancedWidgets = widgets.some((widget) => !DEFAULT_WIDGETS.includes(widget));
+
   useEffect(() => {
+    if (!usesAdvancedWidgets) return;
     void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
     void loadDeveloperReports();
     const store = useAuroraStore.getState();
@@ -517,14 +515,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
     loadRecordingModeStateFromStore();
     void store.loadActiveDashboardView();
     void useAuroraStore.getState().refreshAll();
-    const refreshAfterMutation = () => {
-      void loadKnowledgeDocuments(); void loadVectorItems(); void loadWorkflowBlueprints();
-      void loadDeveloperReports();
-      void useAuroraStore.getState().refreshAll();
-    };
-    window.addEventListener(ORION_API_MUTATION_EVENT, refreshAfterMutation);
-    return () => window.removeEventListener(ORION_API_MUTATION_EVENT, refreshAfterMutation);
-  }, [loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore]);
+  }, [loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore, usesAdvancedWidgets]);
 
   function metricValue(
     source: Record<string, unknown> | undefined,
@@ -574,15 +565,23 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
   }, [forceGovernanceMode, forceSecurityMode, applyDashboardViewPreset]);
 
   const refreshDashboard = () => {
-    void loadKnowledgeDocuments();
-    void loadVectorItems();
-    void loadWorkflowBlueprints();
-    void loadDeveloperReports();
     void queryClient.invalidateQueries({ refetchType: "active" });
-    void useAuroraStore.getState().refreshAll();
+    if (usesAdvancedWidgets) {
+      void loadKnowledgeDocuments();
+      void loadVectorItems();
+      void loadWorkflowBlueprints();
+      void loadDeveloperReports();
+      void useAuroraStore.getState().refreshAll();
+    }
   };
 
   const liveDashboard = useLiveDashboardReality();
+  const backendOnline = liveDashboard.backendOnline;
+  const backendPending = liveDashboard.backendPending;
+  const backendStateLabel = backendPending ? "Connecting" : backendOnline ? "Online" : "Unavailable";
+  const backendLastCheckedAt = liveDashboard.backendLastCheckedAt;
+  const backendLastError = liveDashboard.backendLastError;
+  const checkBackendHealth = () => void liveDashboard.refreshStatus();
   const intelligenceScoreValue = Number(
     liveDashboard.intelligence?.intelligence_score,
   );
@@ -683,6 +682,15 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
         .join(" · ") ||
       `${liveDashboard.missions.length} total missions`
     : "Mission endpoint unavailable";
+  const overviewWidgets = new Set([
+    "Hero",
+    "Metrics",
+    "Analytics",
+    "Quick Actions",
+    "Models",
+    "Timeline",
+  ]);
+  const hasAdvancedWidgets = widgets.some((widget) => !overviewWidgets.has(widget));
 
   return (
     <div className="space-y-5 pb-10">
@@ -698,7 +706,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
                 ? "Security controls are active."
                 : `${greeting}, ${displayName}.`}
           </h1>
-          <p className="mt-2 text-sm text-slate-500">{displayDate || "Loading date"} · {forceGovernanceMode ? "Release, roadmap, safety, audit, and patch controls are active." : forceSecurityMode ? "Plugins, policy profiles, permission matrix, and audit controls are active." : "O.R.I.O.N. is ready to think, plan and act."}</p>
+          <p className="mt-2 text-sm text-slate-500">{displayDate || "Loading date"} · {forceGovernanceMode ? "Release, roadmap, safety, audit, and patch controls are active." : forceSecurityMode ? "Plugins, policy profiles, permission matrix, and audit controls are active." : backendOnline ? "O.R.I.O.N. is authenticated and ready to think, plan and act." : "Aurora OS is available; live operations are waiting for the authenticated backend."}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-2xl border border-white/[0.07] bg-white/[0.025] p-1">
@@ -741,7 +749,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
         </div>
       )}
 
-      <OfflineBanner online={backendOnline} lastCheckedAt={backendLastCheckedAt} lastError={backendLastError} onRetry={checkBackendHealth} />
+      {!backendPending ? <OfflineBanner online={backendOnline} lastCheckedAt={backendLastCheckedAt} lastError={backendLastError} onRetry={checkBackendHealth} /> : null}
 
       {widgets.includes("Hero") && (
         <section className="orion-panel overflow-hidden">
@@ -749,7 +757,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
             <div className="orion-command-visual relative flex min-h-[390px] flex-col justify-between border-b border-white/[0.07] p-5 sm:p-7 xl:border-b-0 xl:border-r">
               <div className="relative z-10 flex flex-wrap items-start justify-between gap-4">
                 <div><div className="flex items-center gap-2"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-300 opacity-60" /><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-300" /></span><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-200/80">Backend telemetry status</p></div><h2 className="mt-3 text-xl font-semibold text-white sm:text-2xl">Live backend status is the source of truth</h2><p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">Operational values are loaded from backend endpoints. Missing endpoints are shown as unavailable, not simulated.</p></div>
-                <StatusChip tone={backendOnline ? "success" : "warning"}>{backendOnline ? "Backend connected" : "Demo / offline mode"}</StatusChip>
+                <StatusChip tone={backendOnline ? "success" : "warning"}>{backendOnline ? "Backend connected" : backendPending ? "Connecting and authenticating" : "Backend unavailable"}</StatusChip>
               </div>
 
               <div className="relative z-10 flex flex-1 items-center justify-center py-8">
@@ -758,14 +766,14 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
                   <span className="orion-radar-ring" style={{ animationDelay: "1.6s" }} />
                   <div className="orion-core flex items-center justify-center"><Sparkles size={26} className="text-white/80" /></div>
                   <div className="absolute -left-7 top-10 rounded-xl border border-white/[0.08] bg-[#090d15]/85 px-3 py-2 backdrop-blur-xl"><p className="text-[9px] uppercase tracking-[0.16em] text-slate-600">Readiness</p><p className="mt-1 text-xs font-semibold text-cyan-100">{liveDashboard.sources.intelligence ? liveReadinessLabel : "Unavailable"}</p></div>
-                  <div className="absolute -right-9 bottom-12 rounded-xl border border-white/[0.08] bg-[#090d15]/85 px-3 py-2 backdrop-blur-xl"><p className="text-[9px] uppercase tracking-[0.16em] text-slate-600">Backend</p><p className="mt-1 text-xs font-semibold text-violet-100">{backendOnline ? "Connected" : "Offline"}</p></div>
+                  <div className="absolute -right-9 bottom-12 rounded-xl border border-white/[0.08] bg-[#090d15]/85 px-3 py-2 backdrop-blur-xl"><p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Backend</p><p className="mt-1 text-xs font-semibold text-violet-100">{backendStateLabel}</p></div>
                 </div>
               </div>
 
               <div className="relative z-10 grid gap-3 sm:grid-cols-3">
                 <HeroStat label="Active missions" value={String(liveDashboard.activeMissions.length)} detail={activeMissionDetail} icon={<Rocket size={15} />} />
                 <HeroStat label="Security profile" value={liveDashboard.sources.intelligence ? liveSecurityProfile : "Unavailable"} detail={liveDashboard.sources.intelligence ? `Safety level: ${liveSafetyLevel}` : "Policy telemetry unavailable"} icon={<ShieldCheck size={15} />} />
-                <HeroStat label="Backend state" value={backendOnline ? "Online" : "Offline"} detail={backendOnline ? "Local API connected" : "Backend unavailable"} icon={<Activity size={15} />} />
+                <HeroStat label="Backend state" value={backendStateLabel} detail={backendOnline ? "Local API authenticated" : backendPending ? "Negotiating local session" : "Live API evidence unavailable"} icon={<Activity size={15} />} />
               </div>
             </div>
 
@@ -787,7 +795,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
       {widgets.includes("Metrics") && (
         <section>
-          <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-white">System overview</h2><p className="mt-1 text-xs text-slate-600">Live operational metrics across the O.R.I.O.N. stack</p></div><span className="hidden items-center gap-1.5 text-[10px] text-slate-600 sm:flex"><Radio size={11} className="text-emerald-300" /> Refreshing every 30 seconds</span></div>
+          <div className="mb-3 flex items-center justify-between"><div><h2 className="text-sm font-semibold text-white">System overview</h2><p className="mt-1 text-xs text-slate-400">Operational metrics from each endpoint&apos;s shared query cache</p></div><span className="hidden items-center gap-1.5 text-[11px] text-slate-400 sm:flex"><Radio size={11} className="text-emerald-300" /> Freshness varies by resource</span></div>
           <div className={`grid gap-3 sm:grid-cols-2 xl:grid-cols-4 ${compactMetrics ? "2xl:grid-cols-8" : "2xl:grid-cols-4"}`}>
             <DashboardMetric label="Intelligence score" value={liveDashboard.sources.intelligence ? String(intelligenceScore) : "Unavailable"} detail={dashboardText(liveDashboard.intelligence?.readiness_label, "Unavailable")} trend={liveDashboard.sources.intelligence ? "Live" : "Offline"} icon={<Gauge size={17} />} compact={compactMetrics} />
             <DashboardMetric label="Agent telemetry" value="Unavailable" detail="No dedicated /api/agents runtime endpoint configured" trend={liveDashboard.sources.missions ? "Backend" : "Offline"} icon={<Bot size={17} />} compact={compactMetrics} />
@@ -812,10 +820,10 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
               <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 <QuickAction href="/assistant" title="Open assistant" detail="Start a contextual conversation" icon={<Sparkles size={18} />} tone="cyan" />
                 <QuickAction href="/missions" title="Create mission" detail="Plan an approval-gated workflow" icon={<Rocket size={18} />} tone="violet" />
-                <QuickAction href="/agents" title="Deploy agent" detail="Assign a specialised runtime" icon={<Bot size={18} />} tone="green" />
-                <QuickAction href="/context" title="Search context" detail="Retrieve memory and knowledge" icon={<Search size={18} />} tone="blue" />
-                <QuickAction href="/workflows" title="Run workflow" detail={`${workflowBlueprints.length} backend blueprints loaded`} icon={<Workflow size={18} />} tone="amber" />
-                <QuickAction href="/console" title="Open console" detail="Inspect logs and commands" icon={<SquareTerminal size={18} />} tone="slate" />
+                <QuickAction href="/approvals" title="Review approvals" detail={`${liveDashboard.pendingApprovals.length} decisions waiting`} icon={<ShieldCheck size={18} />} tone="amber" />
+                <QuickAction href="/activity" title="Inspect activity" detail="Review meaningful backend events" icon={<Activity size={18} />} tone="green" />
+                <QuickAction href="/memory" title="Search memory" detail="Inspect retained context and provenance" icon={<Search size={18} />} tone="blue" />
+                <QuickAction href="/developer" title="Developer Mode" detail="Inspect, propose, review, and validate" icon={<SquareTerminal size={18} />} tone="slate" />
               </div>
             </section>
           )}
@@ -840,7 +848,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
           <section className="orion-panel p-5 sm:p-6">
             <div className="flex items-start justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Infrastructure</p><h2 className="mt-2 text-base font-semibold text-white">Observed endpoints</h2></div><span className="text-[10px] text-slate-600">No inferred health score</span></div>
             <div className="mt-5 space-y-4"><HealthBar label="API gateway" available={backendOnline} detail={backendOnline ? "Responding" : "Connection unavailable"} icon={<Network size={14} />} /><HealthBar label="Dashboard intelligence" available={liveDashboard.sources.intelligence} detail={liveDashboard.sources.intelligence ? dashboardText(liveDashboard.intelligence?.readiness_label, "Loaded") : "No /api/dashboard/intelligence data"} icon={<Database size={14} />} /><HealthBar label="Mission records" available={liveDashboard.sources.missions} detail={liveDashboard.sources.missions ? `${liveDashboard.missions.length} missions loaded` : "No /api/missions data"} icon={<Bot size={14} />} /><HealthBar label="Approval queue" available={liveDashboard.sources.approvals} detail={liveDashboard.sources.approvals ? `${liveDashboard.pendingApprovals.length} pending approvals` : "No /api/approvals data"} icon={<HardDrive size={14} />} /></div>
-            <button className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-xs font-semibold text-slate-400 hover:bg-white/[0.045] hover:text-white">Open system diagnostics <ArrowUpRight size={13} /></button>
+            <Link href="/system" className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-4 py-3 text-xs font-semibold text-slate-400 hover:bg-white/[0.045] hover:text-white">Open system diagnostics <ArrowUpRight size={13} /></Link>
           </section>
 
           <section className="orion-panel p-5 sm:p-6">
@@ -852,7 +860,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
       )}
 
-      <section className="pt-2">
+      {hasAdvancedWidgets ? <section className="pt-2">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Advanced workspace</p><h2 className="mt-2 text-lg font-semibold text-white">{forceGovernanceMode ? "Governance control modules" : forceSecurityMode ? "Security control modules" : "Operational modules"}</h2><p className="mt-1 text-sm text-slate-600">{forceGovernanceMode ? "Approvals, policy, plugin permissions, tool audit, and current release evidence are visible on this route." : forceSecurityMode ? "Plugin registry, policy profiles, permission enforcement, audit history, and safety review panels are forced visible on this route." : "API-backed controls and specialist panels selected for the current dashboard mode."}</p></div><button onClick={() => setCustomizerOpen(true)} className="flex items-center gap-2 rounded-xl border border-white/[0.07] px-3 py-2 text-xs font-semibold text-slate-400 hover:bg-white/[0.04] hover:text-white"><SlidersHorizontal size={13} /> Manage modules</button></div>
         <div className="grid gap-5 2xl:grid-cols-2">
           <div className="space-y-5">
@@ -895,7 +903,7 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
             {widgets.includes("UI Polish") && panelVisible("ui-polish") && <SafePanel panelId="ui-polish"><UIPolishPanel result={uiPolishResult} loading={uiPolishLoading} onCheck={loadUIPolishStatusFromStore} onSave={saveUIPolishReportFromStore} /></SafePanel>}
           </div>
         </div>
-      </section>
+      </section> : null}
 
       <RecordingModeOverlay recordingModeState={recordingModeState} />
       <DemoCalloutOverlay demoWalkthroughState={demoWalkthroughState} onNext={nextDemoWalkthroughStepFromStore} onStop={stopDemoWalkthroughFromStore} />
@@ -950,11 +958,11 @@ function QuickAction({ href, title, detail, icon, tone }: DashboardVisualProps &
     slate: "bg-white/[0.05] text-slate-300 group-hover:bg-white/[0.08]",
   };
   return (
-    <a href={href} className="group flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.018] p-3.5 transition hover:-translate-y-0.5 hover:border-white/[0.13] hover:bg-white/[0.035]">
+    <Link href={href} className="group flex items-center gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.018] p-3.5 transition hover:-translate-y-0.5 hover:border-white/[0.13] hover:bg-white/[0.035]">
       <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition ${tones[tone]}`}>{icon}</span>
       <span className="min-w-0 flex-1"><span className="block text-sm font-semibold text-slate-200 group-hover:text-white">{title}</span><span className="mt-1 block truncate text-[10px] text-slate-600">{detail}</span></span>
       <ArrowUpRight size={14} className="text-slate-700 transition group-hover:text-slate-400" />
-    </a>
+    </Link>
   );
 }
 

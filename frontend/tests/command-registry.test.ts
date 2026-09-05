@@ -31,7 +31,8 @@ describe("command registry", () => {
   });
 
   it("searches labels, descriptions, groups, and keywords", () => {
-    expect(filterCommands("approval permission").map((command) => command.id)).toContain("open-tools");
+    expect(filterCommands("approval permission").map((command) => command.id)).toContain("open-approvals");
+    expect(filterCommands("capability permission").map((command) => command.id)).toContain("open-tools");
     expect(filterCommands("backup recovery").map((command) => command.id)).toEqual(["open-system"]);
     expect(filterCommands("not-a-real-command")).toEqual([]);
   });

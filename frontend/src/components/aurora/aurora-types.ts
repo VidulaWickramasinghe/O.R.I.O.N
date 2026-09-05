@@ -28,6 +28,10 @@ export type ActivityEvent = {
   type: string;
   source: string;
   message: string;
+  correlation_id?: string;
+  mission_id?: number | null;
+  step_id?: number | null;
+  approval_id?: number | null;
 };
 
 export type ProjectItem = {
@@ -45,6 +49,10 @@ export type WorkspaceItem = {
   path: string;
   description: string;
   status: string;
+  trusted: boolean;
+  source_consent: boolean;
+  consent_source: string;
+  consented_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -100,12 +108,22 @@ export type ApprovalItem = {
   title: string;
   description: string;
   payload: Record<string, unknown>;
+  payload_hash?: string;
+  idempotency_key?: string;
+  mission_id?: number | null;
+  step_id?: number | null;
+  run_id?: number | null;
+  session_id?: string;
   risk_level: string;
   status: string;
   result: string;
   source: string;
+  execution_started_at?: string;
+  completed_at?: string;
   created_at: string;
   updated_at: string;
+  execution?: Record<string, unknown> | null;
+  continuation?: Record<string, unknown> | null;
 };
 
 export type VoiceStatus = {

@@ -104,6 +104,8 @@ def _decode_document(item: Dict[str, Any]) -> Dict[str, Any]:
         item["provenance"] = {}
     item["excluded"] = bool(item.get("excluded", 0))
     item["source_consent"] = bool(item.get("source_consent", 0))
+    item["chunk_count"] = int(item.get("chunk_count", 0) or 0)
+    item["status"] = "excluded" if item["excluded"] else "indexed"
     return item
 
 
@@ -333,9 +335,12 @@ def list_knowledge_documents(limit: int = 50) -> List[Dict[str, Any]]:
         conn.row_factory = sqlite3.Row
         rows = conn.execute(
             """
-            SELECT *
+            SELECT knowledge_documents.*, COUNT(knowledge_chunks.id) AS chunk_count
             FROM knowledge_documents
-            ORDER BY updated_at DESC
+            LEFT JOIN knowledge_chunks
+              ON knowledge_chunks.document_id = knowledge_documents.id
+            GROUP BY knowledge_documents.id
+            ORDER BY knowledge_documents.updated_at DESC
             LIMIT ?
             """,
             (limit,),
@@ -349,9 +354,12 @@ def get_knowledge_document(document_id: int) -> Optional[Dict[str, Any]]:
         conn.row_factory = sqlite3.Row
         row = conn.execute(
             """
-            SELECT *
+            SELECT knowledge_documents.*, COUNT(knowledge_chunks.id) AS chunk_count
             FROM knowledge_documents
-            WHERE id = ?
+            LEFT JOIN knowledge_chunks
+              ON knowledge_chunks.document_id = knowledge_documents.id
+            WHERE knowledge_documents.id = ?
+            GROUP BY knowledge_documents.id
             """,
             (document_id,),
         ).fetchone()

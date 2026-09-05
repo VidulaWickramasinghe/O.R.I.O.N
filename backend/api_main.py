@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional, Set
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -89,8 +89,10 @@ from core.approvals import (
     complete_approval_execution,
     create_approval_request,
     fail_approval_execution,
+    get_approval_execution,
     get_approval_request,
     get_latest_mission_continuation,
+    get_mission_continuation,
     get_mission_continuation_for_run,
     init_approval_db,
     list_approval_requests,
@@ -257,8 +259,10 @@ from core.tool_permissions import (
 )
 
 from core.tool_audit import (
+    build_mission_audit_timeline,
     get_tool_audit_snapshot,
     init_tool_audit_db,
+    list_audit_events,
     render_tool_audit_report,
 )
 
@@ -1090,6 +1094,10 @@ class ActivityEvent(BaseModel):
     type: str
     source: str
     message: str
+    correlation_id: str = ""
+    mission_id: Optional[int] = None
+    step_id: Optional[int] = None
+    approval_id: Optional[int] = None
 
 
 class ActivityResponse(BaseModel):
@@ -1269,6 +1277,7 @@ class ApprovalItem(BaseModel):
     mission_id: Optional[int] = None
     step_id: Optional[int] = None
     run_id: Optional[int] = None
+    session_id: str = ""
     risk_level: str
     status: str
     result: str
@@ -1277,10 +1286,25 @@ class ApprovalItem(BaseModel):
     completed_at: str = ""
     created_at: str
     updated_at: str
+    execution: Optional[Dict[str, Any]] = None
+    continuation: Optional[Dict[str, Any]] = None
 
 
 class ApprovalsResponse(BaseModel):
     approvals: List[ApprovalItem]
+
+
+class ApprovalRejectRequest(BaseModel):
+    reason: str = Field(default="Rejected by user.", min_length=1, max_length=500)
+
+
+class ApprovalDecisionResponse(BaseModel):
+    status: str
+    approval_id: int
+    result: str = ""
+    execution: Optional[Dict[str, Any]] = None
+    continuation: Optional[Dict[str, Any]] = None
+    replayed: bool = False
 
 
 class WorkspaceItem(BaseModel):
@@ -1289,6 +1313,10 @@ class WorkspaceItem(BaseModel):
     path: str
     description: str
     status: str
+    trusted: bool = False
+    source_consent: bool = False
+    consent_source: str = ""
+    consented_at: Optional[str] = None
     created_at: str
     updated_at: str
 
@@ -1473,6 +1501,19 @@ class ToolAuditEventItem(BaseModel):
     risk_level: str
     category: str
     source: str
+    actor: str = "unknown"
+    session_id: str = ""
+    policy_profile: str = "unknown"
+    mission_id: Optional[int] = None
+    step_id: Optional[int] = None
+    run_id: Optional[int] = None
+    approval_id: Optional[int] = None
+    scope: str = ""
+    side_effect: bool = False
+    correlation_id: str = ""
+    arguments_hash: str = ""
+    result: str = ""
+    duration_ms: Optional[float] = None
     created_at: str
 
 
@@ -1480,6 +1521,44 @@ class ToolAuditResponse(BaseModel):
     metrics: Dict[str, Any]
     events: List[ToolAuditEventItem]
     report: str
+
+
+class AuditEventItem(BaseModel):
+    id: int
+    correlation_id: str
+    sequence: int
+    parent_event_id: Optional[int] = None
+    event_type: str
+    phase: str
+    status: str = ""
+    actor: str = "unknown"
+    source: str = "O.R.I.O.N."
+    session_id: str = ""
+    mission_id: Optional[int] = None
+    step_id: Optional[int] = None
+    run_id: Optional[int] = None
+    tool_name: str = ""
+    plugin_key: str = ""
+    policy_profile: str = "unknown"
+    approval_id: Optional[int] = None
+    scope: str = ""
+    decision: str = ""
+    arguments_hash: str = ""
+    result: str = ""
+    result_hash: str = ""
+    duration_ms: Optional[float] = None
+    reason: str = ""
+    created_at: str
+    completed_at: str = ""
+
+
+class AuditEventsResponse(BaseModel):
+    events: List[AuditEventItem]
+
+
+class MissionAuditResponse(BaseModel):
+    mission_id: int
+    timeline: List[Dict[str, Any]]
 
 
 
@@ -1632,22 +1711,22 @@ class DemoReleasePackResponse(BaseModel):
 
 
 class KnowledgeIndexRequest(BaseModel):
-    workspace_id: int
-    relative_path: str
+    workspace_id: int = Field(ge=1)
+    relative_path: str = Field(min_length=1, max_length=1000)
     source_consent: bool = False
-    summary: str = ""
+    summary: str = Field(default="", max_length=4000)
 
 
 class KnowledgeFolderIndexRequest(BaseModel):
-    workspace_id: int
-    relative_path: str = "."
+    workspace_id: int = Field(ge=1)
+    relative_path: str = Field(default=".", min_length=1, max_length=1000)
     source_consent: bool = False
 
 
 class KnowledgeSearchRequest(BaseModel):
-    query: str
-    limit: int = 10
-    workspace_id: Optional[int] = None
+    query: str = Field(min_length=1, max_length=1000)
+    limit: int = Field(default=10, ge=1, le=100)
+    workspace_id: Optional[int] = Field(default=None, ge=1)
     include_sensitive: bool = False
 
 
@@ -1668,6 +1747,8 @@ class KnowledgeDocumentItem(BaseModel):
     excluded: bool = False
     exclusion_reason: str = ""
     provenance: Dict[str, Any] = Field(default_factory=dict)
+    status: str = "unavailable"
+    chunk_count: int = 0
 
 
 class KnowledgeDocumentsResponse(BaseModel):
@@ -2320,11 +2401,6 @@ def memory_delete(memory_id: int):
 
 @app.get("/api/missions", response_model=MissionsResponse)
 def missions():
-    log_activity(
-        "MISSIONS_VIEW",
-        "Aurora OS requested mission planner records.",
-        "Aurora OS",
-    )
     return MissionsResponse(missions=list_mission_records(limit=20))
 
 
@@ -2433,21 +2509,11 @@ def mission_retry_step(
 
 @app.get("/api/mission-runs", response_model=MissionRunsResponse)
 def mission_runs():
-    log_activity(
-        "MISSION_RUNS_VIEW",
-        "Aurora OS requested mission run history.",
-        "Aurora OS",
-    )
     return MissionRunsResponse(runs=list_mission_runs(limit=30))
 
 
 @app.get("/api/missions/{mission_id}/runs", response_model=MissionRunsResponse)
 def mission_runs_for_mission(mission_id: int):
-    log_activity(
-        "MISSION_RUNS_VIEW",
-        f"Aurora OS requested run history for mission {mission_id}.",
-        "Aurora OS",
-    )
     return MissionRunsResponse(
         runs=list_runs_for_mission(
             mission_id=mission_id,
@@ -2489,13 +2555,18 @@ def mission_report(mission_id: int):
 
 
 @app.get("/api/approvals", response_model=ApprovalsResponse)
-def approvals():
-    log_activity(
-        "APPROVALS_VIEW",
-        "Aurora OS requested command approval queue.",
-        "Aurora OS",
-    )
-    return ApprovalsResponse(approvals=list_approval_requests(limit=30))
+def approvals(
+    status: Optional[
+        Literal["pending", "executing", "approved", "rejected", "failed"]
+    ] = None,
+    limit: int = Query(default=100, ge=1, le=500),
+):
+    records = list_approval_requests(limit=limit, status=status)
+    for record in records:
+        approval_id = int(record["id"])
+        record["execution"] = get_approval_execution(approval_id)
+        record["continuation"] = get_mission_continuation(approval_id)
+    return ApprovalsResponse(approvals=records)
 
 
 def _resolve_linked_approval(approval: Dict[str, Any]) -> Optional[Dict[str, Any]]:
@@ -2539,25 +2610,30 @@ def _resolve_linked_approval(approval: Dict[str, Any]) -> Optional[Dict[str, Any
         }
 
 
-@app.post("/api/approvals/{approval_id}/approve")
+@app.post(
+    "/api/approvals/{approval_id}/approve",
+    response_model=ApprovalDecisionResponse,
+)
 def approve_request(
     approval_id: int,
     idempotency_key: str = Header(default="", alias="Idempotency-Key"),
 ):
     authorization = get_active_authorization()
-    claim = claim_approval_execution(
-        approval_id,
-        actor=authorization.context.actor if authorization else "",
-        expected_idempotency_key=idempotency_key,
-    )
+    try:
+        claim = claim_approval_execution(
+            approval_id,
+            actor=authorization.context.actor if authorization else "",
+            expected_idempotency_key=idempotency_key,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=409,
+            detail="Approval integrity or idempotency validation failed.",
+        ) from error
     approval = claim.get("approval")
     execution = claim.get("execution")
     if not approval:
-        return {
-            "status": "not_found",
-            "approval_id": approval_id,
-            "result": "Approval request not found.",
-        }
+        raise HTTPException(status_code=404, detail="Approval request not found.")
     if not claim["claimed"]:
         continuation = None
         if claim["status"] in {"approved", "failed"}:
@@ -2630,10 +2706,21 @@ def approve_request(
     }
 
 
-@app.post("/api/approvals/{approval_id}/reject")
-def reject_request(approval_id: int):
-    rejection = reject_approval_request(approval_id, "Rejected by user.")
+@app.post(
+    "/api/approvals/{approval_id}/reject",
+    response_model=ApprovalDecisionResponse,
+)
+def reject_request(
+    approval_id: int,
+    request: Optional[ApprovalRejectRequest] = None,
+):
+    rejection = reject_approval_request(
+        approval_id,
+        request.reason if request else "Rejected by user.",
+    )
     approval = rejection.get("approval")
+    if not approval:
+        raise HTTPException(status_code=404, detail="Approval request not found.")
     continuation = None
     if approval and rejection["status"] == "rejected":
         continuation = _resolve_linked_approval(approval)
@@ -3042,7 +3129,6 @@ async def run_mission_batch(mission_id: int, request: MultiStepMissionRunRequest
 
 @app.get("/api/workspaces", response_model=WorkspacesResponse)
 def workspaces():
-    log_activity("WORKSPACES_VIEW", "Aurora OS requested workspace records.", "Aurora OS")
     return WorkspacesResponse(workspaces=list_workspace_records(limit=30))
 
 
@@ -3520,12 +3606,20 @@ def demo_release_pack():
 
 @app.get("/api/knowledge/documents", response_model=KnowledgeDocumentsResponse)
 def knowledge_documents():
-    log_activity(
-        "KNOWLEDGE_DOCUMENTS_VIEW",
-        "Aurora OS requested indexed knowledge documents.",
-        "Aurora OS",
-    )
     return KnowledgeDocumentsResponse(documents=list_knowledge_documents(limit=100))
+
+
+def _raise_knowledge_http_error(error: Exception) -> None:
+    if isinstance(error, PermissionError):
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    if isinstance(error, FileNotFoundError):
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    if isinstance(error, (NotADirectoryError, ValueError, TypeError)):
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    raise HTTPException(
+        status_code=500,
+        detail="Knowledge indexing failed without changing the source catalogue.",
+    ) from error
 
 
 @app.post("/api/knowledge/index", response_model=KnowledgeActionResponse)
@@ -3548,11 +3642,7 @@ def knowledge_index(request: KnowledgeIndexRequest):
             data=result,
         )
     except Exception as error:
-        return KnowledgeActionResponse(
-            status="failed",
-            message=str(error),
-            data={},
-        )
+        _raise_knowledge_http_error(error)
 
 
 @app.post("/api/knowledge/index-folder", response_model=KnowledgeActionResponse)
@@ -3563,23 +3653,34 @@ def knowledge_index_folder(request: KnowledgeFolderIndexRequest):
             relative_path=request.relative_path,
             source_consent=request.source_consent,
         )
+        if result["failed_count"] and not result["indexed_count"]:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "No documents were indexed from the consented source; "
+                    f"{result['failed_count']} candidate file(s) were rejected."
+                ),
+            )
+        action_status = "partial" if result["failed_count"] else "indexed"
         log_activity(
-            "KNOWLEDGE_FOLDER_INDEXED",
-            f"Knowledge folder indexed from workspace {request.workspace_id}: "
+            "KNOWLEDGE_FOLDER_PARTIAL" if action_status == "partial" else "KNOWLEDGE_FOLDER_INDEXED",
+            f"Knowledge folder {action_status} from workspace {request.workspace_id}: "
             f"{request.relative_path}",
             "O.R.I.O.N.",
         )
         return KnowledgeActionResponse(
-            status="indexed",
-            message="Knowledge folder indexed successfully.",
+            status=action_status,
+            message=(
+                "Knowledge folder indexed with some rejected files."
+                if action_status == "partial"
+                else "Knowledge folder indexed successfully."
+            ),
             data=result,
         )
+    except HTTPException:
+        raise
     except Exception as error:
-        return KnowledgeActionResponse(
-            status="failed",
-            message=str(error),
-            data={},
-        )
+        _raise_knowledge_http_error(error)
 
 
 @app.post("/api/knowledge/search", response_model=KnowledgeSearchResponse)
@@ -3976,12 +4077,6 @@ def dashboard_intelligence():
     data = generate_dashboard_intelligence()
     report = render_dashboard_intelligence_report(data)
 
-    log_activity(
-        "DASHBOARD_INTELLIGENCE",
-        f"Dashboard intelligence generated. Score: {data['intelligence_score']}.",
-        "O.R.I.O.N.",
-    )
-
     return DashboardIntelligenceResponse(
         intelligence_score=data["intelligence_score"],
         readiness_label=data["readiness_label"],
@@ -4006,12 +4101,6 @@ def dashboard_intelligence():
 
 @app.get("/api/settings/profile", response_model=UserSettingsResponse)
 def settings_profile():
-    log_activity(
-        "USER_SETTINGS_VIEW",
-        "Aurora OS requested user profile settings.",
-        "Aurora OS",
-    )
-
     return UserSettingsResponse(
         settings=list_user_settings(),
         settings_map=get_user_settings_map(),
@@ -4053,11 +4142,14 @@ def settings_update(setting_key: str, request: UserSettingUpdateRequest):
             message=f"Setting {setting_key} updated.",
         )
     except Exception as error:
-        return UserSettingUpdateResponse(
-            status="failed",
-            setting=None,
-            message=str(error),
-        )
+        if isinstance(error, PermissionError):
+            raise HTTPException(status_code=403, detail=str(error)) from error
+        if isinstance(error, (KeyError, TypeError, ValueError)):
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        raise HTTPException(
+            status_code=500,
+            detail="The user setting could not be updated.",
+        ) from error
 
 
 @app.get("/api/plugins", response_model=PluginsResponse)
@@ -4118,11 +4210,6 @@ def plugins_update_status(plugin_key: str, request: PluginStatusUpdateRequest):
 
 @app.get("/api/tools/permissions", response_model=ToolPermissionResponse)
 def tool_permissions():
-    log_activity(
-        "TOOL_PERMISSION_VIEW",
-        "Aurora OS requested tool permission matrix.",
-        "Aurora OS",
-    )
     snapshot = get_tool_permission_snapshot()
     return ToolPermissionResponse(
         metrics=snapshot["metrics"],
@@ -4144,11 +4231,6 @@ def tool_permission_check(tool_name: str):
 
 @app.get("/api/tools/audit", response_model=ToolAuditResponse)
 def tool_audit():
-    log_activity(
-        "TOOL_AUDIT_VIEW",
-        "Aurora OS requested Tool Audit Center.",
-        "Aurora OS",
-    )
     snapshot = get_tool_audit_snapshot(limit=120)
     return ToolAuditResponse(
         metrics=snapshot["metrics"],
@@ -4157,14 +4239,43 @@ def tool_audit():
     )
 
 
+@app.get("/api/audit/events", response_model=AuditEventsResponse)
+def audit_events(
+    mission_id: Optional[int] = Query(default=None, ge=1),
+    correlation_id: str = Query(default="", max_length=128),
+    phase: Optional[Literal["decision", "execution", "action", "activity"]] = None,
+    limit: int = Query(default=200, ge=1, le=500),
+):
+    """Return the newest durable decision and execution evidence.
+
+    This read deliberately avoids emitting an activity event so polling the audit
+    explorer cannot mutate the audit store it is inspecting.
+    """
+
+    return AuditEventsResponse(
+        events=list_audit_events(
+            mission_id=mission_id,
+            correlation_id=correlation_id,
+            phase=phase or "",
+            limit=limit,
+            newest_first=True,
+        )
+    )
+
+
+@app.get("/api/missions/{mission_id}/audit", response_model=MissionAuditResponse)
+def mission_audit(mission_id: int):
+    if not get_mission_record(mission_id):
+        raise HTTPException(status_code=404, detail="Mission not found.")
+    return MissionAuditResponse(
+        mission_id=mission_id,
+        timeline=build_mission_audit_timeline(mission_id),
+    )
+
+
 
 @app.get("/api/security/policy", response_model=SecurityPolicyResponse)
 def security_policy_status():
-    log_activity(
-        "SECURITY_POLICY_VIEW",
-        "Aurora OS requested security policy status.",
-        "Aurora OS",
-    )
     snapshot = get_security_policy_snapshot(event_limit=50)
     return SecurityPolicyResponse(
         active_policy=snapshot["active_policy"],

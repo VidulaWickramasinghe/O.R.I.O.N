@@ -16,14 +16,12 @@ export function ToolAuditPanel({
     <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">Tool Audit Center</h2>
+          <h2 className="text-xl font-bold text-white">Policy decision ledger</h2>
           <p className="text-sm text-slate-400">
-            Allowed tools, blocked tools, plugin decisions, and security review history
+            Policy decisions with actor, mission ownership, scope, and correlation evidence
           </p>
         </div>
-        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">
-          v4.3
-        </span>
+        <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">Local evidence</span>
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
@@ -43,7 +41,7 @@ export function ToolAuditPanel({
               <div key={event.id} className="rounded-xl border border-white/10 bg-black/30 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-100">{event.tool_name}</h3>
+                    <h3 className="text-sm font-semibold text-slate-100">Policy decision · {event.tool_name}</h3>
                     <p className="mt-1 text-xs text-cyan-300">
                       {event.plugin_key || "unmapped"} | {event.category}
                     </p>
@@ -59,9 +57,17 @@ export function ToolAuditPanel({
                   </span>
                 </div>
                 <p className="mt-2 text-xs leading-5 text-slate-400">{event.reason}</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Risk: {event.risk_level} | Source: {event.source} | {event.created_at}
-                </p>
+                <dl className="mt-3 grid gap-x-4 gap-y-1 text-[10px] text-slate-500 sm:grid-cols-2">
+                  <div><dt className="inline text-slate-600">Actor: </dt><dd className="inline">{event.actor || "unknown"}</dd></div>
+                  <div><dt className="inline text-slate-600">Policy: </dt><dd className="inline">{event.policy_profile || "unknown"}</dd></div>
+                  <div><dt className="inline text-slate-600">Mission / step / run: </dt><dd className="inline">{event.mission_id ?? "none"} / {event.step_id ?? "none"} / {event.run_id ?? "none"}</dd></div>
+                  <div><dt className="inline text-slate-600">Approval: </dt><dd className="inline">{event.approval_id ?? "none"}</dd></div>
+                  <div><dt className="inline text-slate-600">Risk / scope: </dt><dd className="inline">{event.risk_level} / {event.scope || "none"}</dd></div>
+                  <div><dt className="inline text-slate-600">Side effect: </dt><dd className="inline">{event.side_effect ? "yes" : "no"}</dd></div>
+                </dl>
+                {event.correlation_id ? <p className="mt-2 break-all font-mono text-[10px] text-cyan-300/65">Correlation: {event.correlation_id}</p> : null}
+                {event.arguments_hash ? <p className="mt-1 break-all font-mono text-[10px] text-slate-600">Arguments SHA-256: {event.arguments_hash}</p> : null}
+                <p className="mt-2 text-[10px] text-slate-600">Source: {event.source} · {event.created_at}</p>
               </div>
             ))
           )}
@@ -69,7 +75,7 @@ export function ToolAuditPanel({
 
         <details className="rounded-2xl border border-white/10 bg-white/5 p-3">
           <summary className="cursor-pointer text-sm font-semibold text-cyan-200">
-            Tool Audit Report
+            Legacy policy-decision report
           </summary>
           <pre className="mt-3 max-h-96 overflow-y-auto whitespace-pre-wrap text-xs leading-5 text-slate-300">
             {report || "No tool audit report loaded yet."}
@@ -77,7 +83,7 @@ export function ToolAuditPanel({
         </details>
 
         <p className="text-xs leading-5 text-slate-500">
-          Safety: Audit Center stores local records of protected tool decisions. It helps review blocked actions and high-risk tool usage.
+          Safety: these rows are authorization decisions, not proof that an action completed. Execution results must be corroborated by correlated execution events and mission reports.
         </p>
       </div>
     </GlassPanel>

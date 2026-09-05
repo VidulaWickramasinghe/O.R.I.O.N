@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { ToolPermissionPanel } from "@/components/aurora/panels/ToolPermissionPanel";
 import { ToolsModule } from "@/components/aurora/modules/tools-module";
-import { useAuroraStore } from "@/store/auroraStore";
+import { ErrorState, LoadingSkeleton } from "@/components/aurora/operational-ui";
+import { getToolPermissions } from "@/lib/api/tools";
 
 function metricValue(
   source: Record<string, unknown> | undefined,
@@ -19,37 +21,30 @@ function metricValue(
     : String(value);
 }
 
-export function ToolsWorkspace() {
+export function ToolsWorkspace({ focus = "catalog" }: { focus?: "catalog" | "approvals" }) {
   const [message, setMessage] = useState("");
-  const toolPermissionMatrix = useAuroraStore(
-    (state) => state.toolPermissionMatrix,
-  );
-  const toolPermissionMetrics = useAuroraStore(
-    (state) => state.toolPermissionMetrics,
-  );
-  const toolPermissionReport = useAuroraStore(
-    (state) => state.toolPermissionReport,
-  );
-  const loadToolPermissions = useAuroraStore(
-    (state) => state.loadToolPermissions,
-  );
-
-  useEffect(() => {
-    void loadToolPermissions();
-  }, [loadToolPermissions]);
+  const permissionsQuery = useQuery({
+    queryKey: ["tool-permissions"],
+    queryFn: getToolPermissions,
+    enabled: focus === "catalog",
+  });
+  const toolPermissionMatrix = permissionsQuery.data?.matrix ?? [];
+  const toolPermissionMetrics = permissionsQuery.data?.metrics ?? {};
+  const toolPermissionReport = permissionsQuery.data?.report ?? "";
 
   return (
     <div className="mx-auto w-full max-w-[1600px] space-y-5">
         <header className="rounded-3xl border border-cyan-300/15 bg-black/25 p-5">
           <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">
-            Live tools and approvals
+            {focus === "approvals" ? "Human decision queue" : "Capability catalogue"}
           </p>
           <h1 className="mt-2 text-3xl font-semibold text-white">
-            Tool execution control
+            {focus === "approvals" ? "Approvals" : "Tools and execution policy"}
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-            Review pending approval requests, approve or reject backend-gated actions,
-            and keep command execution visible through O.R.I.O.N.&apos;s safety layer.
+            {focus === "approvals"
+              ? "Inspect mission ownership, normalized arguments, risk, and expected effects before allowing or rejecting a side effect."
+              : "Inspect capability permissions and the live approval boundary enforced by O.R.I.O.N.'s gateway."}
           </p>
 
           <Link
@@ -71,18 +66,31 @@ export function ToolsWorkspace() {
           </section>
         )}
 
-        <ToolPermissionPanel
-          matrix={toolPermissionMatrix}
-          metrics={toolPermissionMetrics}
-          report={toolPermissionReport}
-          metricValue={metricValue}
-        />
+        {focus === "catalog" ? (
+          <>
+            {permissionsQuery.isLoading ? <LoadingSkeleton label="Loading capability catalogue" /> : null}
+            {permissionsQuery.isError ? <ErrorState title="Capability catalogue unavailable" description="Tool availability and effective policy could not be read. No capability should be assumed available." onRetry={() => void permissionsQuery.refetch()} /> : null}
+            {permissionsQuery.data ? <ToolPermissionPanel
+              matrix={toolPermissionMatrix}
+              metrics={toolPermissionMetrics}
+              report={toolPermissionReport}
+              metricValue={metricValue}
+            /> : null}
+          </>
+        ) : null}
 
-        <ToolsModule
-          title="Approval Queue"
-          description="Live backend approval requests for command, desktop, workspace, and developer actions."
-          onAssistantMessage={setMessage}
-        />
+        {focus === "approvals" ? (
+          <ToolsModule
+            title="Approval Queue"
+            description="Live backend approval requests for command, desktop, workspace, and developer actions."
+            onAssistantMessage={setMessage}
+            pendingOnly
+          />
+        ) : (
+          <p className="rounded-2xl border border-white/10 bg-black/25 p-4 text-xs leading-5 text-slate-400">
+            Side-effect decisions are intentionally separated from the catalogue. Open the dedicated <Link href="/approvals" className="font-semibold text-amber-200 hover:text-amber-100">Approval queue</Link> to inspect and decide a request.
+          </p>
+        )}
 
         <p className="rounded-2xl border border-white/10 bg-black/25 p-4 text-xs leading-5 text-slate-500">
           Safety: this page does not execute commands directly. It only sends approve

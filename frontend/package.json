@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test:server-state": "node --test tests/server-state-network-count.test.mjs",
     "test:ux": "node --test tests/information-architecture.test.mjs",
-    "test:command-palette": "vitest run tests/command-palette.test.tsx tests/command-registry.test.ts",
+    "test:command-palette": "vitest run tests/command-palette.test.tsx tests/command-registry.test.ts tests/mission-status.test.ts tests/operational-ui.test.tsx",
     "test:recovery": "vitest run tests/recovery-accessibility.test.tsx tests/voice-capture.test.tsx tests/assistant-recovery.test.tsx",
     "test:pet": "vitest run tests/orion-pet.test.tsx",
     "test:settings": "vitest run tests/settings-control-plane.test.tsx",

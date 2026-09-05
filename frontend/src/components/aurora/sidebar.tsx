@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDown,
   ChevronsUpDown,
@@ -18,12 +19,14 @@ import {
 
 import {
   useAuroraMissions,
+  useAuroraStatus,
+  useAuroraUserSettings,
   useAuroraWorkspaces,
 } from "@/components/aurora/lib/aurora-queries";
+import { updateUserSetting } from "@/lib/api/settings";
 import { sidebarGroups } from "@/lib/aurora-data";
 import { ORION_BUILD } from "@/lib/orion-build";
 import { cn } from "@/lib/utils";
-import { useAuroraStore } from "@/store/auroraStore";
 import { useUiStore, type SidebarMode } from "@/store/ui-store";
 
 const STORAGE_KEY = "orion-sidebar-mode";
@@ -35,16 +38,20 @@ export function Sidebar() {
   const mobileOpen = useUiStore((state) => state.mobileSidebarOpen);
   const setMode = useUiStore((state) => state.setSidebarMode);
   const setMobileOpen = useUiStore((state) => state.setMobileSidebarOpen);
-  const userSettingsProfile = useAuroraStore(
-    (state) => state.userSettingsProfile,
-  );
-  const loadUserSettingsProfile = useAuroraStore(
-    (state) => state.loadUserSettingsProfile,
-  );
-  const updateUserSettingFromStore = useAuroraStore(
-    (state) => state.updateUserSettingFromStore,
-  );
+  const queryClient = useQueryClient();
+  const settingsQuery = useAuroraUserSettings();
+  const statusQuery = useAuroraStatus();
+  const userSettingsProfile = settingsQuery.data ?? null;
+  const updateSettingMutation = useMutation({
+    mutationFn: ({ key, value }: { key: string; value: string }) => updateUserSetting(key, value),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["aurora-user-settings"] });
+    },
+  });
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const [desktopViewport, setDesktopViewport] = useState(false);
+  const [settingError, setSettingError] = useState("");
+  const [failedPreference, setFailedPreference] = useState<{ key: string; value: string } | null>(null);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(
     Object.fromEntries(sidebarGroups.map((group) => [group.label, true])),
   );
@@ -54,12 +61,15 @@ export function Sidebar() {
   const workspaceLoading = workspacesQuery.isLoading;
   const missionCount = missionsQuery.data?.missions.length ?? 0;
   const hidden = mode === "hidden";
+  const sidebarInteractive = mobileOpen || (desktopViewport && !hidden);
 
   useEffect(() => {
-    if (!userSettingsProfile) {
-      void loadUserSettingsProfile();
-    }
-  }, [loadUserSettingsProfile, userSettingsProfile]);
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setDesktopViewport(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
 
   useEffect(() => {
     const storedMode = window.localStorage.getItem(STORAGE_KEY) as
@@ -128,16 +138,26 @@ export function Sidebar() {
   const routeIsActive = (href: string) =>
     pathname === href || (href === "/context" && pathname === "/memory");
 
+  async function savePreference(preference: { key: string; value: string }) {
+    setSettingError("");
+    setFailedPreference(preference);
+    try {
+      await updateSettingMutation.mutateAsync(preference);
+      setFailedPreference(null);
+      setWorkspaceMenuOpen(false);
+    } catch (error) {
+      setSettingError(error instanceof Error ? error.message : "The preference could not be saved.");
+    }
+  }
+
   async function selectWorkspace(workspaceId: number) {
-    await updateUserSettingFromStore("default_workspace_id", String(workspaceId));
-    setWorkspaceMenuOpen(false);
+    await savePreference({ key: "default_workspace_id", value: String(workspaceId) });
   }
 
   async function selectEnvironment(
     environment: "production" | "development" | "demo",
   ) {
-    await updateUserSettingFromStore("environment_mode", environment);
-    setWorkspaceMenuOpen(false);
+    await savePreference({ key: "environment_mode", value: environment });
   }
 
   return (
@@ -153,8 +173,8 @@ export function Sidebar() {
 
       <aside
         aria-label="Primary navigation"
-        aria-hidden={hidden && !mobileOpen ? true : undefined}
-        inert={hidden && !mobileOpen ? true : undefined}
+        aria-hidden={!sidebarInteractive ? true : undefined}
+        inert={!sidebarInteractive ? true : undefined}
         className={cn(
           "orion-sidebar fixed inset-y-0 left-0 z-50 flex w-[304px] shrink-0 flex-col border-r border-white/[0.08] bg-[#080b12]/97 backdrop-blur-2xl transition-[width,transform,opacity] duration-300 ease-out lg:static lg:z-auto lg:translate-x-0",
           hidden
@@ -231,14 +251,7 @@ export function Sidebar() {
                   />
                 </button>
 
-                <div
-                  className={cn(
-                    "grid transition-[grid-template-rows,opacity] duration-200",
-                    isOpen
-                      ? "grid-rows-[1fr] opacity-100"
-                      : "grid-rows-[0fr] opacity-0",
-                  )}
-                >
+                {isOpen ? <div className="grid grid-rows-[1fr] opacity-100">
                   <div className="min-h-0 overflow-hidden">
                     <div className="space-y-1">
                       {group.items.map((item) => {
@@ -283,7 +296,7 @@ export function Sidebar() {
                       })}
                     </div>
                   </div>
-                </div>
+                </div> : null}
               </section>
             );
           })}
@@ -318,6 +331,12 @@ export function Sidebar() {
                   Workspace
                 </p>
                 <div className="space-y-1">
+                  {settingError ? (
+                    <div role="alert" className="mb-2 rounded-xl border border-rose-300/20 bg-rose-300/[0.06] p-3 text-[11px] leading-5 text-rose-100">
+                      <p>{settingError}</p>
+                      {failedPreference ? <button type="button" disabled={updateSettingMutation.isPending} onClick={() => void savePreference(failedPreference)} className="mt-2 rounded-lg border border-rose-200/25 px-2.5 py-1.5 font-bold disabled:opacity-50">Retry save</button> : null}
+                    </div>
+                  ) : null}
                   {workspaceLoading ? (
                     <p className="px-3 py-2 text-xs text-slate-500">
                       Loading workspaces…
@@ -334,6 +353,7 @@ export function Sidebar() {
                           key={workspace.id}
                           type="button"
                           role="menuitem"
+                          disabled={updateSettingMutation.isPending}
                           onClick={() => void selectWorkspace(workspace.id)}
                           className={cn(
                             "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition",
@@ -369,6 +389,7 @@ export function Sidebar() {
                     key={value}
                     type="button"
                     role="menuitem"
+                    disabled={updateSettingMutation.isPending}
                     onClick={() => void selectEnvironment(value)}
                     className={cn(
                       "flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition",
@@ -404,7 +425,7 @@ export function Sidebar() {
           >
             <div className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-slate-700 to-slate-900 text-slate-200">
               <CircleUserRound size={19} />
-              <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#080b12] bg-emerald-400" />
+              <span className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#080b12] ${statusQuery.isSuccess ? "bg-emerald-400" : statusQuery.isPending ? "bg-amber-300" : "bg-rose-400"}`} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-xs font-semibold text-white">
@@ -418,8 +439,9 @@ export function Sidebar() {
           </Link>
 
           <div className="mt-2 grid grid-cols-2 gap-2 text-[10px] text-slate-500">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck size={12} className="text-emerald-300" /> Secure
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <ShieldCheck size={12} className={statusQuery.isSuccess ? "text-emerald-300" : statusQuery.isPending ? "text-amber-300" : "text-rose-300"} />
+              {statusQuery.isSuccess ? "API verified" : statusQuery.isPending ? "Authenticating" : "API unavailable"}
             </span>
             <span className="flex items-center justify-end gap-1.5">
               <Cpu size={12} className="text-cyan-300" />

@@ -61,3 +61,47 @@ test("secondary live views consume the shared query cache", () => {
     assert.match(source, /useAurora[A-Z][A-Za-z]+\s*\(/);
   }
 });
+
+test("the application shell does not duplicate backend state in Zustand", () => {
+  const shellFiles = [
+    "../src/components/aurora/app-shell.tsx",
+    "../src/components/aurora/sidebar.tsx",
+    "../src/components/aurora/topbar.tsx",
+    "../src/components/aurora/notification-center.tsx",
+    "../src/components/aurora/modules/memory-module.tsx",
+  ];
+
+  for (const path of shellFiles) {
+    const source = readFileSync(new URL(path, import.meta.url), "utf8");
+    assert.doesNotMatch(source, /useAuroraStore/);
+  }
+
+  const topbar = readFileSync(
+    new URL("../src/components/aurora/topbar.tsx", import.meta.url),
+    "utf8",
+  );
+  assert.doesNotMatch(topbar, /checkBackendHealth|loadNotificationEvents/);
+  assert.match(topbar, /setInterval\(\(\) => setNow/);
+  assert.match(topbar, /useAuroraStatus/);
+  assert.match(topbar, /useAuroraSecurityPolicy/);
+});
+
+test("mutations invalidate owned resources without a global refetch fan-out", () => {
+  const provider = readFileSync(
+    new URL("../src/components/aurora/providers/query-provider.tsx", import.meta.url),
+    "utf8",
+  );
+  const dashboard = readFileSync(
+    new URL("../src/components/aurora/dashboard-workspace.tsx", import.meta.url),
+    "utf8",
+  );
+  const approvals = readFileSync(
+    new URL("../src/components/aurora/modules/tools-module.tsx", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(provider, /invalidateQueries\(\{\s*refetchType/);
+  assert.doesNotMatch(dashboard, /ORION_API_MUTATION_EVENT|addEventListener\([^,]*api-mutated/);
+  assert.match(approvals, /queryKey:\s*\["aurora-approvals"\]/);
+  assert.match(approvals, /queryKey:\s*\["aurora-activity"\]/);
+});

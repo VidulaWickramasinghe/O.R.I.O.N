@@ -1,19 +1,20 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw, Settings2, ShieldCheck, SlidersHorizontal } from "lucide-react";
 
 import { GlassPanel } from "@/components/aurora/glass-panel";
 import { InterfacePreferencesPanel } from "@/components/aurora/interface-preferences-panel";
 import { StatusChip } from "@/components/aurora/status-chip";
 import { UserSettingsPanel } from "@/components/aurora/panels/UserSettingsPanel";
+import { useAuroraUserSettings } from "@/components/aurora/lib/aurora-queries";
 import {
   getUserSettingsProfile,
   resetUserSettings,
   updateUserSetting,
 } from "@/lib/api/settings";
 import type { UserSettingsProfile } from "@/types/orion";
-import { useAuroraStore } from "@/store/auroraStore";
 
 function valueFromMap(
   profile: UserSettingsProfile | null,
@@ -26,32 +27,19 @@ function valueFromMap(
 }
 
 export function SettingsLiveWorkspace() {
+  const queryClient = useQueryClient();
+  const settingsQuery = useAuroraUserSettings();
   const [profile, setProfileState] = useState<UserSettingsProfile | null>(null);
   const [loadingKey, setLoadingKey] = useState("");
   const [message, setMessage] = useState("");
-  const [lastLoadedAt, setLastLoadedAt] = useState("");
 
-  const loadSettings = useCallback(async () => {
+  const loadSettings = async () => {
     setLoadingKey("profile");
     setMessage("");
-
-    try {
-      const data = await getUserSettingsProfile();
-      setProfileState(data);
-      useAuroraStore.setState({ userSettingsProfile: data });
-      setLastLoadedAt(
-        new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      );
-    } catch {
-      setProfileState(null);
-      setMessage("User settings failed to load. Confirm the backend is running.");
-    } finally {
-      setLoadingKey("");
-    }
-  }, []);
+    const result = await settingsQuery.refetch();
+    if (result.error) setMessage("User settings failed to load. Confirm the backend is running and authenticated.");
+    setLoadingKey("");
+  };
 
   async function handleUpdateSetting(key: string, value: string) {
     setLoadingKey(key);
@@ -61,10 +49,10 @@ export function SettingsLiveWorkspace() {
       await updateUserSetting(key, value);
       const data = await getUserSettingsProfile();
       setProfileState(data);
-      useAuroraStore.setState({ userSettingsProfile: data });
+      queryClient.setQueryData(["aurora-user-settings"], data);
       setMessage(`Setting updated: ${key}`);
-    } catch {
-      setMessage(`Setting update failed: ${key}`);
+    } catch (error) {
+      setMessage(error instanceof Error ? `Setting update failed: ${error.message}` : `Setting update failed: ${key}`);
     } finally {
       setLoadingKey("");
     }
@@ -77,7 +65,7 @@ export function SettingsLiveWorkspace() {
     try {
       const data = await resetUserSettings();
       setProfileState(data);
-      useAuroraStore.setState({ userSettingsProfile: data });
+      queryClient.setQueryData(["aurora-user-settings"], data);
       setMessage("User settings reset to backend defaults.");
     } catch {
       setMessage("User settings reset failed.");
@@ -87,8 +75,8 @@ export function SettingsLiveWorkspace() {
   }
 
   useEffect(() => {
-    void loadSettings();
-  }, [loadSettings]);
+    setProfileState(settingsQuery.data ?? null);
+  }, [settingsQuery.data]);
 
   const settingsCount = profile?.settings?.length || 0;
 
@@ -208,7 +196,7 @@ export function SettingsLiveWorkspace() {
             </div>
 
             <p className="mt-4 text-xs leading-5 text-slate-500">
-              Last refresh: {lastLoadedAt || "Unchecked"}
+              Last refresh: {settingsQuery.dataUpdatedAt ? new Date(settingsQuery.dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Unchecked"}
             </p>
           </GlassPanel>
 

@@ -33,11 +33,11 @@ test("primary navigation contains exactly seven product destinations", () => {
   const block = dataSource.match(/export const navItems[\s\S]*?= \[([\s\S]*?)\n\];/)?.[1] ?? "";
   const labels = [...block.matchAll(/label: "([^"]+)"/g)].map((match) => match[1]);
   assert.deepEqual(labels, [
-    "Dashboard",
-    "Assistant",
-    "Missions",
-    "Context",
-    "Workspaces",
+    "Command",
+    "Operations",
+    "Intelligence",
+    "Environment",
+    "Capabilities",
     "Governance",
     "System",
   ]);
@@ -49,29 +49,58 @@ test("primary navigation contains exactly seven product destinations", () => {
 
 test("every core task is exposed directly in the persistent sidebar registry", () => {
   for (const route of [
+    "/",
     "/assistant",
-    "/voice",
-    "/browser",
     "/missions",
-    "/workflows",
-    "/agents",
-    "/context",
-    "/projects",
+    "/approvals",
+    "/activity",
+    "/memory",
+    "/knowledge",
     "/workspaces",
-    "/governance",
-    "/security",
+    "/developer",
     "/tools",
     "/plugins",
-    "/system",
+    "/security",
+    "/audit",
+    "/release",
     "/analytics",
+    "/system",
     "/settings",
-    "/console",
   ]) {
     assert.match(dataSource, new RegExp(`href: "${route}"`));
   }
   assert.match(dataSource, /export const sidebarGroups/);
   assert.match(sidebarSource, /sidebarGroups\.map/);
   assert.doesNotMatch(appShellSource, /DestinationNavigation/);
+});
+
+test("the app shell exposes one evidence-backed operational status contract", () => {
+  const statusBarSource = readFileSync(
+    new URL("../src/components/aurora/operational-status-bar.tsx", import.meta.url),
+    "utf8",
+  );
+  const lifecycleSource = readFileSync(
+    new URL("../src/lib/mission-status.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(appShellSource, /<OperationalStatusBar\s*\/>/);
+  for (const label of [
+    "Draft",
+    "Ready",
+    "Running",
+    "Waiting for approval",
+    "Paused",
+    "Blocked",
+    "Failed",
+    "Cancelled",
+    "Complete",
+  ]) {
+    assert.match(lifecycleSource, new RegExp(`"${label}"`));
+  }
+  assert.match(statusBarSource, /Review approvals/);
+  assert.match(statusBarSource, /Updated/);
+  assert.doesNotMatch(statusBarSource, /mock|simulated/i);
 });
 
 test("branding and sidebar visibility use one consolidated control", () => {

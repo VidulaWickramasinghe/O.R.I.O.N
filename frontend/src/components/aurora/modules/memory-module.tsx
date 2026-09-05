@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { MemoryItem } from "../aurora-types";
 import {
   deleteMemory,
-  getMemory,
   previewContext as getContextPreview,
   setMemoryExcluded,
   updateMemory,
 } from "@/lib/api/memory";
+import { useAuroraMemory } from "../lib/aurora-queries";
+import { ErrorState, LoadingSkeleton } from "../operational-ui";
 import { ModuleShell } from "./module-shell";
 
 type MemoryModuleProps = {
@@ -17,18 +19,15 @@ type MemoryModuleProps = {
 };
 
 export function MemoryModule({ onAsk }: MemoryModuleProps) {
-  const [memoryItems, setMemoryItems] = useState<MemoryItem[]>([]);
+  const queryClient = useQueryClient();
+  const memoryQuery = useAuroraMemory();
+  const memoryItems = (memoryQuery.data?.items ?? []) as MemoryItem[];
   const [query, setQuery] = useState("");
   const [contextPreview, setContextPreview] = useState("");
   const [actionMessage, setActionMessage] = useState("");
 
-  async function loadMemory() {
-    try {
-      const data = await getMemory();
-      setMemoryItems(data.items || []);
-    } catch {
-      setMemoryItems([]);
-    }
+  async function refreshMemory() {
+    await queryClient.invalidateQueries({ queryKey: ["aurora-memory"] });
   }
 
   async function previewContext() {
@@ -46,7 +45,7 @@ export function MemoryModule({ onAsk }: MemoryModuleProps) {
     setActionMessage("");
     try {
       await setMemoryExcluded(item.id, !item.excluded, item.excluded ? "" : "Excluded by user in Memory Matrix");
-      await loadMemory();
+      await refreshMemory();
       setActionMessage(item.excluded ? "Memory restored to retrieval." : "Memory excluded from every prompt and search.");
     } catch {
       setActionMessage("Memory exclusion could not be changed.");
@@ -60,7 +59,7 @@ export function MemoryModule({ onAsk }: MemoryModuleProps) {
     if (content === null) return;
     try {
       await updateMemory(item.id, { title, content });
-      await loadMemory();
+      await refreshMemory();
       setActionMessage("Memory updated.");
     } catch {
       setActionMessage("Memory update failed.");
@@ -71,16 +70,12 @@ export function MemoryModule({ onAsk }: MemoryModuleProps) {
     if (!window.confirm(`Permanently delete memory “${item.title}”?`)) return;
     try {
       await deleteMemory(item.id);
-      await loadMemory();
+      await refreshMemory();
       setActionMessage("Memory permanently deleted.");
     } catch {
       setActionMessage("Memory deletion failed.");
     }
   }
-
-  useEffect(() => {
-    loadMemory();
-  }, []);
 
   return (
     <ModuleShell
@@ -93,8 +88,11 @@ export function MemoryModule({ onAsk }: MemoryModuleProps) {
           <h3 className="text-lg font-bold text-white">Memory Matrix</h3>
           {actionMessage && <p className="mt-2 text-xs text-cyan-200">{actionMessage}</p>}
 
+          {memoryQuery.isLoading ? <div className="mt-4"><LoadingSkeleton label="Loading memory" /></div> : null}
+          {memoryQuery.isError ? <div className="mt-4"><ErrorState title="Memory unavailable" description="The authenticated memory endpoint could not be read. No cached or synthetic memories are shown." onRetry={() => void memoryQuery.refetch()} /></div> : null}
+
           <div className="mt-4 max-h-[560px] space-y-3 overflow-y-auto">
-            {memoryItems.length === 0 ? (
+            {!memoryQuery.isLoading && !memoryQuery.isError && memoryItems.length === 0 ? (
               <p className="text-sm text-slate-500">No memory items found.</p>
             ) : (
               memoryItems.map((item) => (
