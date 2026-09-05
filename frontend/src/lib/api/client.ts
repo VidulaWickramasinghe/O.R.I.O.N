@@ -2,7 +2,6 @@ import { invoke, isTauri } from "@tauri-apps/api/core";
 import { getBrowserApiBaseUrl, RuntimeConfigurationError, runtimeConfig } from "@/lib/config/runtime";
 
 export const ORION_API_BASE = runtimeConfig.apiBaseUrl;
-export const ORION_API_MUTATION_EVENT = "orion:api-mutated";
 
 export type ApiErrorShape = {
   status: number;
@@ -185,16 +184,6 @@ export async function apiRequest<T>(method: string, path: string, options: ApiRe
     }
     const payload = await responsePayload(response);
     if (!response.ok) throw errorFromResponse(response, payload);
-    if (
-      typeof window !== "undefined" &&
-      !["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())
-    ) {
-      window.dispatchEvent(
-        new CustomEvent(ORION_API_MUTATION_EVENT, {
-          detail: { method: method.toUpperCase(), path },
-        }),
-      );
-    }
     return payload as T;
   } catch (error) {
     if (error instanceof ApiError) throw error;

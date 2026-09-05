@@ -5,16 +5,17 @@ import { ReactNode, useEffect, useRef } from "react";
 import { CommandPalette } from "./command-palette";
 import { ContextPanel } from "./context-panel";
 import { NotificationCenter } from "./notification-center";
+import { OperationalStatusBar } from "./operational-status-bar";
 import { OrionPet } from "./orion-pet";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
+import { useAuroraUserSettings } from "./lib/aurora-queries";
 
 import {
   readInterfacePreferences,
   writeInterfacePreferences,
 } from "@/lib/interface-preferences";
 import { readPetVisibility, writePetVisibility } from "@/lib/pet-preference";
-import { useAuroraStore } from "@/store/auroraStore";
 import { useUiStore } from "@/store/ui-store";
 
 const CONTEXT_PANEL_STORAGE_KEY = "orion-context-open";
@@ -34,10 +35,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const setInterfacePreferenceReady = useUiStore(
     (state) => state.setInterfacePreferenceReady,
   );
-  const themeMode = useAuroraStore(
-    (state) =>
-      state.userSettingsProfile?.settings_map?.theme_mode || "aurora_dark",
-  );
+  const settingsQuery = useAuroraUserSettings();
+  const themeMode = settingsQuery.data?.settings_map?.theme_mode || "aurora_dark";
   const contextPreferenceLoaded = useRef(false);
   const petPreferenceLoaded = useRef(false);
   const interfacePreferenceLoaded = useRef(false);
@@ -123,6 +122,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <section className="relative flex min-w-0 flex-1 flex-col">
         <Topbar />
+        <OperationalStatusBar />
 
         <div className="orion-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5 2xl:px-6">
           <div className="mx-auto w-full max-w-[1880px]">

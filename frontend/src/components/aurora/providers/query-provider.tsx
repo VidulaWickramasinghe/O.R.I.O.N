@@ -1,9 +1,7 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactNode, useEffect, useState } from "react";
-
-import { ORION_API_MUTATION_EVENT } from "@/lib/api/client";
+import { ReactNode, useState } from "react";
 
 type QueryProviderProps = {
   children: ReactNode;
@@ -23,14 +21,6 @@ export function AuroraQueryProvider({ children }: QueryProviderProps) {
         },
       })
   );
-
-  useEffect(() => {
-    const invalidate = () => {
-      void queryClient.invalidateQueries({ refetchType: "active" });
-    };
-    window.addEventListener(ORION_API_MUTATION_EVENT, invalidate);
-    return () => window.removeEventListener(ORION_API_MUTATION_EVENT, invalidate);
-  }, [queryClient]);
 
   return (
     <QueryClientProvider client={queryClient}>

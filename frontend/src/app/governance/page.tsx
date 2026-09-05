@@ -7,7 +7,7 @@ const governanceModules = [
   {
     title: "Approval Queue",
     description: "Review pending high-risk operations and their ownership.",
-    href: "/tools",
+    href: "/approvals",
   },
   {
     title: "Security Policy",
@@ -22,12 +22,12 @@ const governanceModules = [
   {
     title: "Tool Audit",
     description: "Reconstruct policy decisions and executed actions.",
-    href: "#tool-audit",
+    href: "/audit",
   },
   {
     title: "Release Evidence",
     description: "Review the current candidate gate and artifact evidence.",
-    href: "#release-candidate",
+    href: "/release",
   },
 ];
 

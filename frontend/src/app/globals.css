@@ -3,10 +3,48 @@
 :root {
   --background: #05070b;
   --foreground: #e8edf7;
+  --orion-font-display: "Inter", "SF Pro Display", "Segoe UI", sans-serif;
+  --orion-font-body: "Inter", "SF Pro Text", "Segoe UI", sans-serif;
+  --orion-font-mono: "SFMono-Regular", "Cascadia Code", Consolas, monospace;
+  --orion-text-xs: 0.75rem;
+  --orion-text-sm: 0.875rem;
+  --orion-text-md: 1rem;
+  --orion-text-lg: 1.125rem;
+  --orion-text-xl: clamp(1.5rem, 2.4vw, 2rem);
+  --orion-space-1: 0.25rem;
+  --orion-space-2: 0.5rem;
+  --orion-space-3: 0.75rem;
+  --orion-space-4: 1rem;
+  --orion-space-5: 1.25rem;
+  --orion-space-6: 1.5rem;
+  --orion-space-8: 2rem;
+  --orion-radius-sm: 0.625rem;
+  --orion-radius-md: 0.875rem;
+  --orion-radius-lg: 1.125rem;
+  --orion-radius-xl: 1.5rem;
+  --orion-surface-base: #05070b;
+  --orion-surface-raised: rgba(17, 21, 29, 0.86);
+  --orion-surface-overlay: rgba(8, 11, 18, 0.96);
+  --orion-border-subtle: rgba(255, 255, 255, 0.07);
+  --orion-border-strong: rgba(255, 255, 255, 0.13);
+  --orion-shadow-raised: 0 18px 50px rgba(0, 0, 0, 0.2);
   --orion-cyan: #67e8f9;
   --orion-blue: #60a5fa;
   --orion-violet: #a78bfa;
   --orion-green: #6ee7b7;
+  --orion-info: #67e8f9;
+  --orion-success: #6ee7b7;
+  --orion-waiting: #fcd34d;
+  --orion-danger: #fda4af;
+  --orion-ai: #c4b5fd;
+  --orion-unavailable: #64748b;
+  --orion-focus: rgba(103, 232, 249, 0.72);
+  --orion-motion-fast: 140ms;
+  --orion-motion-standard: 200ms;
+  --orion-breakpoint-mobile: 390px;
+  --orion-breakpoint-tablet: 768px;
+  --orion-breakpoint-desktop: 1024px;
+  --orion-breakpoint-wide: 1440px;
 }
 
 html[data-orion-theme="midnight"] {
@@ -67,7 +105,7 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid rgba(103, 232, 249, 0.65);
+  outline: 2px solid var(--orion-focus);
   outline-offset: 2px;
 }
 
@@ -188,9 +226,9 @@ html[data-orion-reduced-motion="true"] *::after {
 
 .orion-panel {
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 22px;
-  background: linear-gradient(180deg, rgba(17, 21, 29, 0.86), rgba(11, 14, 21, 0.83));
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+  border-radius: var(--orion-radius-xl);
+  background: linear-gradient(180deg, var(--orion-surface-raised), rgba(11, 14, 21, 0.83));
+  box-shadow: var(--orion-shadow-raised);
   backdrop-filter: blur(18px);
 }
 

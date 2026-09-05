@@ -15,6 +15,9 @@ import {
 import { api } from "@/lib/api/client";
 import { getDashboardIntelligence } from "@/lib/api/dashboard";
 import { getPersistenceOverview } from "@/lib/api/persistence";
+import { getNotificationEvents } from "@/lib/api/notifications";
+import { getUserSettingsProfile } from "@/lib/api/settings";
+import { getSecurityPolicy } from "@/lib/api/security";
 
 type StatusResponse = Status;
 
@@ -46,10 +49,13 @@ type ApprovalsResponse = {
   approvals: ApprovalItem[];
 };
 
+export type ApprovalStatus = "pending" | "executing" | "approved" | "rejected" | "failed";
+
 export function useAuroraStatus() {
   return useQuery({
     queryKey: ["aurora-status"],
     queryFn: () => api.get<StatusResponse>("/api/status"),
+    refetchInterval: 30000,
   });
 }
 
@@ -57,6 +63,28 @@ export function useAuroraActivity() {
   return useQuery({
     queryKey: ["aurora-activity"],
     queryFn: () => api.get<ActivityResponse>("/api/activity"),
+  });
+}
+
+export function useAuroraNotificationEvents() {
+  return useQuery({
+    queryKey: ["aurora-notification-events"],
+    queryFn: getNotificationEvents,
+    refetchInterval: 30000,
+  });
+}
+
+export function useAuroraUserSettings() {
+  return useQuery({
+    queryKey: ["aurora-user-settings"],
+    queryFn: getUserSettingsProfile,
+  });
+}
+
+export function useAuroraSecurityPolicy() {
+  return useQuery({
+    queryKey: ["aurora-security-policy"],
+    queryFn: getSecurityPolicy,
   });
 }
 
@@ -95,10 +123,27 @@ export function useAuroraMissionRuns() {
   });
 }
 
-export function useAuroraApprovals() {
+export function useAuroraApprovals(statuses?: ApprovalStatus[]) {
+  const statusKey = statuses?.join(",") || "all";
   return useQuery({
-    queryKey: ["aurora-approvals"],
-    queryFn: () => api.get<ApprovalsResponse>("/api/approvals"),
+    queryKey: ["aurora-approvals", statusKey],
+    queryFn: async () => {
+      if (!statuses?.length) {
+        return api.get<ApprovalsResponse>("/api/approvals", { query: { limit: 100 } });
+      }
+      const responses = await Promise.all(
+        statuses.map((status) =>
+          api.get<ApprovalsResponse>("/api/approvals", {
+            query: { status, limit: 100 },
+          }),
+        ),
+      );
+      return {
+        approvals: responses
+          .flatMap((response) => response.approvals)
+          .sort((left, right) => right.id - left.id),
+      };
+    },
   });
 }
 

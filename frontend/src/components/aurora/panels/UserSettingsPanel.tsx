@@ -2,11 +2,17 @@
 
 import { useState } from "react";
 import {
+  Bell,
   Bot,
+  Database,
+  HardDrive,
+  Mic,
+  MonitorCog,
   Palette,
   RotateCcw,
   ShieldCheck,
   UserRound,
+  Wrench,
 } from "lucide-react";
 
 import { GlassPanel } from "@/components/aurora/glass-panel";
@@ -34,37 +40,74 @@ const BOOLEAN_FIELDS = new Set([
 
 const SETTING_GROUPS = [
   {
-    id: "identity",
-    title: "Identity & workspace",
-    description: "How Aurora identifies you and which trusted workspace opens by default.",
+    id: "profile",
+    title: "Profile",
+    description: "How Aurora identifies and addresses you.",
     icon: UserRound,
-    keys: [
-      "display_name",
-      "role_title",
-      "environment_mode",
-      "default_workspace_id",
-    ],
+    keys: ["display_name", "role_title"],
   },
   {
-    id: "assistant",
-    title: "Assistant & startup",
-    description: "Model preference, voice posture, and startup behaviour.",
+    id: "ai-provider",
+    title: "AI provider",
+    description: "Select the backend-registered model preference.",
     icon: Bot,
-    keys: ["preferred_model", "voice_mode", "startup_briefing_enabled"],
+    keys: ["preferred_model"],
+  },
+  {
+    id: "context-memory",
+    title: "Context and memory",
+    description: "Control retrieval, retention, scope, and context inclusion when supported.",
+    icon: Database,
+    keys: [],
+  },
+  {
+    id: "voice",
+    title: "Voice",
+    description: "Choose an explicit voice interaction posture.",
+    icon: Mic,
+    keys: ["voice_mode"],
+  },
+  {
+    id: "safety",
+    title: "Safety",
+    description: "Choose the user safety preference; effective policy remains backend-enforced.",
+    icon: ShieldCheck,
+    keys: ["safety_level"],
   },
   {
     id: "appearance",
-    title: "Appearance & presentation",
-    description: "Aurora visual theme and portfolio presentation preference.",
+    title: "Appearance",
+    description: "Choose the Aurora visual theme; device layout controls are available above.",
     icon: Palette,
-    keys: ["theme_mode", "demo_mode_preference"],
+    keys: ["theme_mode"],
   },
   {
-    id: "governance",
-    title: "Safety & developer access",
-    description: "Security posture and explicit developer-mode preference.",
-    icon: ShieldCheck,
-    keys: ["safety_level", "developer_mode_enabled"],
+    id: "notifications",
+    title: "Notifications",
+    description: "Control startup and operational attention preferences.",
+    icon: Bell,
+    keys: ["startup_briefing_enabled"],
+  },
+  {
+    id: "data-retention",
+    title: "Data and retention",
+    description: "Configure memory expiry, audit retention, and local data lifecycle when supported.",
+    icon: HardDrive,
+    keys: [],
+  },
+  {
+    id: "desktop",
+    title: "Desktop",
+    description: "Choose the environment and trusted workspace opened by default.",
+    icon: MonitorCog,
+    keys: ["environment_mode", "default_workspace_id"],
+  },
+  {
+    id: "advanced",
+    title: "Advanced developer settings",
+    description: "Opt into developer and portfolio preferences without changing approval enforcement.",
+    icon: Wrench,
+    keys: ["developer_mode_enabled", "demo_mode_preference"],
   },
 ] as const;
 
@@ -183,7 +226,11 @@ export function UserSettingsPanel({
                 </div>
 
                 <div className="mt-5 space-y-4">
-                  {groupSettings.map((setting) => (
+                  {groupSettings.length === 0 ? (
+                    <p className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] p-4 text-xs leading-5 text-slate-500">
+                      No backend setting is registered for this category. Aurora does not present a local-only control as enforced policy.
+                    </p>
+                  ) : groupSettings.map((setting) => (
                     <SettingField
                       key={setting.key}
                       setting={setting}

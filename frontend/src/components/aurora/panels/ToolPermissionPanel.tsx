@@ -1,3 +1,6 @@
+"use client";
+
+import { useMemo, useState } from "react";
 import type { ToolPermissionItem } from "@/types/orion";
 import { GlassPanel } from "@/components/aurora/glass-panel";
 
@@ -12,6 +15,28 @@ export function ToolPermissionPanel({
   report: string;
   metricValue: (source: Record<string, unknown> | undefined, key: string, fallback?: string) => string;
 }) {
+  const [query, setQuery] = useState("");
+  const [availability, setAvailability] = useState<"all" | "allowed" | "blocked">("all");
+  const [category, setCategory] = useState("all");
+  const categories = useMemo(
+    () => Array.from(new Set(matrix.map((item) => item.category).filter(Boolean))).sort(),
+    [matrix],
+  );
+  const visibleTools = useMemo(() => {
+    const cleanQuery = query.trim().toLowerCase();
+    return matrix.filter((item) => {
+      const matchesQuery = !cleanQuery || [item.tool_name, item.plugin_name, item.plugin_key, item.category, item.permissions.join(" ")].some((value) => value.toLowerCase().includes(cleanQuery));
+      const matchesAvailability = availability === "all" || (availability === "allowed" ? item.allowed : !item.allowed);
+      return matchesQuery && matchesAvailability && (category === "all" || item.category === category);
+    });
+  }, [availability, category, matrix, query]);
+  const groupedTools = useMemo(() => Object.entries(
+    visibleTools.reduce<Record<string, ToolPermissionItem[]>>((groups, item) => {
+      (groups[item.category || "Uncategorized"] ??= []).push(item);
+      return groups;
+    }, {}),
+  ).sort(([left], [right]) => left.localeCompare(right)), [visibleTools]);
+
   return (
     <GlassPanel className="border-cyan-400/20 bg-white/[0.06] p-5">
       <div className="mb-4 flex items-center justify-between">
@@ -24,7 +49,7 @@ export function ToolPermissionPanel({
       </div>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
           <PermissionMetric label="Mapped" value={metricValue(metrics, "total_mapped_tools")} tone="text-slate-100" />
           <PermissionMetric label="Allowed" value={metricValue(metrics, "allowed_tools")} tone="text-emerald-200" />
           <PermissionMetric label="Blocked" value={metricValue(metrics, "blocked_tools")} tone="text-red-200" />
@@ -32,11 +57,19 @@ export function ToolPermissionPanel({
           <PermissionMetric label="HR Allowed" value={metricValue(metrics, "high_risk_allowed")} tone="text-cyan-200" />
         </div>
 
+        <div className="grid gap-2 rounded-2xl border border-white/10 bg-white/[0.025] p-3 md:grid-cols-[minmax(0,1fr)_auto_auto]">
+          <label className="text-xs text-slate-300"><span className="sr-only">Search capabilities</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search tool, plugin, permission, or category" className="w-full rounded-xl border border-white/10 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-cyan-300/30" /></label>
+          <label className="text-xs text-slate-300"><span className="sr-only">Filter availability</span><select aria-label="Filter availability" value={availability} onChange={(event) => setAvailability(event.target.value as "all" | "allowed" | "blocked")} className="w-full rounded-xl border border-white/10 bg-[#0b0f17] px-3 py-2.5 text-xs text-white"><option value="all">All availability</option><option value="allowed">Allowed</option><option value="blocked">Blocked</option></select></label>
+          <label className="text-xs text-slate-300"><span className="sr-only">Filter category</span><select aria-label="Filter category" value={category} onChange={(event) => setCategory(event.target.value)} className="w-full rounded-xl border border-white/10 bg-[#0b0f17] px-3 py-2.5 text-xs text-white"><option value="all">All categories</option>{categories.map((item) => <option key={item} value={item}>{item}</option>)}</select></label>
+        </div>
+
         <div className="max-h-96 space-y-2 overflow-y-auto rounded-2xl border border-white/10 bg-white/5 p-3">
           {matrix.length === 0 ? (
             <p className="text-sm text-slate-500">Tool permission matrix has not loaded yet.</p>
+          ) : visibleTools.length === 0 ? (
+            <p className="text-sm text-slate-400">No capabilities match the current search and filters.</p>
           ) : (
-            matrix.map((item) => {
+            groupedTools.map(([group, items]) => <section key={group} className="space-y-2"><h3 className="sticky top-0 z-10 bg-[#11151d] px-1 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-cyan-200">{group} · {items.length}</h3>{items.map((item) => {
               const allowed = item.allowed;
               return (
                 <div key={item.tool_name} className="rounded-xl border border-white/10 bg-black/30 p-3">
@@ -101,7 +134,7 @@ export function ToolPermissionPanel({
                   </div>
                 </div>
               );
-            })
+            })}</section>)
           )}
         </div>
 

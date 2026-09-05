@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Bell,
   ChevronDown,
@@ -11,10 +12,17 @@ import {
   Search,
   ShieldCheck,
 } from "lucide-react";
-import { useAuroraStore } from "@/store/auroraStore";
+import {
+  useAuroraNotificationEvents,
+  useAuroraSecurityPolicy,
+  useAuroraStatus,
+} from "@/components/aurora/lib/aurora-queries";
+import { applySecurityProfile } from "@/lib/api/security";
+import { ApiError } from "@/lib/api/client";
 import { useUiStore } from "@/store/ui-store";
 
 export function Topbar() {
+  const queryClient = useQueryClient();
   const [now, setNow] = useState<Date | null>(null);
   const [safetyMenuOpen, setSafetyMenuOpen] = useState(false);
   const [pendingProfile, setPendingProfile] = useState<string | null>(null);
@@ -26,33 +34,29 @@ export function Topbar() {
   const use24HourTime = useUiStore((state) => state.use24HourTime);
   const contextOpen = useUiStore((state) => state.contextOpen);
   const setContextOpen = useUiStore((state) => state.setContextOpen);
-  const securityProfiles = useAuroraStore(
-    (state) => state.securityProfiles,
-  );
-  const securityPolicyActive = useAuroraStore(
-    (state) => state.securityPolicyActive,
-  );
-  const securityPolicyLoadingKey = useAuroraStore(
-    (state) => state.securityPolicyLoadingKey,
-  );
-  const loadSecurityPolicy = useAuroraStore(
-    (state) => state.loadSecurityPolicy,
-  );
-  const applySecurityProfileFromStore = useAuroraStore(
-    (state) => state.applySecurityProfileFromStore,
-  );
-  const backendOnline = useAuroraStore(
-    (state) => state.backendOnline,
-  );
-  const notificationEvents = useAuroraStore(
-    (state) => state.notificationEvents,
-  );
-  const checkBackendHealth = useAuroraStore(
-    (state) => state.checkBackendHealth,
-  );
-  const loadNotificationEvents = useAuroraStore(
-    (state) => state.loadNotificationEvents,
-  );
+  const securityQuery = useAuroraSecurityPolicy();
+  const securityProfiles = securityQuery.data?.profiles ?? [];
+  const securityPolicyActive = securityQuery.data?.active_policy ?? {};
+  const securityMutation = useMutation({
+    mutationFn: applySecurityProfile,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["aurora-security-policy"] });
+    },
+  });
+  const securityPolicyLoadingKey = securityMutation.isPending
+    ? String(securityMutation.variables ?? "profile")
+    : null;
+  const statusQuery = useAuroraStatus();
+  const notificationEventsQuery = useAuroraNotificationEvents();
+  const backendOnline = statusQuery.isSuccess;
+  const backendState = statusQuery.isPending
+    ? "connecting"
+    : backendOnline
+      ? "online"
+      : statusQuery.error instanceof ApiError && statusQuery.error.status === 401
+        ? "authentication required"
+        : "unavailable";
+  const notificationEvents = notificationEventsQuery.data?.events ?? [];
 
   useEffect(() => {
     setNow(new Date());
@@ -60,38 +64,19 @@ export function Topbar() {
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    void loadSecurityPolicy();
-  }, [loadSecurityPolicy]);
-
-  useEffect(() => {
-    void Promise.all([
-      checkBackendHealth(),
-      loadNotificationEvents(),
-    ]);
-
-    const timer = window.setInterval(() => {
-      void Promise.all([
-        checkBackendHealth(),
-        loadNotificationEvents(),
-      ]);
-    }, 30000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [checkBackendHealth, loadNotificationEvents]);
-
   const activeProfileKey = String(
-    securityPolicyActive?.active_profile ||
-    "strict",
+    securityQuery.isSuccess ? securityPolicyActive?.active_profile || "" : "",
   );
 
   const activeProfile = securityProfiles.find(
     (profile) => profile.key === activeProfileKey,
   );
 
-  const activeProfileLabel = activeProfile?.name || "Strict Mode";
+  const activeProfileLabel = securityQuery.isPending
+    ? "Loading policy…"
+    : securityQuery.isError
+      ? "Policy unavailable"
+      : activeProfile?.name || "Policy unavailable";
 
   async function requestSecurityProfile(profileKey: string) {
     if (profileKey === activeProfileKey) {
@@ -100,7 +85,7 @@ export function Topbar() {
     }
 
     if (profileKey === "strict") {
-      await applySecurityProfileFromStore(profileKey);
+      await securityMutation.mutateAsync(profileKey);
       setSafetyMenuOpen(false);
       return;
     }
@@ -111,7 +96,7 @@ export function Topbar() {
   async function confirmSecurityProfileChange() {
     if (!pendingProfile) return;
 
-    await applySecurityProfileFromStore(pendingProfile);
+    await securityMutation.mutateAsync(pendingProfile);
 
     setPendingProfile(null);
     setSafetyMenuOpen(false);
@@ -155,14 +140,20 @@ export function Topbar() {
               className={`relative inline-flex h-2 w-2 rounded-full ${
                 backendOnline
                   ? "bg-emerald-300"
-                  : "bg-amber-300"
+                  : statusQuery.isPending
+                    ? "bg-amber-300"
+                    : "bg-rose-300"
               }`}
             />
           </span>
           <span className="text-xs font-medium text-slate-300">
-            {backendOnline
+            {backendState === "online"
               ? "Backend connected"
-              : "Backend unavailable"}
+              : backendState === "connecting"
+                ? "Connecting…"
+                : backendState === "authentication required"
+                  ? "Authentication required"
+                  : "Backend unavailable"}
           </span>
         </div>
 
@@ -171,6 +162,7 @@ export function Topbar() {
             type="button"
             aria-haspopup="menu"
             aria-expanded={safetyMenuOpen}
+            disabled={!securityQuery.isSuccess}
             onClick={() => setSafetyMenuOpen((open) => !open)}
             className="flex items-center gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.025] px-3 py-2 text-left transition hover:border-violet-300/20 hover:bg-white/[0.05]"
           >

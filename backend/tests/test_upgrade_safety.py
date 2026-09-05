@@ -283,7 +283,7 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "loadNotificationEvents",
+            "useAuroraNotificationEvents",
             notifications,
         )
 
@@ -440,9 +440,16 @@ class FrontendRefactorTests(unittest.TestCase):
             dashboard,
         )
 
-        self.assertIn(
+        self.assertNotIn(
             "Refreshing every 30 seconds",
             dashboard,
+            "The dashboard must not claim a polling interval it does not use.",
+        )
+
+        self.assertIn(
+            "backendLastCheckedAt",
+            dashboard,
+            "Live data freshness must come from the query update timestamp.",
         )
 
         self.assertIn(
@@ -504,7 +511,7 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "recent mission",
+            "missionCount",
             sidebar,
         )
 
@@ -557,7 +564,7 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "loadToolPermissions",
+            "getToolPermissions",
             tools_workspace,
         )
 
@@ -610,8 +617,8 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            '"Governance"',
-            sidebar,
+            'label: "Governance"',
+            navigation,
         )
 
         self.assertIn(
@@ -763,15 +770,9 @@ class FrontendRefactorTests(unittest.TestCase):
             topbar,
         )
 
-        self.assertIn(
-            "loadSecurityPolicy",
-            topbar,
-        )
-
-        self.assertIn(
-            "applySecurityProfileFromStore",
-            topbar,
-        )
+        self.assertIn("useAuroraSecurityPolicy", topbar)
+        self.assertIn("mutationFn: applySecurityProfile", topbar)
+        self.assertIn('queryKey: ["aurora-security-policy"]', topbar)
 
         self.assertIn(
             "requestSecurityProfile",
@@ -889,10 +890,7 @@ class FrontendRefactorTests(unittest.TestCase):
             / ".gitignore"
         ).read_text(encoding="utf-8")
 
-        self.assertIn(
-            "applySecurityProfileFromStore",
-            topbar,
-        )
+        self.assertIn("mutationFn: applySecurityProfile", topbar)
 
         self.assertIn(
             "missionCount",
@@ -1089,7 +1087,7 @@ class FrontendRefactorTests(unittest.TestCase):
             "const loadRecordingModeStateFromStore = useAuroraStore(", dashboard
         )
         self.assertIn(
-            "[loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore]",
+            "[loadDemoWalkthroughStateFromStore, loadRecordingModeStateFromStore, usesAdvancedWidgets]",
             dashboard,
         )
 

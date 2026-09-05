@@ -404,6 +404,7 @@ def list_audit_events(
     mission_id: Optional[int] = None,
     correlation_id: str = "",
     phase: str = "",
+    newest_first: bool = False,
 ) -> List[Dict[str, Any]]:
     init_tool_audit_db()
     clauses: List[str] = []
@@ -422,8 +423,10 @@ def list_audit_events(
     values.append(bounded_limit)
     with get_connection() as conn:
         conn.row_factory = sqlite3.Row
+        order = "DESC" if newest_first else "ASC"
         rows = conn.execute(
-            f"SELECT * FROM audit_events {where} ORDER BY created_at ASC, id ASC LIMIT ?",
+            f"SELECT * FROM audit_events {where} "
+            f"ORDER BY created_at {order}, id {order} LIMIT ?",
             tuple(values),
         ).fetchall()
     return [dict(row) for row in rows]
