@@ -472,7 +472,7 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
           <div className="mt-4 max-h-[620px] space-y-3 overflow-y-auto">
             {missions.length === 0 ? (
               <p className="text-sm text-slate-500">
-                No missions yet. Create one from a workflow blueprint above.
+                No missions yet. Save your own goal and plan above, or use an optional workflow blueprint.
               </p>
             ) : (
               missions.map((mission) => (

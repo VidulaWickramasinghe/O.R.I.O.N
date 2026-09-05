@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { MissionsModule } from "@/components/aurora/modules/missions-module";
+import { MissionAuthor } from "./mission-author";
 
 export function MissionsWorkspace() {
   const [message, setMessage] = useState("");
@@ -36,6 +37,7 @@ export function MissionsWorkspace() {
         </section>
       )}
 
+      <MissionAuthor />
       <MissionsModule onAssistantMessage={setMessage} />
 
       <p className="rounded-2xl border border-white/10 bg-black/25 p-4 text-xs leading-5 text-slate-500">

@@ -1,5 +1,7 @@
 """Regression coverage for the launch-scoped local control API identity."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import json
 import os
 import socket

@@ -1,4 +1,4 @@
-"""Local release-candidate state and artifact generation for O.R.I.O.N. v4.0.
+"""Local release-candidate state and artifact generation for O.R.I.O.N.
 
 This module never performs external publication, source-control pushes, or
 destructive actions.  It records a local release-readiness freeze and writes
@@ -27,6 +27,7 @@ from core.tool_audit import get_tool_audit_metrics, render_tool_audit_report
 from core.tool_permissions import get_tool_permission_metrics, render_tool_permission_report
 from core.user_settings import get_user_settings_map
 from core.database import managed_connection
+from core.version import VERSION_LABEL, RELEASE_NAME
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -38,8 +39,8 @@ RC_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_FREEZE_STATE: Dict[str, Any] = {
     "frozen": False,
-    "release_version": "v4.0",
-    "release_name": "Autonomous Release Candidate",
+    "release_version": VERSION_LABEL,
+    "release_name": RELEASE_NAME,
     "freeze_reason": "",
     "frozen_at": "",
     "unfrozen_at": "",
@@ -116,6 +117,9 @@ def get_freeze_state() -> Dict[str, Any]:
         return DEFAULT_FREEZE_STATE.copy()
     state = dict(row)
     state["frozen"] = state.get("frozen") == "true"
+    if not state["frozen"]:
+        state["release_version"] = VERSION_LABEL
+        state["release_name"] = RELEASE_NAME
     return state
 
 
@@ -155,7 +159,7 @@ def list_release_events(limit: int = 50) -> List[Dict[str, Any]]:
 
 
 @requires_gateway
-def freeze_system(reason: str = "Preparing O.R.I.O.N. v4.0 release candidate.", release_version: str = "v4.0") -> Dict[str, Any]:
+def freeze_system(reason: str = "Preparing O.R.I.O.N. release candidate.", release_version: str = VERSION_LABEL) -> Dict[str, Any]:
     """Enter local release-readiness mode; no external system is changed."""
     init_release_candidate_db()
     clean_reason = _clean_text(reason, "reason", 1000)
@@ -228,7 +232,7 @@ def generate_release_checklist(include_dashboard: bool = True) -> Dict[str, Any]
         {"item": "Security Policy active", "ok": bool(security_policy.get("active_profile")), "details": f"Active profile: {security_policy.get('active_profile', 'unknown')}"},
         {"item": "Safety level configured", "ok": settings.get("safety_level", "") in {"strict", "balanced", "experimental"}, "details": f"Safety level: {settings.get('safety_level', 'unknown')}"},
         {"item": "Approval gates remain protected", "ok": True, "details": "Approval system is protected by policy profile logic."},
-        {"item": "v4.1 Stabilization scan completed", "ok": stabilization.get("status") in {"stable", "review_recommended", "cleanup_recommended"}, "details": f"Status: {stabilization.get('status', 'unknown')}"},
+        {"item": "Stabilization scan completed", "ok": stabilization.get("status") in {"stable", "review_recommended", "cleanup_recommended"}, "details": f"Status: {stabilization.get('status', 'unknown')}"},
     ]
     passed = sum(1 for item in checklist if item["ok"])
     return {"passed": passed, "failed": len(checklist) - passed, "items": checklist}
@@ -285,7 +289,7 @@ def generate_release_candidate_package() -> Dict[str, Any]:
         f"- [{'x' if item['ok'] else ' '}] {item['item']} — {item['details']}" for item in checklist["items"]
     )
     ci_evidence_summary = render_ci_evidence_summary(ci_evidence)
-    overview = f"""# O.R.I.O.N. v4.0 Release Candidate Overview
+    overview = f"""# O.R.I.O.N. {VERSION_LABEL} Release Candidate Overview
 
 Generated: {_now()}
 
@@ -330,7 +334,7 @@ Generated: {_now()}
     summary_path = _write_artifact(
         f"orion_v4_release_package_summary_{timestamp}.json", json.dumps(package_summary, indent=2)
     )
-    record_release_event("RELEASE_PACKAGE_GENERATED", "v4.0 Release Candidate Package Generated",
+    record_release_event("RELEASE_PACKAGE_GENERATED", f"{VERSION_LABEL} Release Candidate Package Generated",
                          f"Generated {len(artifacts)} release artifacts.", summary_path)
     return {**package_summary, "summary_path": summary_path}
 
@@ -354,7 +358,7 @@ def render_release_candidate_report(snapshot: Dict[str, Any] | None = None) -> s
         f"- [{event['created_at']}] {event['event_type']}: {event['title']} — {event['message']}"
         for event in snapshot["events"]
     ) or "No release candidate events yet."
-    return f"""# O.R.I.O.N. v4.0 Release Candidate Report
+    return f"""# O.R.I.O.N. {VERSION_LABEL} Release Candidate Report
 
 ## Freeze State
 

@@ -14,9 +14,10 @@ from core.patch_release import load_patch_state
 from core.post_release_maintenance import load_known_issues
 from core.capability_gateway import requires_gateway
 from core.stable_release import load_version_lock
+from core.runtime_paths import runtime_data_dir
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "backend/data/roadmap_planner"
+OUT = runtime_data_dir() / "roadmap_planner"
 ROADMAP_FILE = OUT / "future_features.json"
 
 _LOCK = threading.RLock()

@@ -111,5 +111,4 @@ export function destinationForPath(pathname: string): PrimaryDestination {
 
 // Secondary dashboard customisation only. These labels are not operational
 // telemetry and are intentionally excluded from the default command overview.
-export const dashboardModels = ["GPT-5.5", "Claude", "Gemini", "Local LLM"];
 export const dashboardTimeline = ["Request", "Planning", "Memory", "Agent", "Tools", "Approval", "Complete"];

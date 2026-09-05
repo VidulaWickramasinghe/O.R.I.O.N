@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 
 from core.capability_gateway import requires_gateway
 from core.runtime_paths import runtime_data_dir
+from core.version import VERSION_LABEL
 
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -16,7 +17,7 @@ DEMO_STATE_FILE = DATA_DIR / "portfolio_demo_state.json"
 
 DEFAULT_DEMO_STATE: Dict[str, Any] = {
     "demo_mode": False,
-    "release_version": "v6.5",
+    "release_version": VERSION_LABEL,
     "project_name": "O.R.I.O.N.",
     "interface_name": "Aurora OS",
     "tagline": "Think. Plan. Act. Learn.",
@@ -55,6 +56,8 @@ def load_demo_state() -> Dict[str, Any]:
 
     state = DEFAULT_DEMO_STATE.copy()
     state.update(loaded_state)
+    # Saved pack paths remain historical evidence; the active demo reflects this build.
+    state["release_version"] = VERSION_LABEL
 
     return state
 
@@ -103,7 +106,7 @@ def generate_demo_readiness_report() -> str:
 {state.get("interface_name", "Aurora OS")}
 
 ## Release Version
-{state.get("release_version", "v6.5")}
+{state.get("release_version", VERSION_LABEL)}
 
 ## Tagline
 {state.get("tagline", "Think. Plan. Act. Learn.")}
@@ -261,7 +264,7 @@ def generate_readme_snapshot() -> str:
 ## Operational Response and Intelligent Orchestration Network
 
 **Interface:** {state.get("interface_name", "Aurora OS")}  
-**Release:** {state.get("release_version", "v6.5")}  
+**Release:** {state.get("release_version", VERSION_LABEL)}
 **Tagline:** {state.get("tagline", "Think. Plan. Act. Learn.")}
 
 ---
@@ -313,7 +316,7 @@ O.R.I.O.N. is not just a chatbot. It is an AI-native operating layer for persona
 
 ## Release Status
 
-Portfolio demo release pack generated for {state.get("release_version", "v6.5")}.
+Portfolio demo release pack generated for {state.get("release_version", VERSION_LABEL)}.
 """
 
 
@@ -325,7 +328,7 @@ def generate_changelog_snapshot() -> str:
 
     return f"""# Changelog
 
-## {state.get("release_version", "v6.5")} — Portfolio Release + Demo Mode
+## {state.get("release_version", VERSION_LABEL)} — Portfolio Release + Demo Mode
 
 ### Added
 
@@ -437,7 +440,7 @@ def generate_release_pack() -> Dict[str, Any]:
         "status": "generated",
         "project_name": "O.R.I.O.N.",
         "interface_name": "Aurora OS",
-        "release_version": "v6.5",
+        "release_version": VERSION_LABEL,
         "generated_at": generated_at,
         "files": files,
     }

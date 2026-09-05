@@ -1,5 +1,7 @@
 """Lifecycle and fault-injection tests for the durable mission state machine."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import tempfile
 import time
 import unittest

@@ -1,5 +1,7 @@
 """SSRF regression coverage for the browser research transport."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import os
 import socket
 import unittest

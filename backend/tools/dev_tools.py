@@ -9,6 +9,7 @@ from core.tool_logger import instrument_tool
 from core.tool_permissions import enforce_tool_permission
 from core.approvals import create_approval_request, get_approval_request
 from core.capability_gateway import requires_gateway
+from core.workspace_commands import package_script_plan, revalidate_package_script
 from core.workspace_manager import (
     get_trusted_workspace_record,
     is_sensitive_workspace_path,
@@ -66,7 +67,7 @@ def _is_safe_command(command: str) -> bool:
         return False
 
     for allowed in ALLOWED_COMMANDS:
-        if parts[: len(allowed)] == allowed:
+        if parts == allowed:
             return True
 
     return False
@@ -87,13 +88,15 @@ def _write_project_file_now(workspace_id: int, path: str, content: str) -> str:
 
 
 @requires_gateway
-def _run_safe_command_now(workspace_id: int, command: str) -> str:
+def _run_safe_command_now(workspace_id: int, command: str, command_plan: Optional[Dict[str, Any]] = None) -> str:
     if not _is_safe_command(command):
-        return f"Blocked unsafe or unapproved command: {command}"
+        raise PermissionError(f"Command is not allowlisted: {command}")
 
     parts = shlex.split(command)
     workspace = get_trusted_workspace_record(workspace_id)
     workspace_root = Path(str(workspace["path"])).resolve(strict=True)
+    if parts == ["npm", "run", "build"]:
+        revalidate_package_script(workspace_id, "build", command_plan)
 
     result = subprocess.run(
         parts,
@@ -106,6 +109,8 @@ def _run_safe_command_now(workspace_id: int, command: str) -> str:
 
     output = result.stdout.strip()
     error = result.stderr.strip()
+    if result.returncode != 0:
+        raise RuntimeError(f"Command exited with status {result.returncode}: {error or output}")
 
     if error:
         return f"Command completed with messages:\n{error}\n\nOutput:\n{output}"
@@ -143,6 +148,7 @@ def execute_approved_dev_action(
         return _run_safe_command_now(
             workspace_id=int(payload.get("workspace_id", 0)),
             command=payload.get("command", ""),
+            command_plan=payload.get("command_plan"),
         )
 
     return f"No executor available for action type: {action_type}"
@@ -268,24 +274,26 @@ def write_project_file(workspace_id: int, path: str, content: str) -> str:
 @enforce_tool_permission("run_safe_command")
 def run_safe_command(workspace_id: int, command: str) -> str:
     """
-    Request approval before running an approved non-destructive developer command.
+    Request approval for an allowlisted command. Package scripts execute arbitrary workspace code.
     """
     if not _is_safe_command(command):
         return f"Blocked unsafe or unapproved command: {command}"
     try:
         get_trusted_workspace_record(workspace_id)
+        command_plan = package_script_plan(workspace_id, "build") if shlex.split(command) == ["npm", "run", "build"] else None
     except Exception as error:
         return f"Command request blocked: {error}"
 
     approval_id = create_approval_request(
         action_type="RUN_SAFE_COMMAND",
         title=f"Run command: {command}",
-        description="O.R.I.O.N. requests permission to run an approved developer command.",
+        description=command_plan["effect"] if command_plan else "Run the exact displayed command in this trusted workspace.",
         payload={
             "workspace_id": workspace_id,
             "command": command,
+            "command_plan": command_plan,
         },
-        risk_level="medium",
+        risk_level="high" if command_plan else "medium",
         source="run_safe_command",
     )
 

@@ -77,8 +77,8 @@ def get_operational_telemetry(
 
     tool_rows = _read_rows(
         tool_audit.DB_PATH,
-        "tool_audit_events",
-        "id, tool_name, actor, decision, side_effect, created_at",
+        "audit_events",
+        "id, event_type, phase, tool_name, actor, status, duration_ms, completed_at, created_at",
     )
     agent_rows = _read_rows(
         agent_runtime.DB_PATH,
@@ -93,28 +93,29 @@ def get_operational_telemetry(
 
     executions: List[Dict[str, Any]] = []
     for row in tool_rows:
-        timestamp = _parse_timestamp(row.get("created_at"))
-        if timestamp and start <= timestamp <= current and bool(row.get("side_effect")):
+        timestamp = _parse_timestamp(row.get("completed_at"))
+        if (row.get("event_type") == "capability.execution"
+                and row.get("phase") == "execution"
+                and row.get("status") in {"succeeded", "failed", "cancelled"}
+                and timestamp and start <= timestamp <= current):
             executions.append(
                 {
                     "timestamp": timestamp,
-                    "success": row.get("decision") == "allowed",
+                    "success": row.get("status") == "succeeded",
                     "agent": str(row.get("actor") or "unknown"),
-                    "latency_ms": None,
+                    "latency_ms": row.get("duration_ms"),
                 }
             )
 
     total_tokens = 0
+    completed_agent_runs = 0
+    successful_agent_runs = 0
     for row in agent_rows:
-        timestamp = _parse_timestamp(row.get("started_at"))
+        timestamp = _parse_timestamp(row.get("completed_at"))
+        if row.get("status") not in {"completed", "succeeded", "failed", "cancelled", "recoverable_failure", "cancelled_recoverable", "failed_recoverable"}:
+            continue
         if not timestamp or not (start <= timestamp <= current):
             continue
-        completed = _parse_timestamp(row.get("completed_at"))
-        latency = (
-            max(0, (completed - timestamp).total_seconds() * 1000)
-            if completed is not None
-            else None
-        )
         try:
             usage = json.loads(str(row.get("usage_json") or "{}"))
         except (json.JSONDecodeError, TypeError):
@@ -123,14 +124,8 @@ def get_operational_telemetry(
             int(usage.get(key) or 0)
             for key in ("input_tokens", "output_tokens")
         )
-        executions.append(
-            {
-                "timestamp": timestamp,
-                "success": row.get("status") in {"completed", "succeeded"},
-                "agent": f"{row.get('provider') or 'unknown'}:{row.get('model') or 'unknown'}",
-                "latency_ms": latency,
-            }
-        )
+        completed_agent_runs += 1
+        successful_agent_runs += int(row.get("status") in {"completed", "succeeded"})
 
     bucket_seconds = duration.total_seconds() / bucket_count
     buckets = [
@@ -213,7 +208,12 @@ def get_operational_telemetry(
         "range": range_key,
         "window_start": start.isoformat(),
         "window_end": current.isoformat(),
-        "has_data": bool(executions or latest_mission_state),
+        "has_data": bool(executions or latest_mission_state or completed_agent_runs),
+        "metric_definition": "One terminal capability.execution audit record. Succeeded / (succeeded + failed + cancelled), by completion time in UTC. Decisions, internal primitives, and running work are excluded.",
+        "agent_runs": {
+            "completed": completed_agent_runs,
+            "success_rate": _percent(successful_agent_runs, completed_agent_runs),
+        },
         "summary": {
             "total_executions": len(executions),
             "success_rate": _percent(successes, len(executions)),

@@ -1,5 +1,7 @@
 """Regression tests for semantic memory and approval-gated developer mode."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import os
 import re
 import tempfile
@@ -323,9 +325,14 @@ class FrontendRefactorTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "Runtime telemetry unavailable",
+            "Model availability is not reported here.",
             dashboard,
         )
+        self.assertNotIn("dashboardModels", dashboard)
+        self.assertNotIn("Private fallback", dashboard)
+        graph = (project_root / "frontend/src/components/aurora/graphs/mission-flow-graph.tsx").read_text()
+        self.assertNotIn('status: "complete"', graph)
+        self.assertIn('status: "reference"', graph)
 
     def test_dashboard_reality_cleanup_removes_stale_fake_metrics(self) -> None:
         project_root = Path(__file__).resolve().parents[2]

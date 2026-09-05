@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { useAuroraStore } from "@/store/auroraStore";
 
-import { dashboardModels, dashboardTimeline } from "@/lib/aurora-data";
+import { dashboardTimeline } from "@/lib/aurora-data";
 import { createDeveloperPatchPlan, diagnoseDeveloperWorkspace, getDeveloperReports, inspectDeveloperWorkspace } from "@/lib/api/developer";
 import { getKnowledgeDocuments, indexKnowledgeFolder, searchKnowledge } from "@/lib/api/knowledge";
 import { getVectorItems, rebuildVectorIndex, searchVector } from "@/lib/api/vector";
@@ -838,8 +838,9 @@ export function DashboardWorkspace({ forceGovernanceMode = false, forceSecurityM
 
           {widgets.includes("Models") && (
             <section className="orion-panel p-5 sm:p-6">
-              <div className="flex items-center justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-600">Model mesh</p><h2 className="mt-2 text-base font-semibold text-white">Configured model options</h2></div><span className="text-[10px] text-slate-600">Runtime telemetry unavailable</span></div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{dashboardModels.map((model, index) => <div key={model} className="orion-panel-soft p-4"><div className={`flex h-9 w-9 items-center justify-center rounded-xl ${index === 0 ? "bg-cyan-300/[0.09] text-cyan-200" : index === 1 ? "bg-violet-300/[0.09] text-violet-200" : index === 2 ? "bg-blue-300/[0.09] text-blue-200" : "bg-emerald-300/[0.09] text-emerald-200"}`}><Cpu size={17} /></div><p className="mt-4 text-sm font-semibold text-white">{model}</p><p className="mt-1 text-[10px] text-slate-600">{index === 0 ? "Primary reasoning" : index === 1 ? "Deep analysis" : index === 2 ? "Multimodal" : "Private fallback"}</p><div className="mt-4 flex items-center justify-between text-[10px]"><span className="text-slate-600">Runtime status</span><span className="text-slate-500">Not reported</span></div></div>)}</div>
+              <h2 className="text-base font-semibold text-white">AI provider configuration</h2>
+              <p className="mt-3 text-sm text-slate-400">Model availability is not reported here. The Assistant displays the provider and model returned by each run; configured preferences do not prove provider health or fallback availability.</p>
+              <Link href="/settings" className="mt-4 inline-flex rounded-xl border border-cyan-300/20 px-4 py-2 text-sm text-cyan-200 focus-visible:outline-2 focus-visible:outline-cyan-300">Review AI settings</Link>
             </section>
           )}
         </div>

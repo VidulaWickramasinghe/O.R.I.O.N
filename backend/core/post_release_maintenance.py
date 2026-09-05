@@ -8,8 +8,9 @@ from core.stable_release import generate_stable_release_checklist, load_version_
 from core.production_readiness import generate_production_readiness_snapshot
 from core.release_verification import generate_release_verification_snapshot
 from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
-ROOT=Path(__file__).resolve().parents[2]; OUT=ROOT/'backend/data/post_release_maintenance'; ISSUES=OUT/'known_issues.json'; RELEASE_VERSION='v6.5'; _LOCK=threading.RLock(); DEFAULT={'issues':[],'updated_at':''}; PRIORITIES={'critical','high','medium','low'}
+ROOT=Path(__file__).resolve().parents[2]; OUT=runtime_data_dir()/'post_release_maintenance'; ISSUES=OUT/'known_issues.json'; RELEASE_VERSION='v6.5'; _LOCK=threading.RLock(); DEFAULT={'issues':[],'updated_at':''}; PRIORITIES={'critical','high','medium','low'}
 def _now(): return datetime.now().isoformat(timespec='seconds')
 def _stamp(): return datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 def _atomic(path:Path,content:str):

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from core.tool_logger import instrument_tool
+from core.runtime_paths import runtime_data_dir
 
 
 try:
@@ -20,7 +21,7 @@ except Exception:
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-DEMO_OUTPUT_DIR = BACKEND_DIR / "data" / "demo"
+DEMO_OUTPUT_DIR = runtime_data_dir() / "demo"
 
 
 def _safe_import_portfolio_demo():

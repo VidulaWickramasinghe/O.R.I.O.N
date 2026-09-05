@@ -1,5 +1,7 @@
 """Session isolation, provider selection, fallback, and failure tests."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import asyncio
 import tempfile
 import unittest

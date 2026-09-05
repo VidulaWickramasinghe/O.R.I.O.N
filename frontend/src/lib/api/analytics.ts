@@ -9,6 +9,8 @@ export type OperationalTelemetry = {
   window_start: string;
   window_end: string;
   has_data: boolean;
+  metric_definition: string;
+  agent_runs: { completed: number; success_rate: number | null };
   summary: {
     total_executions: number;
     success_rate: number | null;

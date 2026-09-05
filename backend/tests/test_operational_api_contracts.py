@@ -7,6 +7,8 @@ suite never reads or changes a user's local O.R.I.O.N. state.
 
 from __future__ import annotations
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import tempfile
 import unittest
 from contextlib import contextmanager

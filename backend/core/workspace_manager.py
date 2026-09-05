@@ -153,7 +153,10 @@ def is_sensitive_workspace_path(relative_path: str | Path) -> bool:
 
 
 def _workspace_root(workspace: Dict[str, Any]) -> Path:
-    root = Path(str(workspace["path"])).expanduser().resolve(strict=True)
+    registered = Path(str(workspace["path"])).expanduser()
+    root = registered.resolve(strict=True)
+    if root != registered:
+        raise PermissionError("The registered workspace root changed. Register and review it again.")
     if not root.is_dir():
         raise PermissionError("The registered workspace root is no longer a directory.")
     return root

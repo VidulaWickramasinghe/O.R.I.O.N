@@ -1,5 +1,7 @@
 """Voice capture must remain explicit, bounded, gateway-controlled, and review-only."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import tempfile
 import unittest
 from pathlib import Path

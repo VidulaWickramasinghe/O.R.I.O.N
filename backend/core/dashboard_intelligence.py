@@ -6,7 +6,7 @@ from .developer_agent import list_developer_reports
 from .knowledge_base import list_knowledge_documents
 from .mission_planner import list_mission_records
 from .mission_run_history import list_mission_runs
-from .notification_engine import list_reminders, refresh_due_reminders
+from .notification_engine import list_reminders
 from .persistent_memory import list_recent_memory
 from .plugin_registry import get_plugin_metrics
 from .release_candidate import generate_release_checklist, get_freeze_state
@@ -247,7 +247,6 @@ def generate_dashboard_intelligence() -> Dict[str, Any]:
     risk_metrics = calculate_risk_metrics()
     activity_metrics = calculate_activity_metrics()
     developer_metrics = calculate_developer_metrics()
-    refresh_due_reminders()
     reminders = list_reminders(limit=100)
     due_reminders = [item for item in reminders if item.get("status") == "due"]
     pending_reminders = [item for item in reminders if item.get("status") == "pending"]

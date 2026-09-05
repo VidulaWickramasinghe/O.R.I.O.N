@@ -1,5 +1,7 @@
 """Platform claims must match explicit package and release evidence."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import json
 import unittest
 from pathlib import Path

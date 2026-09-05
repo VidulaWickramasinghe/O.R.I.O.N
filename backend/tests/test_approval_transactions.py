@@ -1,5 +1,7 @@
 """Transactional approval and mission continuation regression coverage."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import tempfile
 import threading
 import time
