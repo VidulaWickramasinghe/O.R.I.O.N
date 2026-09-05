@@ -1,5 +1,7 @@
 """Security regression tests for trusted workspace and knowledge scopes."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import tempfile
 import unittest
 from contextlib import contextmanager

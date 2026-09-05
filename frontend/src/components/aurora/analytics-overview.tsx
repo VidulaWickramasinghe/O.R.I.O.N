@@ -83,7 +83,7 @@ export function AnalyticsOverview() {
         <div>
           <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.22em] text-cyan-300/70"><Activity size={13} /> Operational analytics · persisted events</div>
           <h2 className="mt-2 text-lg font-semibold text-white">Performance intelligence</h2>
-          <p className="mt-1 text-xs leading-5 text-slate-500">Capability decisions, agent runs and mission transitions from local event stores.</p>
+          <p className="mt-1 text-xs leading-5 text-slate-400">Finished capability calls, provider usage and mission transitions from local event stores.</p>
         </div>
         <div className="flex rounded-xl border border-white/[0.07] bg-black/20 p-1">
           {(["24h", "7d", "30d"] as const).map((item) => <button key={item} type="button" onClick={() => setRange(item)} className={`rounded-lg px-3 py-2 text-[11px] font-semibold ${range === item ? "bg-cyan-300/[0.12] text-cyan-100" : "text-slate-500"}`}>{item}</button>)}
@@ -94,10 +94,11 @@ export function AnalyticsOverview() {
         <AnalyticsMessage>No operational events exist in this window. Metrics will appear after a mission, agent run, or governed action occurs.</AnalyticsMessage>
       ) : (
         <>
+          <p className="border-b border-white/10 p-4 text-xs leading-5 text-slate-300">{telemetry.metric_definition} Updated {new Date(telemetry.generated_at).toLocaleString()}. <a href="/audit" className="text-cyan-200 underline">Inspect audit evidence</a></p>
           <div className="grid border-b border-white/[0.07] sm:grid-cols-2 xl:grid-cols-4">
-            <AnalyticsStat icon={<Zap size={16} />} label="Total executions" value={formatCompact(telemetry.summary.total_executions)} detail="Persisted decisions and agent runs" />
-            <AnalyticsStat icon={<ShieldCheck size={16} />} label="Success rate" value={telemetry.summary.success_rate == null ? "No sample" : `${telemetry.summary.success_rate.toFixed(1)}%`} detail="Allowed/completed event ratio" />
-            <AnalyticsStat icon={<Clock3 size={16} />} label="Average latency" value={telemetry.summary.average_latency_ms == null ? "No sample" : `${telemetry.summary.average_latency_ms} ms`} detail="Completed agent runs only" />
+            <AnalyticsStat icon={<Zap size={16} />} label="Finished capability calls" value={formatCompact(telemetry.summary.total_executions)} detail="Terminal execution records; excludes decisions" />
+            <AnalyticsStat icon={<ShieldCheck size={16} />} label="Success rate" value={telemetry.summary.success_rate == null ? "No sample" : `${telemetry.summary.success_rate.toFixed(1)}%`} detail="Succeeded / all finished calls, including failures and cancellations" />
+            <AnalyticsStat icon={<Clock3 size={16} />} label="Average latency" value={telemetry.summary.average_latency_ms == null ? "No sample" : `${telemetry.summary.average_latency_ms} ms`} detail="Finished capability calls with measured duration" />
             <AnalyticsStat icon={<Bot size={16} />} label="Token usage" value={formatCompact(telemetry.summary.token_usage)} detail="Provider-reported input + output" />
           </div>
 

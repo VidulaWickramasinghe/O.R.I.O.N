@@ -3,11 +3,12 @@ from datetime import datetime
 from pathlib import Path
 from agents import function_tool
 from core.tool_logger import instrument_tool
+from core.runtime_paths import runtime_data_dir
 
 
-PROJECTS_FILE = Path("backend/data/projects.json")
-ROADMAPS_DIR = Path("backend/data/project_roadmaps")
-SUMMARIES_DIR = Path("backend/data/portfolio_summaries")
+PROJECTS_FILE = runtime_data_dir() / "projects.json"
+ROADMAPS_DIR = runtime_data_dir() / "project_roadmaps"
+SUMMARIES_DIR = runtime_data_dir() / "portfolio_summaries"
 
 PROJECTS_FILE.parent.mkdir(parents=True, exist_ok=True)
 ROADMAPS_DIR.mkdir(parents=True, exist_ok=True)

@@ -75,6 +75,7 @@ CAPABILITY_PLUGIN_OVERRIDES: Dict[str, str] = {
 # Every POST endpoint is explicit.  Adding a new mutating route without adding
 # it here fails closed in ``api_capability_guard``.
 API_CAPABILITY_MAP: Dict[str, str] = {
+    "mission_create": "create_mission",
     "clear_activity_route": "clear_activity",
     "mission_report": "generate_mission_report",
     "mission_pause": "pause_mission",
@@ -217,6 +218,7 @@ INTERNAL_CAPABILITY_MAP: Dict[str, frozenset[str]] = {
     "core.demo_recording.save_demo_recording_report": frozenset({"save_demo_recording_report"}),
     "core.demo_walkthrough.save_demo_walkthrough_report": frozenset({"save_demo_walkthrough_report"}),
     "core.desktop_control.execute_approved_desktop_action": frozenset({"execute_approved_action"}),
+    "core.desktop_control._open_target": frozenset({"execute_approved_action"}),
     "core.developer_agent.create_developer_report_record": frozenset(
         {
             "create_workspace_patch_plan",
@@ -643,6 +645,10 @@ def _policy_snapshot() -> tuple[str, set[str]]:
 
 def _plugin_decision(manifest: CapabilityManifest, disabled: set[str]) -> tuple[bool, str, str, str]:
     from core.plugin_registry import get_plugin
+    from core.context_selection import context_plugin_allowed
+
+    if not context_plugin_allowed(manifest.plugin_key):
+        return False, "This context source was excluded for the current conversation.", "unknown", "context"
 
     plugin = get_plugin(manifest.plugin_key)
     if not plugin:

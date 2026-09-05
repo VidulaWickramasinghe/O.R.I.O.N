@@ -1,5 +1,7 @@
 """Regression coverage for evidence-backed CI and release gating."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import json
 import tempfile
 import unittest

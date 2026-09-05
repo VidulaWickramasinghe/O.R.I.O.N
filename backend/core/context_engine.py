@@ -15,6 +15,7 @@ from core.user_settings import get_user_settings_map, render_user_profile_summar
 from core.plugin_registry import get_plugin_metrics, list_plugins
 from core.capability_gateway import requires_gateway
 from core.runtime_paths import runtime_data_dir
+from core.context_selection import current_selection
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -93,6 +94,7 @@ def build_context_bundle(
     Build a compact contextual bundle for O.R.I.O.N. before answering.
     """
     query = user_message.strip()
+    selection = current_selection() or {key: True for key in ("memory", "knowledge", "semantic", "profile", "activity")}
 
     relevant_memories = (
         search_memory_items(
@@ -102,7 +104,7 @@ def build_context_bundle(
             project_key=project_key,
             include_sensitive=include_sensitive,
         )
-        if query
+        if query and selection.get("memory")
         else []
     )
     recent_memories = list_recent_memory(
@@ -110,7 +112,7 @@ def build_context_bundle(
         workspace_id=workspace_id,
         project_key=project_key,
         include_sensitive=include_sensitive,
-    )
+    ) if selection.get("memory") else []
     knowledge_results = (
         search_knowledge(
             query=query,
@@ -118,7 +120,7 @@ def build_context_bundle(
             workspace_id=workspace_id,
             include_sensitive=include_sensitive,
         )
-        if query and workspace_id is not None
+        if query and workspace_id is not None and selection.get("knowledge")
         else []
     )
     semantic_results = []
@@ -131,7 +133,7 @@ def build_context_bundle(
                 project_key=project_key,
                 include_sensitive=include_sensitive,
             )
-            if query
+            if query and all(selection.get(key) for key in ("semantic", "memory", "knowledge"))
             else []
         )
     except Exception:
@@ -142,7 +144,7 @@ def build_context_bundle(
         if workspace_id is not None
         and document.get("workspace_id") == workspace_id
         and _is_active_source(document, include_sensitive)
-    ][:8]
+    ][:8] if selection.get("knowledge") else []
     projects = [
         project for project in _load_projects() if project["key"] == project_key
     ][:1]
@@ -166,9 +168,9 @@ def build_context_bundle(
         for approval in list_approval_requests(limit=100, status="pending")
         if mission_id is not None and approval.get("mission_id") == mission_id
     ][:8]
-    recent_activity = get_recent_activity(limit=8)
-    user_settings = get_user_settings_map()
-    user_profile_summary = render_user_profile_summary()
+    recent_activity = get_recent_activity(limit=8) if selection.get("activity") else []
+    user_settings = get_user_settings_map() if selection.get("profile") else {}
+    user_profile_summary = render_user_profile_summary() if selection.get("profile") else "Profile context excluded."
     plugin_metrics = get_plugin_metrics()
     enabled_plugins = list_plugins(enabled=True, limit=30)
 

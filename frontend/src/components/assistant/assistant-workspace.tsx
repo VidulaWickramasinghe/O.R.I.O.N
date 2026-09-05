@@ -13,7 +13,8 @@ import {
 import { GlassPanel } from "@/components/aurora/glass-panel";
 import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
 import { StatusChip } from "@/components/aurora/status-chip";
-import { previewChatContext, sendChatMessage } from "@/lib/api/chat";
+import { previewChatContext, sendChatMessage, type ContextOptions } from "@/lib/api/chat";
+import { useAuroraWorkspaces } from "@/components/aurora/lib/aurora-queries";
 import { getSystemStatus } from "@/lib/api/status";
 import { recoveryFromError, type RecoveryCode } from "@/lib/recovery";
 import { consumeReviewedVoiceDraft } from "@/lib/voice-handoff";
@@ -58,6 +59,12 @@ export function AssistantWorkspace() {
   const [thinking, setThinking] = useState(false);
   const [contextLoading, setContextLoading] = useState(false);
   const [contextPreview, setContextPreview] = useState("");
+  const [contextHash, setContextHash] = useState("");
+  const [systemInstructions, setSystemInstructions] = useState("");
+  const [contextOptions, setContextOptions] = useState<ContextOptions>({ memory: true, knowledge: true, semantic: false, profile: false, activity: false });
+  const [workspaceId, setWorkspaceId] = useState("");
+  const [activeModel, setActiveModel] = useState("");
+  const workspacesQuery = useAuroraWorkspaces();
   const [backend, setBackend] = useState<BackendState | null>(null);
   const [backendError, setBackendError] = useState("");
   const [recovery, setRecovery] = useState<RecoveryCode | null>(null);
@@ -104,6 +111,15 @@ export function AssistantWorkspace() {
     setMessages((current) => [...current, message]);
   }
 
+  function newConversation() {
+    conversationIdRef.current = "";
+    clientScopeIdRef.current = newId("chat");
+    setContextPreview("");
+    setContextHash("");
+    setSystemInstructions("");
+    appendMessage({ id: newId("scope"), role: "system", content: "New conversation. Earlier messages will not be sent with the next request.", time: nowLabel() });
+  }
+
   async function submit(event?: FormEvent) {
     event?.preventDefault();
 
@@ -127,7 +143,11 @@ export function AssistantWorkspace() {
       const data = await sendChatMessage(cleanMessage, {
         conversation_id: conversationIdRef.current || undefined,
         client_scope_id: clientScopeIdRef.current,
+        workspace_id: workspaceId ? Number(workspaceId) : undefined,
+        context_options: contextOptions,
+        expected_context_hash: contextHash || undefined,
       });
+      setActiveModel(data.model ? `${data.provider} · ${data.model}` : "Provider unavailable");
       conversationIdRef.current = data.conversation_id || conversationIdRef.current;
 
       appendMessage({
@@ -173,8 +193,10 @@ export function AssistantWorkspace() {
     setRecovery(null);
 
     try {
-      const data = await previewChatContext(cleanMessage);
+      const data = await previewChatContext(cleanMessage, { workspace_id: workspaceId ? Number(workspaceId) : undefined, context_options: contextOptions });
       setContextPreview(data.context || "No context returned for this query.");
+      setContextHash(data.context_hash || "");
+      setSystemInstructions(data.system_instructions || "");
     } catch (error) {
       setContextPreview(
         "Context preview failed. Confirm /api/context/preview is available.",
@@ -216,7 +238,7 @@ export function AssistantWorkspace() {
   }, [messages, thinking]);
 
   return (
-    <div className="grid h-full gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+    <div className="grid h-full gap-4 2xl:grid-cols-[minmax(0,1fr)_320px]">
       <GlassPanel className="flex min-h-[680px] flex-col overflow-hidden">
         <div className="border-b border-white/10 p-5">
           <div className="flex flex-wrap items-center gap-2">
@@ -225,7 +247,7 @@ export function AssistantWorkspace() {
             </h1>
 
             <StatusChip tone={statusTone}>
-              {backendOnline ? "Backend Live" : "Backend Offline"}
+              {backendOnline ? "Backend Live" : backendError ? "Backend Offline" : "Connecting…"}
             </StatusChip>
 
             {backend?.version && (
@@ -233,6 +255,8 @@ export function AssistantWorkspace() {
             )}
 
             <StatusChip tone="warning">Approval-Gated Tools</StatusChip>
+            {activeModel && <StatusChip tone="primary">{activeModel}</StatusChip>}
+            <button type="button" onClick={newConversation} disabled={thinking || contextLoading} className="rounded-xl border border-white/20 px-3 py-2 text-sm text-slate-200 disabled:opacity-50">New conversation</button>
           </div>
 
           <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -290,7 +314,8 @@ export function AssistantWorkspace() {
             ref={draftRef}
             aria-label="Message O.R.I.O.N."
             value={draft}
-            onChange={(event) => setDraft(event.target.value)}
+            onChange={(event) => { setDraft(event.target.value); setContextHash(""); setContextPreview(""); }}
+            disabled={contextLoading}
             onKeyDown={(event) => {
               if (event.key === "Enter" && !event.shiftKey) {
                 event.preventDefault();
@@ -324,7 +349,7 @@ export function AssistantWorkspace() {
 
             <button
               type="submit"
-              disabled={thinking || !draft.trim()}
+              disabled={thinking || contextLoading || !draft.trim()}
               className="rounded-xl bg-cyan-300 px-5 py-3 font-bold text-slate-950 hover:bg-cyan-200 disabled:opacity-50"
             >
               <Send className="inline" size={17} /> Send
@@ -334,6 +359,19 @@ export function AssistantWorkspace() {
       </GlassPanel>
 
       <aside className="space-y-4">
+        <SideCard icon={<Brain size={18} />} title="Context sent to the provider" body="Changing these choices starts a new conversation. Preview shows this turn's input; earlier messages and tool results remain part of an existing conversation.">
+          <fieldset disabled={thinking || contextLoading} className="mt-4 space-y-3 text-sm text-slate-200">
+            <label className="block">Workspace
+              <select aria-label="Assistant workspace" value={workspaceId} onChange={(event) => { setWorkspaceId(event.target.value); newConversation(); }} className="mt-1 w-full rounded-lg border border-white/20 bg-[#101722] p-2">
+                <option value="">No workspace context</option>
+                {(workspacesQuery.data?.workspaces ?? []).map((workspace) => <option key={workspace.id} value={workspace.id}>{workspace.name}</option>)}
+              </select>
+            </label>
+            {workspacesQuery.isError && <p role="status">Workspace list unavailable. Retry the backend connection.</p>}
+            {([ ["memory", "Memory"], ["knowledge", "Workspace knowledge"], ["semantic", "Semantic search (sends query to embedding provider)"], ["profile", "Profile preferences"], ["activity", "Recent activity (may include other work)"] ] as const).map(([key, label]) => <label key={key} className="flex items-start gap-2"><input type="checkbox" checked={contextOptions[key]} onChange={(event) => { setContextOptions((current) => ({ ...current, [key]: event.target.checked })); newConversation(); }} className="mt-1" />{label}</label>)}
+            <p className="text-xs leading-5 text-slate-400">Sensitive memories are excluded. Semantic search requires both memory and knowledge enabled. Tool permissions and approval gates still apply.</p>
+          </fieldset>
+        </SideCard>
         <SideCard
           icon={<Sparkles size={18} />}
           title="Live Chat"
@@ -352,6 +390,7 @@ export function AssistantWorkspace() {
           <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap rounded-2xl border border-white/10 bg-black/30 p-3 text-xs leading-5 text-slate-300">
             {contextPreview || "No context preview yet."}
           </pre>
+          {systemInstructions && <details className="mt-3 text-xs text-slate-300"><summary className="cursor-pointer">System instructions</summary><pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap">{systemInstructions}</pre></details>}
         </SideCard>
 
         <SideCard

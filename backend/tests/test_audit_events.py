@@ -1,5 +1,7 @@
 """Regression tests for correlated, durable security and mission audit events."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import sqlite3
 import tempfile
 import unittest

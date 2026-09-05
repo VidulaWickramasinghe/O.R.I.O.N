@@ -1,5 +1,7 @@
 """Scope, provenance, exclusion, and deletion regressions for ORION-011."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import sqlite3
 import tempfile
 import unittest

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import json
 import subprocess
 import sys

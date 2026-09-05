@@ -6,8 +6,9 @@ from pathlib import Path
 from typing import Any, Dict
 from core.roadmap_planner import generate_roadmap_plan, load_future_features
 from core.capability_gateway import requires_gateway
+from core.runtime_paths import runtime_data_dir
 
-ROOT=Path(__file__).resolve().parents[2];OUT=ROOT/'backend/data/safety_review_board';REVIEW_FILE=OUT/'feature_reviews.json';DEFAULT={'reviews':[],'updated_at':''};_LOCK=threading.RLock();DECISIONS={'approved','conditional_approval','rejected','needs_changes'}
+ROOT=Path(__file__).resolve().parents[2];OUT=runtime_data_dir()/'safety_review_board';REVIEW_FILE=OUT/'feature_reviews.json';DEFAULT={'reviews':[],'updated_at':''};_LOCK=threading.RLock();DECISIONS={'approved','conditional_approval','rejected','needs_changes'}
 def _now():return datetime.now().isoformat(timespec='seconds')
 def _stamp():return datetime.now().strftime('%Y%m%d_%H%M%S_%f')
 def _atomic(path:Path,content:str):

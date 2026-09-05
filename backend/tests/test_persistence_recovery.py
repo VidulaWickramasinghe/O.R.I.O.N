@@ -1,5 +1,7 @@
 """Migration matrix and verified backup/restore regressions for ORION-018."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import sqlite3
 import sys
 import tempfile

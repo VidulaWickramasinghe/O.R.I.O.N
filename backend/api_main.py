@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import os
 import sys
@@ -33,6 +34,8 @@ from core.api_auth import (
     create_local_api_authenticator,
 )
 from core.runtime_paths import runtime_data_path
+from core.context_selection import context_selection
+from core.mission_planner import create_mission_record
 from core.agent_runtime import (
     RecoverableAgentRunError,
     get_conversation,
@@ -839,7 +842,6 @@ class PostReleaseMaintenanceResponse(BaseModel):
 
 @asynccontextmanager
 async def app_lifespan(_app: FastAPI):
-    LOCAL_API_AUTHENTICATOR.start_development_broker()
     try:
         restored = apply_pending_runtime_restore()
         initialize_persistence()
@@ -885,6 +887,7 @@ async def app_lifespan(_app: FastAPI):
             f"O.R.I.O.N. API {VERSION_LABEL} started ({RELEASE_NAME}).",
             "API",
         )
+        LOCAL_API_AUTHENTICATOR.start_development_broker()
         yield
     finally:
         LOCAL_API_AUTHENTICATOR.close_development_broker()
@@ -1056,8 +1059,16 @@ orion = Agent(
     ],
 )
 
+class ContextOptions(BaseModel):
+    memory: bool = True
+    knowledge: bool = True
+    semantic: bool = False
+    profile: bool = False
+    activity: bool = False
+
+
 class ChatRequest(BaseModel):
-    message: str
+    message: str = Field(min_length=1, max_length=32000)
     conversation_id: str = ""
     client_scope_id: str = ""
     provider: str = ""
@@ -1065,6 +1076,8 @@ class ChatRequest(BaseModel):
     workspace_id: Optional[int] = None
     project_key: str = ""
     include_sensitive_context: bool = False
+    context_options: ContextOptions = Field(default_factory=ContextOptions)
+    expected_context_hash: str = Field(default="", max_length=64)
 
 
 class ChatResponse(BaseModel):
@@ -1194,6 +1207,13 @@ class MissionDetailItem(MissionItem):
 
 class MissionsResponse(BaseModel):
     missions: List[MissionItem]
+
+
+class MissionCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    goal: str = Field(min_length=1, max_length=8000)
+    steps: List[str] = Field(min_length=1, max_length=50)
+    priority: int = Field(default=3, ge=1, le=5)
 
 
 class MissionRunResponse(BaseModel):
@@ -1422,11 +1442,14 @@ class ContextPreviewRequest(BaseModel):
     project_key: str = ""
     mission_id: Optional[int] = None
     include_sensitive: bool = False
+    context_options: ContextOptions = Field(default_factory=ContextOptions)
 
 
 class ContextPreviewResponse(BaseModel):
     message: str
     context: str
+    context_hash: str = ""
+    system_instructions: str = ""
 
 
 class DesktopUrlRequest(BaseModel):
@@ -2402,6 +2425,15 @@ def memory_delete(memory_id: int):
 @app.get("/api/missions", response_model=MissionsResponse)
 def missions():
     return MissionsResponse(missions=list_mission_records(limit=20))
+
+
+@app.post("/api/missions", response_model=MissionDetailItem, status_code=201)
+def mission_create(request: MissionCreateRequest):
+    steps = [step.strip() for step in request.steps]
+    if not request.title.strip() or not request.goal.strip() or any(not step or len(step) > 2000 for step in steps):
+        raise HTTPException(status_code=422, detail="Title, goal and every step must be non-empty; steps are limited to 2000 characters.")
+    mission_id = create_mission_record(request.title.strip(), request.goal.strip(), steps, priority=request.priority)
+    return MissionDetailItem(**get_mission_record(mission_id))
 
 
 @app.get("/api/missions/{mission_id}", response_model=MissionDetailItem)
@@ -3420,24 +3452,31 @@ def context_preview(request: ContextPreviewRequest):
             context="No message provided.",
         )
 
-    context = get_context_preview(
-        clean_message,
-        workspace_id=request.workspace_id,
-        project_key=request.project_key,
-        mission_id=request.mission_id,
-        include_sensitive=request.include_sensitive,
-    )
-
-    log_activity(
-        "CONTEXT_PREVIEW",
-        "Aurora OS generated a context preview.",
-        "O.R.I.O.N.",
-    )
+    with context_selection(request.context_options.model_dump()):
+        context = prepare_context_enriched_input(
+            clean_message,
+            workspace_id=request.workspace_id,
+            project_key=request.project_key,
+            mission_id=request.mission_id,
+            include_sensitive=request.include_sensitive,
+        )
 
     return ContextPreviewResponse(
         message=clean_message,
         context=context,
+        context_hash=hashlib.sha256(context.encode()).hexdigest(),
+        system_instructions=ORION_SYSTEM_PROMPT,
     )
+
+
+def _raise_desktop_http_error(error: Exception) -> None:
+    if isinstance(error, PermissionError):
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    if isinstance(error, FileNotFoundError):
+        raise HTTPException(status_code=404, detail=str(error)) from error
+    if isinstance(error, (ValueError, NotADirectoryError)):
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    raise HTTPException(status_code=500, detail="Desktop action request failed; no launch was authorized.") from error
 
 
 @app.post("/api/desktop/workspaces/{workspace_id}/open-vscode", response_model=DesktopActionResponse)
@@ -3458,10 +3497,7 @@ def desktop_open_vscode(workspace_id: int):
         )
 
     except Exception as error:
-        return DesktopActionResponse(
-            status="failed",
-            message=str(error),
-        )
+        _raise_desktop_http_error(error)
 
 
 @app.post("/api/desktop/workspaces/{workspace_id}/open-folder", response_model=DesktopActionResponse)
@@ -3482,10 +3518,7 @@ def desktop_open_folder(workspace_id: int):
         )
 
     except Exception as error:
-        return DesktopActionResponse(
-            status="failed",
-            message=str(error),
-        )
+        _raise_desktop_http_error(error)
 
 
 @app.post("/api/desktop/workspaces/{workspace_id}/start-dev", response_model=DesktopActionResponse)
@@ -3506,16 +3539,7 @@ def desktop_start_dev(workspace_id: int):
         )
 
     except Exception as error:
-        return DesktopActionResponse(
-            status="failed",
-            message=str(error),
-        )
-
-    except Exception as error:
-        return DesktopActionResponse(
-            status="failed",
-            message=str(error),
-        )
+        _raise_desktop_http_error(error)
 
 @app.post("/api/desktop/open-url", response_model=DesktopActionResponse)
 def desktop_open_url(request: DesktopUrlRequest):
@@ -3535,10 +3559,7 @@ def desktop_open_url(request: DesktopUrlRequest):
         )
 
     except Exception as error:
-        return DesktopActionResponse(
-            status="failed",
-            message=str(error),
-        )
+        _raise_desktop_http_error(error)
 
 
 @app.get("/api/demo/status", response_model=DemoStatusResponse)
@@ -3554,7 +3575,7 @@ def demo_status():
 
     return DemoStatusResponse(
         demo_mode=state.get("demo_mode", False),
-        release_version=state.get("release_version", "v6.5"),
+        release_version=state.get("release_version", VERSION_LABEL),
         project_name=state.get("project_name", "O.R.I.O.N."),
         interface_name=state.get("interface_name", "Aurora OS"),
         tagline=state.get("tagline", "Think. Plan. Act. Learn."),
@@ -3577,7 +3598,7 @@ def demo_mode(request: DemoModeRequest):
 
     return DemoStatusResponse(
         demo_mode=state.get("demo_mode", False),
-        release_version=state.get("release_version", "v6.5"),
+        release_version=state.get("release_version", VERSION_LABEL),
         project_name=state.get("project_name", "O.R.I.O.N."),
         interface_name=state.get("interface_name", "Aurora OS"),
         tagline=state.get("tagline", "Think. Plan. Act. Learn."),
@@ -4312,11 +4333,6 @@ def security_policy_apply(request: SecurityPolicyApplyRequest):
 
 @app.get("/api/release-candidate/status", response_model=ReleaseCandidateStatusResponse)
 def release_candidate_status():
-    log_activity(
-        "RELEASE_CANDIDATE_STATUS",
-        "Aurora OS requested v4.0 release candidate status.",
-        "Aurora OS",
-    )
     snapshot = get_release_candidate_snapshot(event_limit=50)
     return ReleaseCandidateStatusResponse(
         freeze_state=ReleaseFreezeState(**snapshot["freeze_state"]),
@@ -4328,7 +4344,7 @@ def release_candidate_status():
 
 @app.post("/api/release-candidate/freeze", response_model=ReleaseFreezeState)
 def release_candidate_freeze(request: ReleaseFreezeRequest):
-    state = freeze_system(reason=request.reason, release_version="v4.0")
+    state = freeze_system(reason=request.reason, release_version=VERSION_LABEL)
     log_activity("SYSTEM_FREEZE_ENABLED", request.reason, "Aurora OS")
     return ReleaseFreezeState(**state)
 
@@ -4999,6 +5015,11 @@ def patch_release_package():
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
+    with context_selection(request.context_options.model_dump()):
+        return await _chat_with_context(request)
+
+
+async def _chat_with_context(request: ChatRequest):
     clean_message = request.message.strip()
 
     if not clean_message:
@@ -5011,18 +5032,6 @@ async def chat(request: ChatRequest):
         return ChatResponse(
             response="No message received."
         )
-
-    log_activity(
-        "USER_REQUEST",
-        clean_message,
-        "Aurora OS Chat",
-    )
-
-    log_activity(
-        "AGENT_START",
-        "O.R.I.O.N. started processing the request.",
-        "O.R.I.O.N.",
-    )
 
     try:
         contextual_input = prepare_context_enriched_input(
@@ -5038,11 +5047,22 @@ async def chat(request: ChatRequest):
         )
         if request.conversation_id and not existing_conversation:
             raise HTTPException(status_code=404, detail="Conversation not found.")
+        context_policy = hashlib.sha256(json.dumps({
+            "options": request.context_options.model_dump(),
+            "workspace": request.workspace_id, "project": request.project_key,
+            "sensitive": request.include_sensitive_context,
+        }, sort_keys=True).encode()).hexdigest()[:16]
+        if existing_conversation and not str(existing_conversation["scope_id"]).endswith(f":{context_policy}"):
+            raise HTTPException(status_code=409, detail="Context choices changed. Start a new conversation to exclude earlier context.")
+        if request.expected_context_hash and request.expected_context_hash != hashlib.sha256(contextual_input.encode()).hexdigest():
+            raise HTTPException(status_code=409, detail="Context changed since preview. Review it again before sending.")
         client_scope_id = (
             str(existing_conversation["scope_id"])
             if existing_conversation
-            else request.client_scope_id.strip() or uuid.uuid4().hex
+            else f"{request.client_scope_id.strip() or uuid.uuid4().hex}:{context_policy}"
         )
+        log_activity("USER_REQUEST", clean_message, "Aurora OS Chat")
+        log_activity("AGENT_START", "O.R.I.O.N. started processing the request.", "O.R.I.O.N.")
 
         log_activity(
             "CONTEXT_RETRIEVAL",

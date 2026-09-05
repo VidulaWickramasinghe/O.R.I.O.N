@@ -2,9 +2,10 @@ from agents import function_tool
 from core.tool_logger import instrument_tool
 from datetime import datetime
 from pathlib import Path
+from core.runtime_paths import runtime_data_dir
 
-DATA_DIR = Path("backend/data")
-LOG_DIR = Path("backend/logs")
+DATA_DIR = runtime_data_dir()
+LOG_DIR = DATA_DIR / "logs"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)

@@ -1,5 +1,7 @@
 """Regression coverage for the mandatory O.R.I.O.N. Capability Gateway."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import ast
 import asyncio
 import json

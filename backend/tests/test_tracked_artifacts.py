@@ -1,5 +1,7 @@
 """Release scanner tests for runtime artifacts and credentials."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import importlib.util
 import tempfile
 import unittest

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ORION_BUILD } from "@/lib/orion-build";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Archive, FileCheck2, LockKeyhole, RefreshCw, ShieldCheck } from "lucide-react";
 
@@ -52,7 +53,7 @@ export function ReleaseCenterWorkspace() {
         eyebrow="Governance · Single release decision"
         title="Release Center"
         description="Review build identity, required checks, evidence, freeze state, and artifacts in one place. This screen reports the backend gate; it does not infer production readiness."
-        metadata={<p className="text-[10px] text-amber-200/70">The current backend release-candidate subsystem identifies itself as {status?.freeze_state.release_version || "an unknown legacy version"}. Version normalization remains required before release.</p>}
+        metadata={<p className="text-xs text-slate-300">Build {ORION_BUILD.versionLabel} · {ORION_BUILD.channel}. Saved candidate: {status?.freeze_state.release_version || "unavailable"}. A saved freeze records its own version; readiness requires current evidence.</p>}
         actions={<button type="button" onClick={() => void statusQuery.refetch()} disabled={statusQuery.isFetching} className="inline-flex items-center gap-2 rounded-xl border border-cyan-300/20 px-3 py-2 text-xs font-bold text-cyan-100 disabled:opacity-50"><RefreshCw size={13} className={statusQuery.isFetching ? "animate-spin" : ""} />Refresh evidence</button>}
       />
 

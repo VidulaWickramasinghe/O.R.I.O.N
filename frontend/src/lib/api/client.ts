@@ -40,12 +40,23 @@ type DesktopApiSession = { baseUrl: string; token: string };
 let desktopApiSession: Promise<DesktopApiSession | null> | null = null;
 let browserDevelopmentApiSession: Promise<DesktopApiSession | null> | null = null;
 
+async function negotiateSession(load: () => Promise<DesktopApiSession | null>) {
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const session = await load().catch(() => null);
+    if (session) return session;
+    if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 200 * 2 ** attempt));
+  }
+  return null;
+}
+
 async function getDesktopApiSession(): Promise<DesktopApiSession | null> {
   if (typeof window === "undefined" || !isTauri()) return null;
   if (!desktopApiSession) {
-    desktopApiSession = invoke<DesktopApiSession>("get_api_session").catch(() => null);
+    desktopApiSession = negotiateSession(() => invoke<DesktopApiSession>("get_api_session"));
   }
-  return desktopApiSession;
+  const session = await desktopApiSession;
+  if (!session) desktopApiSession = null;
+  return session;
 }
 
 function validLocalDevelopmentSession(value: unknown): value is DesktopApiSession {
@@ -71,17 +82,18 @@ async function getBrowserDevelopmentApiSession(refresh = false): Promise<Desktop
   }
   if (refresh) browserDevelopmentApiSession = null;
   if (!browserDevelopmentApiSession) {
-    browserDevelopmentApiSession = fetch("/__orion/api-session", {
+    browserDevelopmentApiSession = negotiateSession(() => fetch("/__orion/api-session", {
       cache: "no-store",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(3000),
     })
       .then(async (response) => {
         if (!response.ok) return null;
         const value: unknown = await response.json();
         return validLocalDevelopmentSession(value) ? value : null;
       })
-      .catch(() => null);
+      .catch(() => null));
   }
   const session = await browserDevelopmentApiSession;
   if (!session) browserDevelopmentApiSession = null;
@@ -156,6 +168,9 @@ export async function apiRequest<T>(method: string, path: string, options: ApiRe
 
   try {
     let session = await getApiSession(path);
+    if (!session && path !== "/api/health" && typeof window !== "undefined" && (isTauri() || process.env.NODE_ENV === "development")) {
+      throw new ApiError({ status: 503, code: "SESSION_STARTING", message: "The local session is not ready. Wait for backend startup, then retry connection.", retryable: true });
+    }
     const body = options.body;
     const requestInit = { ...options };
     delete requestInit.body;

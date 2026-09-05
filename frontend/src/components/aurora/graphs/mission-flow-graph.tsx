@@ -128,8 +128,8 @@ export function MissionFlowGraph({ missions, runs }: MissionFlowGraphProps) {
         position: { x: 330, y: 40 },
         data: {
           title: "Mission Planner",
-          subtitle: "Goal converted into controlled execution steps.",
-          status: "planned",
+          subtitle: "Review the saved plan before starting a controlled run.",
+          status: "reference",
         },
       },
       {
@@ -139,7 +139,7 @@ export function MissionFlowGraph({ missions, runs }: MissionFlowGraphProps) {
         data: {
           title: "Approval Gate",
           subtitle: "Commands, file writes, and desktop actions require approval.",
-          status: "approval",
+          status: "reference",
         },
       },
       {
@@ -148,8 +148,8 @@ export function MissionFlowGraph({ missions, runs }: MissionFlowGraphProps) {
         position: { x: 660, y: 140 },
         data: {
           title: "Mission Report",
-          subtitle: "Execution history becomes a portfolio-ready report.",
-          status: "complete",
+          subtitle: "Generate a report from recorded execution evidence. This node does not indicate completion.",
+          status: "reference",
         },
       },
     ];

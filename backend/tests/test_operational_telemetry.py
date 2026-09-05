@@ -1,5 +1,7 @@
 """Event-derived telemetry and fixture-free UI regressions for ORION-012."""
 
+from backend.tests import TEST_DATA_DIR as _TEST_DATA_DIR
+
 import json
 import sqlite3
 import tempfile
@@ -64,6 +66,13 @@ class OperationalTelemetryTests(unittest.TestCase):
         tool_audit.record_tool_audit_event(
             "test_tool", "test", "blocked", "test", actor="agent", side_effect=True
         )
+        tool_audit.record_tool_audit_event("allowed_but_not_run", "test", "allowed", "test", side_effect=True)
+        for status in ("succeeded", "failed"):
+            started = tool_audit.record_audit_event("capability.execution", "execution", status="started", actor="test")
+            tool_audit.complete_audit_event(started["id"], status=status, duration_ms=1000)
+        tool_audit.record_audit_event("capability.execution", "execution", status="started")
+        nested = tool_audit.record_audit_event("internal.operation", "action", status="started")
+        tool_audit.complete_audit_event(nested["id"], status="succeeded", duration_ms=50)
         with closing(sqlite3.connect(self.paths["mission"])) as connection, connection:
             connection.execute(
                 """INSERT INTO mission_transitions
@@ -77,6 +86,7 @@ class OperationalTelemetryTests(unittest.TestCase):
         self.assertEqual(result["summary"]["success_rate"], 50.0)
         self.assertEqual(result["summary"]["average_latency_ms"], 1000)
         self.assertEqual(result["summary"]["token_usage"], 10)
+        self.assertEqual(result["agent_runs"], {"completed": 1, "success_rate": 100.0})
         self.assertEqual(result["outcomes"], [{"label": "completed", "count": 1}])
 
     def test_frontend_contains_no_legacy_synthetic_operational_fixtures(self) -> None:
