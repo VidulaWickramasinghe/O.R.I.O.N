@@ -312,6 +312,8 @@ flowchart LR
 
 ## Quick start
 
+New user? Start with the [first-time user and trainer guide](docs/first-time-user-guide.md), or open **System → User guide** in Aurora OS. For the latest wiring validation scope, see [web wiring verification](docs/web-wiring-verification.md).
+
 ### Prerequisites
 
 - Python 3 with `venv`
@@ -348,10 +350,12 @@ cd ~/O.R.I.O.N/
 | Service | Local URL |
 | --- | --- |
 | Aurora OS | [http://localhost:3000](http://localhost:3000) |
-| Backend API | [http://127.0.0.1:8000](http://127.0.0.1:8000) |
-| OpenAPI schema | [http://127.0.0.1:8000/openapi.json](http://127.0.0.1:8000/openapi.json) |
+| Public backend health | [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health) |
+| Protected API/schema | Authentication required; use `./scripts/verify_api.sh` for a credential-safe check |
 
 Press `Ctrl+C` in the launcher terminal to stop both services.
+
+If ports are occupied, stop the known existing launch or use `./scripts/start_orion.sh --backend-port 8001 --frontend-port 3001` and open `http://localhost:3001`. The launcher never kills unknown port owners. Restart after backend code or `.env` changes.
 
 To run the services in separate terminals, use `./scripts/run_backend.sh` and
 `./scripts/run_frontend.sh`. Their development authentication handshake shares

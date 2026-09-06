@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
-cd "$(dirname "$0")/.."
-
-source .venv/bin/activate
-
-echo "Starting O.R.I.O.N. Mission Control Backend..."
-ORION_BACKEND_PORT=8000 uvicorn backend.api_main:app --reload --host 127.0.0.1 --port 8000
+source "$(dirname "$0")/local_python.sh"
+exec "$python_bin" scripts/local_web.py backend "$@"

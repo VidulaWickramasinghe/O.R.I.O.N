@@ -121,6 +121,7 @@ from core.mission_manager import (
 from core.workspace_manager import (
     init_workspace_db,
     register_workspace_record,
+    get_workspace_record,
     list_workspace_records,
     inspect_workspace_tree,
     detect_workspace_stack,
@@ -1371,9 +1372,9 @@ class WorkspaceTreeResponse(BaseModel):
 
 
 class WorkspaceRegisterRequest(BaseModel):
-    name: str
-    path: str
-    description: str = ""
+    name: str = Field(min_length=1, max_length=200)
+    path: str = Field(min_length=1, max_length=4096)
+    description: str = Field(default="", max_length=2000)
     trusted: bool = False
     source_consent: bool = False
 
@@ -3166,15 +3167,19 @@ def workspaces():
 
 @app.post("/api/workspaces/register")
 def register_workspace_api(request: WorkspaceRegisterRequest):
-    workspace_id = register_workspace_record(
-        name=request.name,
-        path=request.path,
-        description=request.description,
-        status="active",
-        trusted=request.trusted,
-        source_consent=request.source_consent,
-        consent_source="aurora_api_explicit_user_consent",
-    )
+    if not request.name.strip() or not request.path.strip():
+        raise HTTPException(status_code=422, detail="Workspace name and existing folder path are required.")
+    try:
+        workspace_id = register_workspace_record(
+            name=request.name.strip(), path=request.path,
+            description=request.description, status="active",
+            trusted=request.trusted, source_consent=request.source_consent,
+            consent_source="aurora_api_explicit_user_consent",
+        )
+    except PermissionError as error:
+        raise HTTPException(status_code=403, detail=str(error)) from error
+    except (ValueError, OSError) as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
 
     log_activity(
         "WORKSPACE_REGISTERED",
@@ -3185,8 +3190,8 @@ def register_workspace_api(request: WorkspaceRegisterRequest):
     return {
         "status": "registered",
         "workspace_id": workspace_id,
-        "name": request.name,
-        "path": request.path,
+        "name": request.name.strip(),
+        "path": get_workspace_record(workspace_id)["path"],
     }
 
 

@@ -37,6 +37,7 @@ run_step "API and security integration tests" ./scripts/test_api_security.sh
 run_step "Persistence migration tests" ./scripts/test_migrations.sh
 run_step "Frontend lint" npm --prefix frontend run lint
 run_step "Frontend typecheck" npm --prefix frontend run typecheck
+run_step "Frontend/backend wiring" npm --prefix frontend run test:wiring
 run_step "Frontend production build" npm --prefix frontend run build
 run_step "Frontend cache/network integration" npm --prefix frontend run test:server-state
 run_step "Aurora task-navigation UX regression" npm --prefix frontend run test:ux

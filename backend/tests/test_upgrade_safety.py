@@ -114,14 +114,10 @@ class DatabaseConnectionTests(unittest.TestCase):
 class StabilizationManagerTests(unittest.TestCase):
     def test_cached_scan_is_defensively_copied(self) -> None:
         cached = {"status": "stable", "required_files": {"missing": []}}
-        with stabilization_manager._SCAN_CACHE_LOCK:
-            stabilization_manager._SCAN_CACHE.update(
-                {"created_at": datetime.now(), "scan": cached}
-            )
-
-        first = stabilization_manager.run_stabilization_scan(run_build=False)
-        first["required_files"]["missing"].append("mutated")
-        second = stabilization_manager.run_stabilization_scan(run_build=False)
+        with patch.object(stabilization_manager, "_SCAN_CACHE", {"created_at": datetime.now(), "scan": cached}):
+            first = stabilization_manager.run_stabilization_scan(run_build=False)
+            first["required_files"]["missing"].append("mutated")
+            second = stabilization_manager.run_stabilization_scan(run_build=False)
 
         self.assertEqual(second["required_files"]["missing"], [])
 
