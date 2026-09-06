@@ -52,8 +52,9 @@ export function ToolsModule({
   const [workingId, setWorkingId] = useState<number | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [showHistory, setShowHistory] = useState(false);
   const approvalsQuery = useAuroraApprovals(
-    pendingOnly ? ["pending", "executing"] : undefined,
+    pendingOnly && !showHistory ? ["pending", "executing"] : undefined,
   );
   const allApprovals = (approvalsQuery.data?.approvals || []) as ApprovalItem[];
   const approvals = allApprovals;
@@ -74,6 +75,8 @@ export function ToolsModule({
       onAssistantMessage(approvalDecisionMessage("approve", data));
       await queryClient.invalidateQueries({ queryKey: ["aurora-approvals"] });
       await queryClient.invalidateQueries({ queryKey: ["aurora-activity"] });
+      await queryClient.invalidateQueries({ queryKey: ["aurora-missions"] });
+      await queryClient.invalidateQueries({ queryKey: ["aurora-mission-runs"] });
     } catch (error) {
       onAssistantMessage(error instanceof Error ? error.message : `Approval ${id} failed.`);
     } finally {
@@ -91,6 +94,8 @@ export function ToolsModule({
       onAssistantMessage(approvalDecisionMessage("reject", data));
       await queryClient.invalidateQueries({ queryKey: ["aurora-approvals"] });
       await queryClient.invalidateQueries({ queryKey: ["aurora-activity"] });
+      await queryClient.invalidateQueries({ queryKey: ["aurora-missions"] });
+      await queryClient.invalidateQueries({ queryKey: ["aurora-mission-runs"] });
     } catch (error) {
       onAssistantMessage(error instanceof Error ? error.message : `Approval ${id} could not be rejected.`);
     } finally {
@@ -106,6 +111,15 @@ export function ToolsModule({
       description={description}
       badge={`${allApprovals.filter((item) => item.status === "pending").length} waiting · ${allApprovals.filter((item) => item.status === "executing").length} executing`}
     >
+      <div className="mb-5 space-y-3 text-sm leading-6 text-slate-300">
+        <p>Adding a workspace or saving a mission does not create an approval. Request a specific action first. If policy denies it, no pending request is created; read the denial before considering any permission change.</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" disabled={approvalsQuery.isFetching} onClick={() => void approvalsQuery.refetch()} className="rounded-xl border border-white/20 px-3 py-2 disabled:opacity-50">Refresh queue</button>
+          {pendingOnly && <button type="button" aria-pressed={showHistory} onClick={() => setShowHistory((value) => !value)} className="rounded-xl border border-white/20 px-3 py-2">{showHistory ? "Show pending only" : "Show recent history"}</button>}
+          <Link href="/help#approval-workflow" className="text-cyan-200 underline">Why is the queue empty?</Link>
+        </div>
+        {showHistory && <p>Recent history includes terminal results; approved, rejected and failed requests are not pending. Up to 100 recent records are loaded.</p>}
+      </div>
       {approvalsQuery.isLoading ? <LoadingSkeleton label="Loading approvals" /> : null}
       {approvalsQuery.isError ? (
         <ErrorState
@@ -117,8 +131,8 @@ export function ToolsModule({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {!approvalsQuery.isLoading && !approvalsQuery.isError && approvals.length === 0 ? (
           <EmptyState
-            title={pendingOnly ? "No actions are waiting" : "No approval records"}
-            description={pendingOnly ? "O.R.I.O.N. has no pending side effects that need your decision." : "Approval requests will appear here with their mission ownership, risk, and normalized arguments."}
+            title={pendingOnly && !showHistory ? "No actions are waiting" : "No approval records"}
+            description="Nothing needs your decision in this view. Return to the workspace or mission, request an intended action, then check its returned approval ID. Do not create unnecessary actions just to fill this queue."
           />
         ) : (
           approvals.map((approval) => (

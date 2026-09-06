@@ -316,7 +316,7 @@ export function Sidebar() {
                   {selectedWorkspace?.name || "No workspace selected"}
                 </p>
                 <p className="truncate text-[10px] text-slate-500">
-                  {environmentLabel}
+                  {environmentLabel} · label only
                 </p>
               </div>
               <ChevronsUpDown size={14} className="text-slate-500" />
@@ -375,6 +375,7 @@ export function Sidebar() {
                 </div>
 
                 <div className="my-2 border-t border-white/[0.07]" />
+                <p className="px-2 py-2 text-xs leading-5 text-slate-300">Environment is a saved label, not isolation, permissions or production certification. Change effective access in Security.</p>
                 <p className="px-2 pb-2 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-600">
                   Environment
                 </p>

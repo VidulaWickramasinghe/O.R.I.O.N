@@ -163,18 +163,18 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
     setRecovery(null);
 
     try {
-      const data = await api.post<{ output: string }>(
+      const data = await api.post<{ status: string; output: string }>(
         `/api/missions/${missionId}/run-next`
       );
 
       onAssistantMessage(
-        `Mission ${missionId} next-step cycle complete.\n\n${data.output}`
+        `Mission ${missionId} cycle returned: ${data.status}.\n\n${data.output}`
       );
 
       await refreshMissionData();
     } catch (error) {
       setRecovery(recoveryFromError(error, "mission_failed"));
-      onAssistantMessage(`Mission ${missionId} stopped before the next step completed. Review its durable state before retrying.`);
+      onAssistantMessage(`Mission ${missionId} stopped before the next step completed. ${error instanceof Error ? error.message : "Review its durable state before retrying."}`);
     } finally {
       setLoadingMissionId(null);
     }
@@ -194,7 +194,7 @@ export function MissionsModule({ onAssistantMessage }: MissionsModuleProps) {
       });
 
       onAssistantMessage(
-        `Controlled multi-step run complete.\n\nMission: ${missionId}\nStatus: ${data.status}\nStop reason: ${data.stop_reason}\nCompleted cycles: ${data.completed_cycles}`
+        `Controlled multi-step run stopped.\n\nMission: ${missionId}\nStatus: ${data.status}\nStop reason: ${data.stop_reason}\nCompleted cycles: ${data.completed_cycles}`
       );
 
       await refreshMissionData();

@@ -25,7 +25,7 @@ It is not a claim that every historical feature is finished, that all response s
 1. Stop the existing development services in their own terminals; preserve private `.env`, databases and settings.
 2. Update the checkout normally. There is no schema migration and no runtime-data cleanup in this increment.
 3. Run `./scripts/start_orion.sh` from `~/O.R.I.O.N`, or use the separate backend/frontend scripts from the same checkout. For alternate ports, pass the same pair to both separate commands.
-4. Open the frontend, wait for **Online · authenticated**, and run `./scripts/verify_api.sh` from another terminal. An unauthenticated browser request to the API root is still expected to return 401.
+4. Open the frontend, wait for **Backend connected** in the top bar, and run `./scripts/verify_api.sh` from another terminal. An unauthenticated browser request to the API root is still expected to return 401.
 5. Train with a disposable sample folder and Strict Mode. Registering a folder does not index documents or execute code. A security-policy denial is not an authentication failure.
 6. Use the existing release gates before packaging. The Rust test entry point now prepares its required sidecar first.
 
@@ -75,3 +75,21 @@ Open `http://localhost:3001`; run `./scripts/verify_api.sh` in another terminal.
 - The development launcher intentionally does not use backend auto-reload. Restart after backend code or `.env` changes. It starts development services, not a production server or desktop installer.
 
 See [First-time user and trainer guide](first-time-user-guide.md) for the user-facing handoff.
+
+## Workspace and operator-guide follow-up — 2026-09-06
+
+This follow-up does not change backend permissions, registered workspaces, schemas or user data. It addresses the misleading expectation that adding a workspace must populate Approvals.
+
+- Registration now explicitly says it creates no approval. Workspace buttons say **Request**, link to the operating guide, and preserve the distinction between an accepted request and a policy denial.
+- Approvals explains empty queues, offers manual refresh and recent terminal history, and refreshes mission/run caches after an approve or reject decision. A terminal approval is never presented as a new executable request.
+- Mission cycle feedback reports the backend status instead of calling every successful HTTP response a completed cycle.
+- System → User guide provides five ordered walkthroughs, every current primary sidebar destination, recovery guidance and a trainer checklist. It documents that the sidebar workspace preference does not bind missions, goal text is not a sandbox, and the environment selector is a label rather than isolation. Balanced and Developer Lab currently enable the same broad plugin set; neither bypasses approvals or certifies production readiness.
+- The global Active Work / authentication strip is removed. Analytics alone contains a source-backed Live operations board with shared queries, 30-second refresh, explicit unavailable/stale states and coverage limits: latest 20 missions and up to 100 records per approval state. Ready plans are not reported as active execution. This snapshot is separate from the historical charts and their time-range filter.
+
+Follow-up validation:
+
+- Backend compilation and all **221 backend tests** passed. New assertions cover no approval after registration, no pending row after a policy-denied desktop request, and retained rejected history.
+- All **95 frontend tests** passed, including history toggling, approval-driven mission cache refresh, truthful Ready/offline board states and guide coverage of every sidebar route. Lint, typecheck and the production build passed.
+- API route-template checks (144 call sites / 161 declarations), version consistency, tracked-artifact/security scanning and whitespace checks passed.
+- Browser smoke validation used a disposable runtime with no provider key: authenticated Approvals and history loaded, the guide anchor opened the intended workflow, and the Analytics-only board displayed real empty state and source/freshness information. The global strip was absent. The owned test servers were then stopped; no real workspace action or provider call was executed.
+- These checks do not certify live AI task success, full accessibility conformance, signed installers or production deployment. Review the follow-up PR's CI before merging.

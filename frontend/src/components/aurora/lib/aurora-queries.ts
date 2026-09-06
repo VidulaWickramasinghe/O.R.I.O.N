@@ -81,10 +81,11 @@ export function useAuroraUserSettings() {
   });
 }
 
-export function useAuroraSecurityPolicy() {
+export function useAuroraSecurityPolicy(refetchInterval: number | false = false) {
   return useQuery({
     queryKey: ["aurora-security-policy"],
     queryFn: getSecurityPolicy,
+    refetchInterval,
   });
 }
 
@@ -109,10 +110,11 @@ export function useAuroraMemory() {
   });
 }
 
-export function useAuroraMissions() {
+export function useAuroraMissions(refetchInterval: number | false = false) {
   return useQuery({
     queryKey: ["aurora-missions"],
     queryFn: () => api.get<MissionsResponse>("/api/missions"),
+    refetchInterval,
   });
 }
 
@@ -123,10 +125,11 @@ export function useAuroraMissionRuns() {
   });
 }
 
-export function useAuroraApprovals(statuses?: ApprovalStatus[]) {
+export function useAuroraApprovals(statuses?: ApprovalStatus[], refetchInterval: number | false = false) {
   const statusKey = statuses?.join(",") || "all";
   return useQuery({
     queryKey: ["aurora-approvals", statusKey],
+    refetchInterval,
     queryFn: async () => {
       if (!statuses?.length) {
         return api.get<ApprovalsResponse>("/api/approvals", { query: { limit: 100 } });
