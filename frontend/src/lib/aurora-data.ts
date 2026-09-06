@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  BookOpen,
   Briefcase,
   CheckSquare2,
   ClipboardList,
@@ -78,6 +79,7 @@ export const destinationTasks: Record<PrimaryDestination["label"], DestinationTa
     { href: "/analytics", label: "Analytics", description: "Event-derived operational telemetry", icon: BarChart3 },
     { href: "/system", label: "Diagnostics", description: "Backend, desktop, persistence, and recovery", icon: Gauge },
     { href: "/settings", label: "User settings", description: "Profile and interface preferences", icon: Settings2 },
+    { href: "/help", label: "User guide", description: "First-time training and safe operating steps", icon: BookOpen },
   ],
 };
 

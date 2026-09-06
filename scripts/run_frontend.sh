@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-
-cd "$(dirname "$0")/../frontend"
-
-echo "Starting Aurora OS Frontend..."
-npm run dev
+set -euo pipefail
+source "$(dirname "$0")/local_python.sh"
+exec "$python_bin" scripts/local_web.py frontend "$@"

@@ -6,6 +6,9 @@ cd "$project_root"
 if [[ -z "${ORION_PYTHON:-}" && -n "${ORION_PYTHON_BIN:-}" ]]; then
   export ORION_PYTHON="$ORION_PYTHON_BIN"
 fi
+# Tauri validates externalBin even during cargo test. Build the real sidecar,
+# never a placeholder, before invoking Cargo in a clean checkout.
+npm --prefix frontend run desktop:prepare
 cargo test --locked --manifest-path frontend/src-tauri/Cargo.toml
 if [[ "${ORION_TAURI_PACKAGE:-0}" == "1" ]]; then
   case "$(uname -s)" in

@@ -19,6 +19,7 @@
     "test:pet": "vitest run tests/orion-pet.test.tsx",
     "test:settings": "vitest run tests/settings-control-plane.test.tsx",
     "test:api-auth": "vitest run tests/api-auth-session.test.ts",
+    "test:wiring": "node scripts/check-api-contracts.mjs && vitest run tests/workspace-registration.test.tsx",
     "release:sync": "python3 ../scripts/sync_release_manifest.py",
     "release:check": "python3 ../scripts/sync_release_manifest.py --check",
     "dev:tauri": "node scripts/prepare-dev.mjs && next dev --webpack",

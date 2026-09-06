@@ -9,6 +9,7 @@ import { StatusChip } from "@/components/aurora/status-chip";
 import { RecoveryState } from "@/components/aurora/feedback/RecoveryState";
 import { useAuroraWorkspaces } from "@/components/aurora/lib/aurora-queries";
 import type { WorkspaceItem } from "@/components/aurora/aurora-types";
+import { WorkspaceRegistration } from "./workspace-registration";
 
 export function WorkspacesLiveWorkspace() {
   const workspacesQuery = useAuroraWorkspaces();
@@ -61,9 +62,11 @@ export function WorkspacesLiveWorkspace() {
         </div>
       </header>
 
-      {(message || workspacesQuery.isError) && (
+      <WorkspaceRegistration />
+      {message && <p role="status" className="whitespace-pre-wrap rounded-2xl border border-cyan-300/20 p-4 text-sm text-cyan-100">{message}</p>}
+      {workspacesQuery.isError && (
         <RecoveryState
-          code={workspacesQuery.isError ? "backend_offline" : "tool_failed"}
+          code="backend_offline"
           description={message || "Workspace list failed to load. Confirm the backend is running."}
           onAction={() => void loadWorkspaces()}
           actionLabel="Refresh workspaces"
