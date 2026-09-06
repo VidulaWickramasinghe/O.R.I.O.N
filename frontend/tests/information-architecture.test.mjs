@@ -74,9 +74,9 @@ test("every core task is exposed directly in the persistent sidebar registry", (
   assert.doesNotMatch(appShellSource, /DestinationNavigation/);
 });
 
-test("the app shell exposes one evidence-backed operational status contract", () => {
+test("live operational evidence belongs in Analytics, not the global app shell", () => {
   const statusBarSource = readFileSync(
-    new URL("../src/components/aurora/operational-status-bar.tsx", import.meta.url),
+    new URL("../src/components/aurora/live-operational-board.tsx", import.meta.url),
     "utf8",
   );
   const lifecycleSource = readFileSync(
@@ -84,7 +84,9 @@ test("the app shell exposes one evidence-backed operational status contract", ()
     "utf8",
   );
 
-  assert.match(appShellSource, /<OperationalStatusBar\s*\/>/);
+  assert.doesNotMatch(appShellSource, /OperationalStatusBar|LiveOperationalBoard/);
+  const analyticsPage = readFileSync(new URL("../src/app/analytics/page.tsx", import.meta.url), "utf8");
+  assert.match(analyticsPage, /<LiveOperationalBoard\s*\/>/);
   for (const label of [
     "Draft",
     "Ready",

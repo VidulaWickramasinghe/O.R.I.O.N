@@ -1,5 +1,6 @@
 import type { SecurityPolicyEventItem, SecurityProfileItem } from "@/types/orion";
 import { GlassPanel } from "@/components/aurora/glass-panel";
+import Link from "next/link";
 
 export function SecurityPolicyPanel({
   activePolicy,
@@ -31,6 +32,7 @@ export function SecurityPolicyPanel({
         <span className="rounded-full border border-cyan-400/30 px-3 py-1 text-xs text-cyan-300">v4.3</span>
       </div>
       <div className="space-y-4 rounded-2xl border border-white/10 bg-black/30 p-4">
+        <p className="text-sm leading-6 text-slate-300">Profiles control capability availability, not production certification. Pause affected work and review the implications before applying a broader profile. <Link href="/help#security-profiles" className="text-cyan-200 underline">Profile and environment guide →</Link></p>
         <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/10 p-4">
           <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">Active Policy</p>
           <p className="mt-3 text-2xl font-black text-slate-100">

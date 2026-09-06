@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createMission } from "@/lib/api/missions";
+import Link from "next/link";
 
 export function MissionAuthor() {
   const client = useQueryClient();
@@ -20,6 +21,7 @@ export function MissionAuthor() {
   }
   return <form onSubmit={submit} className="space-y-4 rounded-3xl border border-cyan-300/20 bg-black/25 p-5">
     <div><h2 className="text-xl font-semibold text-white">Create a mission from your goal</h2><p className="mt-2 text-sm text-slate-400">Write the goal, review the ordered plan, then save it. Execution starts only when you select a mission run action.</p></div>
+    <p className="text-sm leading-6 text-slate-300">For workspace work, include its registered ID, intended files and read/write limits in the goal. The sidebar selection does not bind this mission. A saved plan is not a scheduled job. <Link href="/help#mission-workflow" className="text-cyan-200 underline">Mission walkthrough →</Link></p>
     <fieldset disabled={mutation.isPending} className="space-y-4 disabled:opacity-60">
       <label className="block text-sm text-slate-200">Mission title<input required maxLength={200} value={title} onChange={(event) => setTitle(event.target.value)} className="mt-1 w-full rounded-xl border border-white/20 bg-black/30 p-3" /></label>
       <label className="block text-sm text-slate-200">Goal<textarea required maxLength={8000} value={goal} onChange={(event) => setGoal(event.target.value)} className="mt-1 min-h-24 w-full rounded-xl border border-white/20 bg-black/30 p-3" /></label>

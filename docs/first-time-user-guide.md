@@ -1,6 +1,6 @@
 # O.R.I.O.N. — first-time user and trainer guide
 
-Use this guide with the 6.7.0 development application. The shorter interactive version is available under **System → User guide**. No technical knowledge is required for the learning exercises after an administrator has installed and configured the application.
+Use this guide with the 6.7.0 development application. The systematic operator handbook is available under **System → User guide**: workspace workflow, empty approvals, mission execution, security profiles, production boundaries, every sidebar option and recovery. No technical knowledge is required for the learning exercises after an administrator has installed and configured the application.
 
 ## What the application does
 
@@ -32,7 +32,7 @@ cd ~/O.R.I.O.N
 ./scripts/start_orion.sh
 ```
 
-Open **http://localhost:3000** in a browser. Wait for **Online · authenticated**. Leave the terminal running. To verify the API from another terminal:
+Open **http://localhost:3000** in a browser. Wait for **Backend connected** in the top bar. Detailed authentication and work state is now in **Analytics → Live operations**, not a persistent bar on every page. Leave the terminal running. To verify the API from another terminal:
 
 ```sh
 cd ~/O.R.I.O.N
@@ -67,7 +67,7 @@ Stop with **Ctrl+C** in the launcher terminal. This stops the services that laun
 
 ### 1. Understand the screen
 
-The top status bar shows connection/authentication, active work, approval counts and freshness. “Backend connected” does not mean the AI provider is configured. Empty metrics mean there is no recorded evidence, not that the system achieved a success rate.
+The top bar retains a compact backend connection indicator. **Analytics → Live operations** shows authentication, current execution, approval counts and freshness, refreshing every 30 seconds while open. Ready plans are not running jobs. “Backend connected” does not mean the AI provider is configured. Empty metrics mean there is no recorded evidence, not that the system achieved a success rate.
 
 The sidebar has seven areas:
 
@@ -127,6 +127,10 @@ Have the trainer prepare a small existing project folder containing only non-sen
 
 Click **Register trusted workspace**. Read the returned canonical path. Registration enables inspection of that trusted source; it does not start a terminal or index documents. Select the workspace separately in Assistant or Knowledge.
 
+Registration also **creates no approval**. The **Open approval queue** link is navigation, not a request. Choose **Request folder**, **Request VS Code**, or an intended mission action first. Only a permitted request returning an approval ID appears in Approvals. Strict Mode denies desktop requests before creating a queue entry. Read the original response; do not repeatedly refresh an empty queue or weaken security to populate it.
+
+After deciding a request, approved/rejected/failed records leave the pending queue. Use **Show recent history** to inspect the outcome. An approval requested directly from a workspace has no mission owner and cannot start or resolve an unrelated mission.
+
 Desktop actions request approval. Knowledge indexing requires the registered scope and explicit indexing consent; some capabilities are disabled by Strict Mode. A policy denial is expected protection, not a broken connection. The trainer must decide whether a policy change is justified—never bypass it.
 
 ### 7. Review memory, knowledge and evidence
@@ -165,5 +169,55 @@ The learner can work independently only when they can demonstrate all of these:
 - Register only an authorized sample folder with explicit consent.
 - Locate Activity/Audit evidence and recognize a real failure.
 - Stop their local services without deleting data or disabling protections.
+
+## Workspace-to-mission follow-up
+
+1. Register a sample folder, confirm its canonical path and note the workspace ID.
+2. In Assistant, select that workspace explicitly, review source inclusion and Preview Context. The sidebar selection is only a preference; it does not automatically set every screen's context.
+3. For a mission, include the workspace ID, target files, read/write limits and completion condition in the goal. Example: “Review workspace ID [your ID], read only the sample README and report three findings with evidence. Do not change files.”
+4. Save small ordered steps, reload to confirm persistence, then choose **Run Next Step** once. A valid provider configuration is required for AI execution.
+5. If waiting, inspect the approval with the same mission and step IDs. After its action completes, return to Missions, inspect the updated state and explicitly run the next eligible cycle. Approval does not start a new unattended batch.
+6. If paused, Resume restores eligibility; then run deliberately. If failed or blocked, inspect run/audit evidence and use the offered explicit retry only after resolving the cause. No offered safe recovery means stop and ask the administrator.
+7. At completion, review step results and generate **Report**. Cancel prevents future work; it cannot undo an already performed action.
+
+A mission named “Daily timetable” can draft a timetable but is not automatically a recurring schedule. Goal text is not a filesystem sandbox. Registered-root checks and capability policy remain authoritative. Assistant context choices apply to its conversation and are not automatically inherited by mission runs.
+
+## Security profiles and environment labels
+
+| Control | Actual effect | Safe operating boundary |
+| --- | --- | --- |
+| Strict Mode | Enables core planning, memory and workspace registration; disables desktop, knowledge/vector, browser, voice, blueprints and advanced developer plugins. | Use for introductory exercises. Disabled requests do not create approvals. |
+| Balanced | Enables the broader installed plugin set, including desktop, knowledge and developer capabilities. | Only after an operator reviews the needed access. Tool disablement, trusted roots and specific approvals still apply. |
+| Developer Lab | Currently uses the same enabled plugin set as Balanced, with an experimental safety-level label. | Not an OS sandbox or an approval-free mode; do not claim stronger isolation based on the name. |
+| Production / Development / Demo | Saves a sidebar environment label. | Does not separate databases, credentials, networks or roots; does not certify a release or change effective policy. |
+
+To change profile deliberately: pause affected missions, inspect executing and pending actions, obtain the responsible operator's authorization, open **Security → Security Policy**, read effects and counts, then Apply. Verify **Active Policy**, the backend response and **Recent Policy Events**. Inspect **Tools** and **Plugins** for actual availability before requesting new work. Profile changes cannot undo in-flight effects. Restore the restrictive profile required by the operator when finished.
+
+For production work, require administrator-reviewed deployment, provider/data-sharing policy, least-privilege capability access, tested backup/restore and exact CI/artifact release evidence. Provision genuinely separate state, workspace roots and credentials for separate environments. The development launcher and a Production label do not provide that separation. Stop if release checks, integrity or recovery are unverified.
+
+## Every sidebar option: the next path
+
+| Option | Work through it | Expected result / next step |
+| --- | --- | --- |
+| Dashboard | Check connection and meaningful activity; choose a concrete task. | Go to Assistant, Missions or a real approval request. |
+| Assistant | New conversation → select workspace/sources → Preview Context → Send. | Inspect answer, tools and evidence; chat is not automatically a mission. |
+| Missions | Goal/scope → steps → save → Run Next Step → resolve approval → continue → Report. | Durable results; Ready is not running or scheduled. |
+| Approvals | Match ID/owner → inspect target/arguments/risk → approve once or reject → read outcome/history. | A decision plus execution result, not a registration receipt. |
+| Activity | Read messages → locate affected mission/approval → compare Audit. | Human-readable history; investigate before retrying. |
+| Memory | Inspect content/scope/provenance → edit/exclude/delete. | Control future retrieval; previous provider disclosures cannot be recalled. |
+| Knowledge | Select trusted workspace/relative source → consent → index → search → inspect matches. | Searchable sources, subject to policy; registration alone indexes nothing. |
+| Workspaces | Register/consent → confirm ID/path → choose Assistant, mission, indexing or desktop request. | A trusted source, not an automatic approval. |
+| Developer Mode | Select → inspect → diagnose → patch plan → review exact content/path → request approval → validate. | Controlled development; plan is not applied patch, and scripts are high risk. |
+| Tools | Inspect capability, owner, risk and effective permission. | Request via its workflow; listed is not enabled/approved. |
+| Plugins | Inspect installed tools, states and permissions; operator reviews changes. | Governance, not arbitrary third-party code installation. |
+| Security | Inspect policy → authorize deliberate change → Apply → verify event/effective tools. | Availability changes without bypassing approvals. |
+| Audit | Inspect actor/policy/correlation/owner; distinguish decision/start/result. | Evidence: allowed does not mean completed. |
+| Release Center | Inspect build/check/artifact evidence; release owner resolves failures. | Release decision evidence, not historical-version promises. |
+| Analytics | Live operations snapshot → separate historical range/charts → underlying evidence. | Current work and event history; unavailable is not zero. |
+| Diagnostics | Inspect backend/desktop/storage errors → review recovery actions. | Safe recovery; do not delete databases or kill unidentified processes. |
+| User settings | Set interface/profile/notifications/pet preferences; read explanations and save. | Preferences, not provider provisioning or environment isolation. |
+| User guide | Follow sample workflows → expand each sidebar lesson → demonstrate trainer checklist. | A repeatable operating routine with safe stopping points. |
+
+Secondary pages remain available in the in-app guide: Browser research for policy-permitted public sources, Voice for explicit push-to-talk/transcript confirmation, and Workflow blueprints for optional reviewed plan templates. None grants extra permissions.
 
 This is a development application, not a production certification. Do not train with sensitive or business-critical material until your organization has reviewed its deployment, provider, security and recovery requirements.

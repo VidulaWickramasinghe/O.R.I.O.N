@@ -4,7 +4,6 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, Clock3, Radio, RefreshCw, ShieldCheck } from "lucide-react";
 
 import {
-  useAuroraActivity,
   useAuroraApprovals,
   useAuroraMissions,
   useAuroraSecurityPolicy,
@@ -15,7 +14,7 @@ import {
   MissionStatusBadge,
   RiskBadge,
 } from "@/components/aurora/operational-ui";
-import { isMissionActive, operationalMissionStatus } from "@/lib/mission-status";
+import { operationalMissionStatus } from "@/lib/mission-status";
 import { ApiError } from "@/lib/api/client";
 
 const riskOrder: Record<string, number> = {
@@ -34,17 +33,16 @@ function formatFreshness(timestamp: number) {
   return `Updated ${minutes}m ago`;
 }
 
-export function OperationalStatusBar() {
+export function LiveOperationalBoard() {
   const statusQuery = useAuroraStatus();
-  const missionsQuery = useAuroraMissions();
-  const approvalsQuery = useAuroraApprovals(["pending", "executing"]);
-  const activityQuery = useAuroraActivity();
-  const securityQuery = useAuroraSecurityPolicy();
+  const missionsQuery = useAuroraMissions(30000);
+  const approvalsQuery = useAuroraApprovals(["pending", "executing"], 30000);
+  const securityQuery = useAuroraSecurityPolicy(30000);
 
   const missions = missionsQuery.data?.missions ?? [];
   const approvals = approvalsQuery.data?.approvals ?? [];
   const activeMission = missions
-    .filter((mission) => isMissionActive(mission.status))
+    .filter((mission) => ["running", "waiting_for_approval"].includes(operationalMissionStatus(mission.status) ?? ""))
     .sort((left, right) => {
       const leftState = operationalMissionStatus(left.status);
       const rightState = operationalMissionStatus(right.status);
@@ -67,14 +65,13 @@ export function OperationalStatusBar() {
     statusQuery.dataUpdatedAt,
     missionsQuery.dataUpdatedAt,
     approvalsQuery.dataUpdatedAt,
-    activityQuery.dataUpdatedAt,
     securityQuery.dataUpdatedAt,
   ].filter(Boolean);
   const lastUpdated = successfulUpdates.length > 0 ? Math.min(...successfulUpdates) : 0;
-  const refreshing = [statusQuery, missionsQuery, approvalsQuery, activityQuery, securityQuery].some(
+  const refreshing = [statusQuery, missionsQuery, approvalsQuery, securityQuery].some(
     (query) => query.isFetching,
   );
-  const partialFailure = [statusQuery, missionsQuery, approvalsQuery, activityQuery, securityQuery].some(
+  const partialFailure = [statusQuery, missionsQuery, approvalsQuery, securityQuery].some(
     (query) => query.isError,
   );
   const connectionState = statusQuery.isPending
@@ -88,7 +85,7 @@ export function OperationalStatusBar() {
     ? "Loading active work…"
     : missionsQuery.isError
       ? "Active work unavailable"
-      : "No active mission";
+      : "No running or approval-waiting mission in loaded records";
   const approvalEvidence = approvalsQuery.isPending
     ? "Loading approval queue…"
     : approvalsQuery.isError
@@ -100,7 +97,6 @@ export function OperationalStatusBar() {
       statusQuery.refetch(),
       missionsQuery.refetch(),
       approvalsQuery.refetch(),
-      activityQuery.refetch(),
       securityQuery.refetch(),
     ]);
   }
@@ -115,10 +111,12 @@ export function OperationalStatusBar() {
 
   return (
     <section
-      aria-label="O.R.I.O.N. operational status"
-      className="relative z-20 shrink-0 border-b border-white/[0.07] bg-[#080b12]/88 px-3 py-2 backdrop-blur-2xl sm:px-5"
+      aria-label="Live operational board"
+      className="orion-panel p-5 sm:p-6"
     >
-      <div className="mx-auto flex w-full max-w-[1880px] flex-wrap items-center gap-x-5 gap-y-2">
+      <h1 className="text-2xl font-semibold text-white">Live operations</h1>
+      <p className="mt-2 text-sm leading-6 text-slate-300">Current connection, work and decision queue. Ready plans are not running jobs. This snapshot is separate from the historical performance charts below.</p>
+      <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
         <ConnectionStatus
           connected={statusQuery.isSuccess}
           authenticated={statusQuery.isSuccess}
@@ -128,7 +126,7 @@ export function OperationalStatusBar() {
 
         <div className="flex min-w-0 items-center gap-2 text-xs">
           <Radio size={12} className={activeMission ? "text-cyan-300" : "text-slate-600"} aria-hidden />
-          <span className="hidden text-slate-600 sm:inline">Active work</span>
+          <span className="text-slate-400">Current execution</span>
           {activeMission ? (
             <>
               <Link href="/missions" className="max-w-52 truncate font-semibold text-slate-200 hover:text-cyan-100">
@@ -151,7 +149,7 @@ export function OperationalStatusBar() {
           {highestRisk ? <RiskBadge risk={highestRisk} /> : null}
         </Link>
 
-        <Link href="/security" className="hidden items-center gap-1.5 text-[10px] text-slate-500 hover:text-violet-100 2xl:flex">
+        <Link href="/security" className="flex items-center gap-1.5 text-xs text-slate-300 hover:text-violet-100">
           <ShieldCheck size={11} className="text-violet-300" aria-hidden />
           Policy: {String(securityQuery.data?.active_policy?.profile_name || securityQuery.data?.active_policy?.active_profile || "unavailable")}
         </Link>
@@ -159,7 +157,7 @@ export function OperationalStatusBar() {
         <div className="ml-auto flex items-center gap-2">
           <span className={`hidden items-center gap-1.5 text-[11px] sm:flex ${partialFailure ? "text-amber-200" : "text-slate-400"}`}>
             <Clock3 size={11} aria-hidden />
-            {partialFailure ? "Some evidence unavailable" : formatFreshness(lastUpdated)}
+            {partialFailure ? "Some evidence unavailable — cached values may be stale" : formatFreshness(lastUpdated)}
           </span>
           <button
             type="button"
@@ -175,6 +173,7 @@ export function OperationalStatusBar() {
           </Link>
         </div>
       </div>
+      <p className="mt-4 text-xs leading-5 text-slate-400">Sources: /api/status, /api/missions, /api/approvals and /api/security/policy. Refreshes every 30 seconds while this board is open. Coverage: latest 20 missions and up to 100 records per approval state, not a lifetime total. Older work may be outside this snapshot. The time-range filter below applies only to historical charts.</p>
     </section>
   );
 }

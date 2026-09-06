@@ -5,7 +5,6 @@ import { ReactNode, useEffect, useRef } from "react";
 import { CommandPalette } from "./command-palette";
 import { ContextPanel } from "./context-panel";
 import { NotificationCenter } from "./notification-center";
-import { OperationalStatusBar } from "./operational-status-bar";
 import { OrionPet } from "./orion-pet";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
@@ -122,7 +121,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <section className="relative flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <OperationalStatusBar />
 
         <div className="orion-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5 2xl:px-6">
           <div className="mx-auto w-full max-w-[1880px]">

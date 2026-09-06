@@ -30,7 +30,7 @@ export function WorkspaceRegistration() {
         <button type="submit" disabled={mutation.isPending || mutation.isSuccess || !name.trim() || !path.trim() || !trusted || !consent} className="rounded-xl bg-cyan-300 px-4 py-3 text-sm font-semibold text-slate-950 disabled:opacity-40">{mutation.isPending ? "Registering…" : "Register trusted workspace"}</button>
       </fieldset>
       {mutation.isError && <p role="alert" className="text-sm text-rose-200">{mutation.error.message} Review the folder path and consent, then retry. Your draft is preserved.</p>}
-      {mutation.isSuccess && <p role="status" className="break-all text-sm text-emerald-200">Workspace {mutation.data.workspace_id} registered at {mutation.data.path}. Select it in Assistant or Knowledge to use its context.</p>}
+      {mutation.isSuccess && <p role="status" className="break-all text-sm text-emerald-200">Workspace {mutation.data.workspace_id} registered at {mutation.data.path}. No approval was created: registration does not execute an action. Select it in Assistant or Knowledge to use its context.</p>}
     </form>
   </section>;
 }

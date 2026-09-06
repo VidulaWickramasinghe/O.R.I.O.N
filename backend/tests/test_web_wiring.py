@@ -45,6 +45,7 @@ class WebWiringTests(unittest.TestCase):
                 workspace_id = saved.json()["workspace_id"]
                 self.assertEqual(client.post("/api/workspaces/register", json=payload).json()["workspace_id"], workspace_id)
                 self.assertEqual(client.get("/api/workspaces").json()["workspaces"][0]["path"], str(workspace.resolve()))
+                self.assertEqual(client.get("/api/approvals?status=pending").json()["approvals"], [], "Registration must not manufacture an approval.")
                 indexed = client.post("/api/knowledge/index", json={"workspace_id": workspace_id, "relative_path": "guide.txt", "source_consent": True})
                 self.assertEqual(indexed.status_code, 200, indexed.text)
                 search = client.post("/api/knowledge/search", json={"query": "approval", "workspace_id": workspace_id, "limit": 5})
@@ -58,6 +59,25 @@ class WebWiringTests(unittest.TestCase):
                 rejected = client.post(f"/api/approvals/{approval_id}/reject", json={"reason": "Training only; do not open a folder."})
                 self.assertEqual(rejected.status_code, 200, rejected.text)
                 self.assertEqual(rejected.json()["status"], "rejected")
+                self.assertEqual(client.get("/api/approvals?status=pending").json()["approvals"], [])
+                self.assertEqual(client.get("/api/approvals").json()["approvals"][0]["status"], "rejected")
+
+    def test_policy_denied_desktop_request_leaves_no_pending_approval(self):
+        from core import capability_gateway
+        with tempfile.TemporaryDirectory() as directory, operational_api_environment(Path(directory)) as client:
+            saved = client.post("/api/workspaces/register", json={"name": "Training", "path": directory, "trusted": True, "source_consent": True})
+            workspace_id = saved.json()["workspace_id"]
+            with patch.object(capability_gateway, "_plugin_decision", return_value=(False, "Plugin is disabled by the active security policy.", "medium", "desktop")):
+                denied = client.post(f"/api/desktop/workspaces/{workspace_id}/open-folder")
+            self.assertEqual(denied.status_code, 403, denied.text)
+            self.assertIn("disabled", denied.text)
+            self.assertEqual(client.get("/api/approvals?status=pending").json()["approvals"], [])
+
+    def test_guide_security_profile_description_matches_current_policy(self):
+        from core.security_policy import SECURITY_PROFILES
+        self.assertIn("desktop_control", SECURITY_PROFILES["strict"]["disabled_plugins"])
+        self.assertIn("desktop_control", SECURITY_PROFILES["balanced"]["enabled_plugins"])
+        self.assertEqual(SECURITY_PROFILES["balanced"]["enabled_plugins"], SECURITY_PROFILES["developer_lab"]["enabled_plugins"])
 
     def test_registration_errors_are_actionable_and_do_not_register(self):
         with tempfile.TemporaryDirectory() as directory, operational_api_environment(Path(directory)) as client:
